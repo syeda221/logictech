@@ -1,0 +1,30 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # 1. Handle Authorization Header
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # 2. Directly serve existing physical files (images, css, js)
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ - [L]
+
+    # 3. Serve uploads from public/uploads if located there
+    RewriteCond %{DOCUMENT_ROOT}/public/uploads/$1 -f
+    RewriteRule ^uploads/(.*)$ public/uploads/$1 [L]
+
+    # 4. Route Software, ERP, Products, API and Admin to Laravel's index.php
+    RewriteCond %{REQUEST_URI} ^/(api|software|storage|build|assets|home|dashboard|pos|sale|sales|Purchase|purchases?|purchase-pos|add/Purchase|InwardGatepass|inward-gatepass|add/InwardGatepass|product-catalog|products-list|product/?$|products|productget|productview|create_prodcut|store-product|generate-barcode-image|customers?|salecustomers|customer-payments|vendor|vendors?|vendors-ledger|warehouses?|warehouse_stocks|warehouse-stock.*|stock_transfers|stock-adjustments|stock|stocks|branch|roles|permissions|users|zone|zones|sales-officers|bookings?|booking|vouchers|all_recepit_vochers|all_Payment_vochers|all_expense_vochers|recepit_vochers|Payment_vochers|expense_vochers|store_rec_vochers|store_Pay_vochers|store_expense_vochers|print|Paymentprint|expenseprint|report|reports|website-settings|web-orders|web-products|coupons|web-users|checkbook|day-closing|drawer-transaction|notifications|discount|category|categories|subcategory|subcategories|Brand|brands|Unit|units|expense-categories|profile|accounts|accounts-head|view_all|narrations|party-list|receipt-vouchers|invoice-series|search-products|search-product-name|get-.*|getOpeningBalance|hr|my-attendance|debug-perms|confirm-password|forgot-password|reset-password|register|settings|modules|admin|logout|login|verify-email|sanctum|index\.php) [NC]
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L,QSA]
+</IfModule>
+
+# 2. Next.js Frontend Storefront Website
+<IfModule mod_passenger.c>
+    PassengerAppRoot /home2/binsult1/domains/trendhub.binsultansweet.com/public_html/frontend
+    PassengerBaseURI /
+    PassengerAppType node
+    PassengerStartupFile server.js
+</IfModule>
+
+
