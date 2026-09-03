@@ -1,6 +1,10 @@
+# ── Force Directory Index to Laravel Front Controller ──
+DirectoryIndex index.php
+
 # ── Disable Phusion Passenger / Node.js Engine ──
 <IfModule mod_passenger.c>
     PassengerEnabled off
+    PassengerAppType none
 </IfModule>
 
 <IfModule mod_rewrite.c>
