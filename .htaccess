@@ -1,30 +1,41 @@
+# ── Disable Phusion Passenger / Node.js Engine ──
+<IfModule mod_passenger.c>
+    PassengerEnabled off
+</IfModule>
+
 <IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews -Indexes
+    </IfModule>
+
     RewriteEngine On
 
-    # 1. Handle Authorization Header
+    # 1. Handle Authorization Header for APIs & Auth
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
-    # 2. Directly serve existing physical files (images, css, js)
+    # 2. Redirect Trailing Slashes If Not A Directory
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [L,R=301]
+
+    # 3. Serve physical files & directories directly (CSS, JS, Images, Uploads)
     RewriteCond %{REQUEST_FILENAME} -f
     RewriteRule ^ - [L]
 
-    # 3. Serve uploads from public/uploads if located there
+    # 4. Fallback for uploads located in public/uploads
     RewriteCond %{DOCUMENT_ROOT}/public/uploads/$1 -f
     RewriteRule ^uploads/(.*)$ public/uploads/$1 [L]
 
-    # 4. Route Software, ERP, Products, API and Admin to Laravel's index.php
-    RewriteCond %{REQUEST_URI} ^/(api|software|storage|build|assets|home|dashboard|pos|sale|sales|Purchase|purchases?|purchase-pos|add/Purchase|InwardGatepass|inward-gatepass|add/InwardGatepass|product-catalog|products-list|product/?$|products|productget|productview|create_prodcut|store-product|generate-barcode-image|customers?|salecustomers|customer-payments|vendor|vendors?|vendors-ledger|warehouses?|warehouse_stocks|warehouse-stock.*|stock_transfers|stock-adjustments|stock|stocks|branch|roles|permissions|users|zone|zones|sales-officers|bookings?|booking|vouchers|all_recepit_vochers|all_Payment_vochers|all_expense_vochers|recepit_vochers|Payment_vochers|expense_vochers|store_rec_vochers|store_Pay_vochers|store_expense_vochers|print|Paymentprint|expenseprint|report|reports|website-settings|web-orders|web-products|coupons|web-users|checkbook|day-closing|drawer-transaction|notifications|discount|category|categories|subcategory|subcategories|Brand|brands|Unit|units|expense-categories|profile|accounts|accounts-head|view_all|narrations|party-list|receipt-vouchers|invoice-series|search-products|search-product-name|get-.*|getOpeningBalance|hr|my-attendance|debug-perms|confirm-password|forgot-password|reset-password|register|settings|modules|admin|logout|login|verify-email|sanctum|index\.php) [NC]
+    # 5. Route all requests through Laravel's index.php
+    RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L,QSA]
 </IfModule>
 
-# 2. Next.js Frontend Storefront Website
-<IfModule mod_passenger.c>
-    PassengerAppRoot /home2/binsult1/domains/trendhub.binsultansweet.com/public_html/frontend
-    PassengerBaseURI /
-    PassengerAppType node
-    PassengerStartupFile server.js
+# ── Security & MIME Types ──
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
 </IfModule>
-
-
