@@ -18,21 +18,22 @@ DirectoryIndex index.php
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
-    # 2. Redirect Trailing Slashes If Not A Directory
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteCond %{REQUEST_URI} (.+)/$
-    RewriteRule ^ %1 [L,R=301]
+    # 2. Block direct access to hidden/sensitive files and directories
+    RewriteRule ^(\.git|\.env|composer\.(json|lock)|package(-lock)?\.json|phpunit\.xml) - [F,L,NC]
 
-    # 3. Serve physical files & directories directly (CSS, JS, Images, Uploads)
+    # 3. Always route /vendor and /warehouse routes to Laravel index.php (even though physical folders exist)
+    RewriteRule ^vendor(/.*)?$ index.php [L,QSA,NC]
+    RewriteRule ^warehouse(/.*)?$ index.php [L,QSA,NC]
+
+    # 4. Serve existing physical files directly (CSS, JS, Images, Uploads)
     RewriteCond %{REQUEST_FILENAME} -f
     RewriteRule ^ - [L]
 
-    # 4. Fallback for uploads located in public/uploads
+    # 5. Fallback for uploads located in public/uploads
     RewriteCond %{DOCUMENT_ROOT}/public/uploads/$1 -f
     RewriteRule ^uploads/(.*)$ public/uploads/$1 [L]
 
-    # 5. Route all requests through Laravel's index.php
-    RewriteCond %{REQUEST_FILENAME} !-d
+    # 6. Route all other requests through Laravel's index.php (without !-d check so routes matching folder names work)
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L,QSA]
 </IfModule>
