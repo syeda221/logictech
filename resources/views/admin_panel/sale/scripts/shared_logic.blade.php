@@ -980,6 +980,20 @@
             
             // Set properties directly
             $row.find('.item-code-display').val(data.sku || '');
+            if (!$row.find('.model-input').val()) {
+                $row.find('.model-input').val(data.model || data.brand || '');
+            }
+
+            if (data.unit_name) {
+                $row.find('.unit-display').val(data.unit_name);
+            } else if (data.size_mode === 'by_kg') {
+                $row.find('.unit-display').val('Kg');
+            } else if (data.size_mode === 'by_meter') {
+                $row.find('.unit-display').val('Mtr');
+            } else {
+                $row.find('.unit-display').val('Pcs');
+            }
+
             $row.find('.retail-price').val(data.retail_price || data.trade_price || 0);
             $row.find('.wholesale-price').val(data.wholesale_price || 0);
             $row.find('.weight-per-piece').val(data.weight_per_piece || 0);
@@ -1237,17 +1251,37 @@
             updateGrandTotals();
         });
 
-        // Enter on any editable input -> compute row, add new row & open product select
-        $('#salesTableBody').on('keydown', '.carton-qty, .loose-pcs-input, .discount-value, .discount-amount, .visible-price', function(e) {
+        // Enter on any editable input or product row -> compute row, add new row & open product select if product is selected
+        $('#salesTableBody').on('keydown', 'input, select, .select2-selection', function(e) {
             if (e.key === 'Enter' || e.keyCode === 13) {
-                e.preventDefault();
-                const $current = $(this).closest('tr');
-                computeRow($current);
-                updateGrandTotals();
+                // If Select2 dropdown search input is open, let Select2 handle selection
+                if ($(e.target).hasClass('select2-search__field')) {
+                    return;
+                }
 
-                // Add new row and open product dropdown
-                addNewRow();
-                setTimeout(() => $('#salesTableBody tr:last-child .product').select2('open'), 50);
+                const $current = $(this).closest('tr');
+                const pid = $current.find('.product-id-hidden').val() || $current.find('.product').val();
+
+                if (pid) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    computeRow($current);
+                    updateGrandTotals();
+
+                    // Check if next row exists and is already empty
+                    const $nextRow = $current.next('tr');
+                    if ($nextRow.length > 0 && !$nextRow.find('.product-id-hidden').val() && !$nextRow.find('.product').val()) {
+                        setTimeout(() => $nextRow.find('.product').select2('open'), 50);
+                    } else {
+                        addNewRow();
+                        setTimeout(() => $('#salesTableBody tr:last-child .product').select2('open'), 50);
+                    }
+                } else {
+                    // No product selected on this row -> open product dropdown for current row
+                    e.preventDefault();
+                    $current.find('.product').select2('open');
+                }
             }
         });
 
