@@ -31,17 +31,34 @@
         }
     });
 
+    function showGridAlert(msg, type = 'warning') {
+        const $row = $('#gridAlertRow');
+        const $text = $('#gridAlertText');
+        if ($row.length && $text.length) {
+            $text.text(msg);
+            $row.removeClass('d-none');
+            clearTimeout(window.gridAlertTimer);
+            window.gridAlertTimer = setTimeout(() => {
+                $row.addClass('d-none');
+            }, 6000);
+        }
+    }
+
     function showAlert(type, msg) {
         const el = $('#alertBox');
         if (el.length) {
             el.removeClass('d-none alert-success alert-danger alert-warning').addClass('alert-' + type).text(msg)
                 .show();
-            setTimeout(() => el.addClass('d-none'), 3000);
+            setTimeout(() => el.addClass('d-none'), 4000);
         } else {
             // fallback if alertBox missing
             if (type === 'error') Swal.fire('Error', msg, 'error');
             else if (type === 'warning') Swal.fire('Warning', msg, 'warning');
             else Swal.fire('Info', msg, 'info');
+        }
+
+        if (type === 'warning' || type === 'error' || type === 'danger') {
+            showGridAlert(msg, type);
         }
     }
 

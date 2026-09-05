@@ -703,6 +703,17 @@
                                         @endif
                                     </tbody>
                                     <tfoot>
+                                        <tr id="gridAlertRow" class="d-none">
+                                            <td colspan="11" class="p-1 border-0" style="background-color: #fef2f2 !important;">
+                                                <div class="d-flex align-items-center justify-content-between px-2 py-1 rounded border border-danger text-danger fw-bold" style="background-color: #fee2e2; font-size: 0.78rem;">
+                                                    <div class="d-flex align-items-center gap-1">
+                                                        <i class="fas fa-exclamation-triangle text-danger me-1"></i>
+                                                        <span id="gridAlertText">Warning: Discount limit exceeded!</span>
+                                                    </div>
+                                                    <button type="button" class="btn-close py-0" style="font-size: 0.65rem;" onclick="$('#gridAlertRow').addClass('d-none');"></button>
+                                                </div>
+                                            </td>
+                                        </tr>
                                         <tr>
                                             <td colspan="9" class="text-end fw-bold text-uppercase text-secondary" style="font-size:0.78rem;">Invoice Total:</td>
                                             <td class="text-end fw-bold text-success fs-6"><span id="totalAmount">0.00</span></td>
