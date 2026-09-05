@@ -505,10 +505,10 @@
                     <button type="button" class="btn-hdr btn-hdr-outline" id="openImportModalBtn">
                         <i class="fas fa-file-upload"></i> Import CSV
                     </button>
-                    <button type="button" class="btn-hdr btn-hdr-warning" onclick="openCreateProductModal('raw_material')" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #ffffff; border: none; font-weight: 700; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.35);">
+                    <button type="button" class="btn-hdr btn-hdr-warning open-cpm-modal" data-item-type="raw_material" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #ffffff; border: none; font-weight: 700; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.35);">
                         <i class="fas fa-boxes-stacked"></i> + Raw Material
                     </button>
-                    <button type="button" class="btn-hdr btn-hdr-success" onclick="openCreateProductModal('finish_goods')" style="background: linear-gradient(135deg, #10b981, #059669); color: #ffffff; border: none; font-weight: 700; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);">
+                    <button type="button" class="btn-hdr btn-hdr-success open-cpm-modal" data-item-type="finish_goods" style="background: linear-gradient(135deg, #10b981, #059669); color: #ffffff; border: none; font-weight: 700; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);">
                         <i class="fas fa-microchip"></i> + Finished Goods
                     </button>
                 @endif
@@ -971,6 +971,19 @@
 @section('js')
 <script>
 $(document).ready(function () {
+
+    // ── Open Create Product / Component Modal (Raw Material / Finished Goods) ──
+    $(document).on('click', '.open-cpm-modal', function () {
+        var itemType = $(this).data('item-type') || 'raw_material';
+        if (typeof window.openCreateProductModal === 'function') {
+            window.openCreateProductModal(itemType);
+        } else {
+            if (typeof window.cpmSetItemType === 'function') {
+                window.cpmSetItemType(itemType);
+            }
+            $('#createProductModal').modal('show');
+        }
+    });
 
     // ── Open Import Modal ──
     $('#openImportModalBtn').on('click', function () {

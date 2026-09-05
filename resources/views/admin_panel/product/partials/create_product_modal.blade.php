@@ -3,6 +3,9 @@
 ══════════════════════════════════════════════════════════════ --}}
 <style>
     /* Modal Specific Styling */
+    #createProductModal {
+        z-index: 1050;
+    }
     #createProductModal .modal-content {
         border-radius: 16px;
         border: 1px solid #e2e8f0;
@@ -189,13 +192,12 @@
         box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15);
     }
 
-    /* Stacked Modals z-index adjustment */
-    #createProductModal { z-index: 1050; }
+    /* Stacked Modals z-index */
     #cpmCategoryModal, #cpmSubcategoryModal, #cpmBrandModal { z-index: 1070; }
 </style>
 
-<div class="modal fade" id="createProductModal" tabindex="-1" aria-labelledby="createProductModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
-    <div class="modal-dialog modal-dialog-centered modal-xl">
+<div class="modal fade" id="createProductModal" tabindex="-1" role="dialog" aria-labelledby="createProductModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl" role="document">
         <div class="modal-content">
             
             {{-- Modal Header --}}
@@ -407,14 +409,14 @@
 
 {{-- ── Quick Add Child Modals ── --}}
 {{-- 1. Category Modal --}}
-<div id="cpmCategoryModal" class="modal fade" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
+<div id="cpmCategoryModal" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm" role="document">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 14px;">
             <form id="cpmQuickCategoryForm" action="{{ route('store.category') }}" method="POST">
                 @csrf
                 <div class="modal-header border-0 pb-0">
                     <h6 class="modal-title fw-bold">New Category</h6>
-                    <button type="button" class="btn-close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="close btn-close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close">&times;</button>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" name="page" value="product_page">
@@ -430,14 +432,14 @@
 </div>
 
 {{-- 2. Subcategory Modal --}}
-<div id="cpmSubcategoryModal" class="modal fade" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
+<div id="cpmSubcategoryModal" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm" role="document">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 14px;">
             <form id="cpmQuickSubcategoryForm" action="{{ route('store.subcategory') }}" method="POST">
                 @csrf
                 <div class="modal-header border-0 pb-0">
                     <h6 class="modal-title fw-bold">New Subcategory</h6>
-                    <button type="button" class="btn-close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="close btn-close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close">&times;</button>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" name="page" value="product_page">
@@ -461,14 +463,14 @@
 </div>
 
 {{-- 3. Brand Modal --}}
-<div id="cpmBrandModal" class="modal fade" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
+<div id="cpmBrandModal" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm" role="document">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 14px;">
             <form id="cpmQuickBrandForm" action="{{ route('store.Brand') }}" method="POST">
                 @csrf
                 <div class="modal-header border-0 pb-0">
                     <h6 class="modal-title fw-bold">New Brand / Manufacturer</h6>
-                    <button type="button" class="btn-close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="close btn-close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close">&times;</button>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" name="page" value="product_page">
@@ -483,9 +485,10 @@
     </div>
 </div>
 
+@push('scripts')
 <script>
 // ── Global Helper for Item Type Toggle ──
-function cpmSetItemType(type) {
+window.cpmSetItemType = function(type) {
     $('#cpm_item_type').val(type);
     if (type === 'raw_material') {
         $('#cpmTypeRawBtn').addClass('active-raw');
@@ -498,13 +501,13 @@ function cpmSetItemType(type) {
         $('#cpmHeaderTitle').html('Create Finished Goods / Product');
         $('#cpmHeaderIcon').attr('class', 'fas fa-microchip text-success');
     }
-}
+};
 
-// ── Open Modal with Specific Item Type ──
-function openCreateProductModal(type) {
-    cpmSetItemType(type || 'raw_material');
+// ── Global Function to Open Modal ──
+window.openCreateProductModal = function(type) {
+    window.cpmSetItemType(type || 'raw_material');
     $('#createProductModal').modal('show');
-}
+};
 
 $(document).ready(function() {
     const cpmForm = document.getElementById('cpmProductForm');
@@ -540,6 +543,7 @@ $(document).ready(function() {
 
     // ── Add Base Variant Row ──
     function cpmAddBaseRow() {
+        if (!cpmVariantsBody) return;
         const prodName = cpmNameInput ? cpmNameInput.value : '';
         const unitVal  = cpmUnitDropdown ? cpmUnitDropdown.options[cpmUnitDropdown.selectedIndex].text : 'Pcs';
         const isCarton = cpmUnitDropdown && cpmUnitDropdown.value === 'by_cartons';
@@ -586,6 +590,7 @@ $(document).ready(function() {
 
     // ── Add New Variant Row ──
     function cpmAddVariantRow() {
+        if (!cpmVariantsBody) return;
         const prodName = cpmNameInput ? cpmNameInput.value : '';
         const unitVal  = cpmUnitDropdown ? cpmUnitDropdown.options[cpmUnitDropdown.selectedIndex].text : 'Pcs';
         const isCarton = cpmUnitDropdown && cpmUnitDropdown.value === 'by_cartons';
@@ -670,7 +675,7 @@ $(document).ready(function() {
 
     // Reset Form on Modal Hidden
     $('#createProductModal').on('hidden.bs.modal', function() {
-        cpmForm.reset();
+        if (cpmForm) cpmForm.reset();
         $('#cpmVariantsBody').empty();
         $('#cpmImagePreview').attr('src', '').addClass('d-none');
         $('#cpmUploadPlaceholder').removeClass('d-none');
@@ -816,3 +821,4 @@ $(document).ready(function() {
 
 });
 </script>
+@endpush
