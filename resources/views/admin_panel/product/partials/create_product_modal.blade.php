@@ -87,48 +87,6 @@
         box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
     }
 
-    /* Classification Toggle */
-    .cpm-type-toggle {
-        display: flex;
-        background: #f1f5f9;
-        padding: 4px;
-        border-radius: 10px;
-        border: 1px solid #e2e8f0;
-        gap: 4px;
-    }
-    .cpm-type-btn {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        padding: 9px 16px;
-        border-radius: 8px;
-        font-weight: 700;
-        font-size: 0.88rem;
-        color: #475569;
-        cursor: pointer;
-        border: 1.5px solid transparent;
-        transition: all 0.18s ease;
-        user-select: none;
-        background: transparent;
-    }
-    .cpm-type-btn:hover {
-        background: rgba(255,255,255,0.7);
-    }
-    .cpm-type-btn.active-raw {
-        background: #f59e0b !important;
-        border-color: #f59e0b !important;
-        color: #ffffff !important;
-        box-shadow: 0 2px 8px rgba(245, 158, 11, 0.35);
-    }
-    .cpm-type-btn.active-finish {
-        background: #10b981 !important;
-        border-color: #10b981 !important;
-        color: #ffffff !important;
-        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
-    }
-
     /* Image Uploader */
     .cpm-img-uploader {
         width: 100%;
@@ -203,15 +161,20 @@
             {{-- Modal Header --}}
             <div class="modal-header d-flex align-items-center justify-content-between">
                 <div class="d-flex align-items-center gap-3">
-                    <button type="button" class="btn btn-sm btn-light border rounded-circle p-0" data-dismiss="modal" data-bs-dismiss="modal" style="width: 32px; height: 32px; display: grid; place-items: center;" title="Close">
+                    <button type="button" class="btn btn-sm btn-light border rounded-circle p-0" data-dismiss="modal" data-bs-dismiss="modal" style="width: 34px; height: 34px; display: grid; place-items: center;" title="Close">
                         <i class="fas fa-arrow-left text-muted"></i>
                     </button>
                     <div>
-                        <h5 class="modal-title fw-bold text-dark mb-0 d-flex align-items-center gap-2" id="createProductModalLabel">
-                            <i class="fas fa-microchip text-primary" id="cpmHeaderIcon"></i>
-                            <span id="cpmHeaderTitle">Create Product / Component</span>
-                        </h5>
-                        <small class="text-muted" style="font-size:0.78rem;" id="cpmHeaderSub">LogicTech Industrial ERP — Add heating devices, chillers, power electronics, or raw materials</small>
+                        <div class="d-flex align-items-center gap-2">
+                            <h5 class="modal-title fw-bold text-dark mb-0 d-flex align-items-center gap-2" id="createProductModalLabel">
+                                <i class="fas fa-boxes-stacked" id="cpmHeaderIcon" style="color:#f59e0b;"></i>
+                                <span id="cpmHeaderTitle">Create Raw Material</span>
+                            </h5>
+                            <span id="cpmTypeBadge" class="badge" style="background:#fef3c7; color:#b45309; border:1px solid #fde68a; font-size:11px; font-weight:700; padding:4px 8px; border-radius:6px;">
+                                <i class="fas fa-boxes-stacked me-1"></i>Raw Material
+                            </span>
+                        </div>
+                        <small class="text-muted" style="font-size:0.78rem;" id="cpmHeaderSub">LogicTech Industrial ERP — Add raw materials, parts &amp; components</small>
                     </div>
                 </div>
                 <button type="button" class="close btn-close text-muted" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close" style="font-size: 1.2rem; background: none; border: none;">
@@ -222,46 +185,29 @@
             {{-- Modal Body with Form --}}
             <form id="cpmProductForm" action="{{ route('store-product') }}" method="POST" enctype="multipart/form-data">
                 @csrf
+                
+                {{-- Hidden Item Type Input --}}
+                <input type="hidden" name="item_type" id="cpm_item_type" value="raw_material">
+
                 <div class="modal-body">
                     
-                    {{-- ── CARD 1: Identity & Classification ── --}}
+                    {{-- ── CARD 1: Identity & Details ── --}}
                     <div class="cpm-card">
                         <div class="cpm-card-header">
                             <h6 class="cpm-card-title">
-                                <i class="fas fa-microchip text-primary"></i> Product &amp; Component Identity
+                                <i class="fas fa-cubes text-primary"></i> <span id="cpmCardIdentityTitle">Raw Material Identity &amp; Details</span>
                             </h6>
                         </div>
                         <div class="cpm-card-body">
                             <div class="row g-3">
                                 
-                                {{-- Left 9 Cols: Classification, Name, Category, Subcategory, Brand, Unit --}}
+                                {{-- Left 9 Cols: Name, Category, Subcategory, Brand, Unit --}}
                                 <div class="col-lg-9 col-md-8">
                                     <div class="row g-3">
-                                        
-                                        {{-- Item Classification Toggle --}}
-                                        <div class="col-12">
-                                            <label class="cpm-label d-flex align-items-center justify-content-between">
-                                                <span><i class="fas fa-layer-group text-primary me-1"></i> Item Classification / Material Type <span class="text-danger">*</span></span>
-                                                <span class="text-muted fw-normal" style="font-size: 0.72rem; text-transform: none;">Choose whether this item is Raw Material or Finished Goods</span>
-                                            </label>
-                                            
-                                            <input type="hidden" name="item_type" id="cpm_item_type" value="raw_material">
-                                            
-                                            <div class="cpm-type-toggle">
-                                                <div class="cpm-type-btn active-raw" id="cpmTypeRawBtn" onclick="cpmSetItemType('raw_material')">
-                                                    <i class="fas fa-boxes-stacked"></i>
-                                                    <span>Raw Material</span>
-                                                </div>
-                                                <div class="cpm-type-btn" id="cpmTypeFinishBtn" onclick="cpmSetItemType('finish_goods')">
-                                                    <i class="fas fa-microchip"></i>
-                                                    <span>Finished Goods</span>
-                                                </div>
-                                            </div>
-                                        </div>
 
                                         {{-- Product / Component Name --}}
                                         <div class="col-12">
-                                            <label class="cpm-label">Product / Component Name <span class="text-danger">*</span></label>
+                                            <label class="cpm-label" id="cpmNameLabel">Item / Component Name <span class="text-danger">*</span></label>
                                             <input type="text" class="cpm-input fw-bold" name="product_name" id="cpm_product_name" required placeholder="e.g. High Frequency Induction Heater 25kW, Industrial Air Chiller 5TR, IGBT Module 1200V">
                                         </div>
 
@@ -318,9 +264,9 @@
                                     </div>
                                 </div>
 
-                                {{-- Right 3 Cols: Product Image Upload --}}
+                                {{-- Right 3 Cols: Image Upload --}}
                                 <div class="col-lg-3 col-md-4">
-                                    <label class="cpm-label">Product Image</label>
+                                    <label class="cpm-label">Item Image</label>
                                     <input type="file" id="cpmImageInput" name="image" class="d-none" accept="image/*">
                                     <div class="cpm-img-uploader" id="cpmUploadArea" onclick="document.getElementById('cpmImageInput').click()">
                                         <button type="button" id="cpmClearImageBtn" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 d-none rounded-circle" style="width:20px;height:20px;padding:0;z-index:10; font-size:12px; line-height:1;">&times;</button>
@@ -340,7 +286,7 @@
                     <div class="cpm-card">
                         <div class="cpm-card-header">
                             <h6 class="cpm-card-title text-primary">
-                                <i class="fas fa-cubes me-1"></i> Product Variants &amp; Units
+                                <i class="fas fa-layer-group me-1"></i> Item Variants &amp; Pricing
                             </h6>
                             <button type="button" class="btn btn-sm btn-primary" id="cpmAddVariantRowBtn" style="background:#4f46e5; border:none; font-weight:600; font-size:0.78rem;">
                                 <i class="fas fa-plus me-1"></i> Add Variant Row
@@ -397,8 +343,8 @@
                     <button type="button" class="btn btn-outline-secondary px-4 py-2" data-dismiss="modal" data-bs-dismiss="modal" style="border-radius: 8px; font-size: 0.88rem;">
                         Cancel
                     </button>
-                    <button type="submit" id="cpmSubmitBtn" class="btn btn-primary px-5 py-2 fw-bold" style="background: #4f46e5; border: none; border-radius: 8px; font-size: 0.88rem; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);">
-                        <i class="fas fa-check-circle me-1"></i> SAVE PRODUCT
+                    <button type="submit" id="cpmSubmitBtn" class="btn btn-primary px-5 py-2 fw-bold" style="background: linear-gradient(135deg, #f59e0b, #d97706); border: none; border-radius: 8px; font-size: 0.88rem; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);">
+                        <i class="fas fa-check-circle me-1"></i> <span id="cpmSubmitBtnText">SAVE RAW MATERIAL</span>
                     </button>
                 </div>
             </form>
@@ -487,19 +433,38 @@
 
 @push('scripts')
 <script>
-// ── Global Helper for Item Type Toggle ──
+// ── Global Helper to Configure Modal by Type ──
 window.cpmSetItemType = function(type) {
     $('#cpm_item_type').val(type);
+
     if (type === 'raw_material') {
-        $('#cpmTypeRawBtn').addClass('active-raw');
-        $('#cpmTypeFinishBtn').removeClass('active-finish');
-        $('#cpmHeaderTitle').html('Create Raw Material / Component');
-        $('#cpmHeaderIcon').attr('class', 'fas fa-boxes-stacked text-warning');
+        $('#cpmHeaderIcon').attr('class', 'fas fa-boxes-stacked').css('color', '#f59e0b');
+        $('#cpmHeaderTitle').text('Create Raw Material');
+        $('#cpmTypeBadge').html('<i class="fas fa-boxes-stacked me-1"></i>Raw Material')
+            .css({'background': '#fef3c7', 'color': '#b45309', 'border-color': '#fde68a'});
+        $('#cpmHeaderSub').text('LogicTech Industrial ERP — Add raw materials, parts & components');
+        $('#cpmCardIdentityTitle').text('Raw Material Identity & Details');
+        $('#cpmNameLabel').html('Raw Material / Component Name <span class="text-danger">*</span>');
+        $('#cpm_product_name').attr('placeholder', 'e.g. IGBT Module 1200V, Copper Pipe 1/2", Stainless Steel Sheet, Relay 24V');
+        $('#cpmSubmitBtnText').text('SAVE RAW MATERIAL');
+        $('#cpmSubmitBtn').css({
+            'background': 'linear-gradient(135deg, #f59e0b, #d97706)',
+            'box-shadow': '0 4px 12px rgba(245, 158, 11, 0.35)'
+        });
     } else {
-        $('#cpmTypeRawBtn').removeClass('active-raw');
-        $('#cpmTypeFinishBtn').addClass('active-finish');
-        $('#cpmHeaderTitle').html('Create Finished Goods / Product');
-        $('#cpmHeaderIcon').attr('class', 'fas fa-microchip text-success');
+        $('#cpmHeaderIcon').attr('class', 'fas fa-microchip').css('color', '#10b981');
+        $('#cpmHeaderTitle').text('Create Finished Goods');
+        $('#cpmTypeBadge').html('<i class="fas fa-microchip me-1"></i>Finished Goods')
+            .css({'background': '#ecfdf5', 'color': '#059669', 'border-color': '#a7f3d0'});
+        $('#cpmHeaderSub').text('LogicTech Industrial ERP — Add heating devices, chillers, power electronics & finished products');
+        $('#cpmCardIdentityTitle').text('Finished Goods Identity & Details');
+        $('#cpmNameLabel').html('Finished Goods / Product Name <span class="text-danger">*</span>');
+        $('#cpm_product_name').attr('placeholder', 'e.g. High Frequency Induction Heater 25kW, Industrial Air Chiller 5TR, Power Supply Unit');
+        $('#cpmSubmitBtnText').text('SAVE FINISHED GOODS');
+        $('#cpmSubmitBtn').css({
+            'background': 'linear-gradient(135deg, #10b981, #059669)',
+            'box-shadow': '0 4px 12px rgba(16, 185, 129, 0.35)'
+        });
     }
 };
 
@@ -792,10 +757,11 @@ $(document).ready(function() {
         .then(({ status, body }) => {
             if (status === 200 || body.status === 'success') {
                 $('#createProductModal').modal('hide');
+                const savedType = $('#cpm_item_type').val() === 'finish_goods' ? 'Finished Goods' : 'Raw Material';
                 Swal.fire({
                     icon: 'success',
                     title: 'Saved Successfully!',
-                    text: 'Product / component profile created.',
+                    text: savedType + ' profile created in inventory.',
                     timer: 1500,
                     showConfirmButton: false
                 }).then(() => {
