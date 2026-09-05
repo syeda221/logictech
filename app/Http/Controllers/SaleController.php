@@ -1078,21 +1078,38 @@ class SaleController extends Controller
             $sale->customer_id = $request->customer;
             $sale->walkin_name = $isWalkin ? $request->walkin_name : null;
             $sale->reference = $request->reference;
-            $sale->total_amount_Words = $request->total_amount_Words; // Consider auto-generating this too?
-            $sale->sale_status = $status;
+            $sale->total_amount_Words = $request->total_amount_Words;
+
+            // Order Status (Excel flow: pending, ready, delivered, cancelled, or legacy booked/posted)
+            if ($request->filled('sale_status')) {
+                $sale->sale_status = $request->sale_status;
+            } elseif ($request->filled('order_status')) {
+                $sale->sale_status = $request->order_status;
+            } else {
+                $sale->sale_status = $status;
+            }
+
+            // Estimated Delivery Date & Delivery Date
+            if ($request->filled('estimated_delivery_date')) {
+                $sale->estimated_delivery_date = \Carbon\Carbon::parse($request->estimated_delivery_date)->format('Y-m-d');
+                $sale->due_date = $sale->estimated_delivery_date;
+            }
+            if ($request->filled('delivery_date')) {
+                $sale->delivery_date = \Carbon\Carbon::parse($request->delivery_date)->format('Y-m-d');
+            }
 
             // Credit Days & Due Date (Optional)
             if ($request->filled('credit_days') && $request->credit_days > 0) {
                 $creditDays = (int) $request->credit_days;
                 $sale->credit_days = $creditDays;
 
-                // Use existing created_at for edits, or now() for new sales
-                $baseDate = $sale->created_at ? $sale->created_at->copy() : now();
-                $sale->due_date = $baseDate->addDays($creditDays);
+                if (empty($sale->estimated_delivery_date)) {
+                    $baseDate = $sale->created_at ? $sale->created_at->copy() : now();
+                    $sale->due_date = $baseDate->addDays($creditDays);
+                    $sale->estimated_delivery_date = $sale->due_date->format('Y-m-d');
+                }
             } else {
-                // No credit days = no notification
                 $sale->credit_days = null;
-                $sale->due_date = null;
             }
 
             if ($isNew) {
@@ -1273,9 +1290,11 @@ class SaleController extends Controller
                 $saleItem = new SaleItem;
                 $saleItem->sale_id = $sale->id;
                 $saleItem->product_id = $isManual ? null : $pid;
+                $saleItem->product_name = $productName; // Store name snapshot
+                $saleItem->model = $request->model[$index] ?? null;
+                $saleItem->serial_no = $request->serial_no[$index] ?? null;
                 $saleItem->color = $request->color[$index] ?? null;
                 $saleItem->warehouse_id = !empty($warehouses[$index]) ? $warehouses[$index] : $defaultWhId;
-                $saleItem->product_name = $productName; // Store name snapshot
 
                 $saleItem->qty = $storedQtyBox; // Store as Box equivalent for consistency
                 $saleItem->total_pieces = $totalPieces;
@@ -2018,6 +2037,8 @@ class SaleController extends Controller
                 'total' => (float) $item->total,
                 'color_val' => $variant['color'] ?? '',
                 'size_val' => $variant['size'] ?? '',
+                'model' => $item->model ?? ($variant['size'] ?? ''),
+                'serial_no' => $item->serial_no ?? '',
                 'variant_unit' => $variant['unit'] ?? '',
                 'weight_per_piece' => $variant['weight_per_piece'] ?? $item->product->weight_per_piece ?? 0,
                 'color' => is_array($variant) ? $variant : [$item->color], // for legacy compatibility

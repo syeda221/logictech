@@ -299,17 +299,17 @@
         }
 
         /* Column Widths - Compact & Full Width */
-        .col-product { width: auto; min-width: 150px; }
+        .col-product { width: auto; min-width: 160px; }
+        .col-model { width: 95px; min-width: 95px; }
+        .col-serial { width: 85px; min-width: 85px; }
         .col-stock { width: 55px; min-width: 55px; }
-        .col-qty, .col-qty-wrapper { width: 95px; min-width: 95px; }
-        .col-size { width: 55px; min-width: 55px; }
-        .col-color { width: 60px; min-width: 60px; }
-        .col-pieces { width: 55px; min-width: 55px; }
-        .col-price-p { width: 75px; min-width: 75px; }
+        .col-qty, .col-qty-wrapper { width: 85px; min-width: 85px; }
+        .col-pieces { width: 50px; min-width: 50px; }
+        .col-price-p { width: 85px; min-width: 85px; }
         .col-disc { width: 75px; min-width: 75px; }
         .col-disc-amt { width: 70px; min-width: 70px; }
-        .col-amount { width: 85px; min-width: 85px; }
-        .col-action { width: 32px; min-width: 32px; text-align: center; }
+        .col-amount { width: 90px; min-width: 90px; }
+        .col-action { width: 30px; min-width: 30px; text-align: center; }
 
         /* Invalid cells & inputs */
         .invalid-cell {
@@ -354,6 +354,7 @@
             border-color: #2563eb !important;
             box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1) !important;
         }
+    </style>
     <style>
         /* 💎 SCREENSHOT POS 3-COLUMN LAYOUT SYSTEM 💎 */
         .pos-product-card {
@@ -451,8 +452,8 @@
             font-size: 1rem;
         }
         .summary-val-change {
-            background: #ffe4e6;
-            color: #e11d48;
+            background: #fee2e2;
+            color: #dc2626;
             font-weight: 800;
             padding: 4px 8px;
             border-radius: 6px;
@@ -505,9 +506,9 @@
                         <a href="{{ route('sale.index') }}" class="btn btn-sm btn-light border rounded-circle" title="Back"><i class="fas fa-arrow-left text-secondary"></i></a>
                         <div>
                             <h5 class="mb-0 fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 1.05rem;">
-                                <i class="fas fa-shopping-cart text-primary"></i> New Sale
+                                <i class="fas fa-shopping-cart text-primary"></i> <span id="pageMainHeading">New Sale / Booking</span>
                             </h5>
-                            <small class="text-muted" style="font-size: 0.7rem;">Create a new invoice</small>
+                            <small class="text-muted" style="font-size: 0.7rem;">Create orders, sales &amp; delivery invoices</small>
                         </div>
                     </div>
                     <div class="d-flex align-items-center gap-2">
@@ -517,12 +518,12 @@
                     </div>
                 </div>
 
-                <!-- TOP INFORMATION PANEL -->
+                <!-- TOP INFORMATION PANEL (EXCEL ORDERS SHEET COMPATIBLE) -->
                 <div class="card-panel mb-2">
                     <div class="row g-2 align-items-end w-100 m-0">
-                        <!-- Invoice No with Prefix Dropdown & Refresh -->
+                        <!-- Invoice / Order No with Prefix Dropdown & Refresh -->
                         <div class="col-sm-3 col-md-2">
-                            <label class="form-label fw-bold text-secondary mb-1" style="font-size:0.7rem;">Invoice No.</label>
+                            <label class="form-label fw-bold text-secondary mb-1" style="font-size:0.7rem;">Order / Invoice No.</label>
                             <div class="input-group input-group-sm">
                                 <button class="btn btn-success dropdown-toggle fw-bold text-white px-2 d-flex align-items-center gap-1" 
                                         type="button" 
@@ -568,45 +569,67 @@
                                 </button>
                             </div>
                         </div>
-                        <!-- Date -->
-                        <div class="col-sm-2">
-                            <label class="form-label fw-bold text-secondary mb-1" style="font-size:0.7rem;">Date</label>
+
+                        <!-- Order Date -->
+                        <div class="col-sm-2 col-md-2">
+                            <label class="form-label fw-bold text-secondary mb-1" style="font-size:0.7rem;"><i class="fas fa-calendar-alt text-primary me-1"></i>Order Date</label>
                             <input type="text" name="sale_date" class="form-control datepicker-custom text-center fw-bold" id="displayDateInput" value="{{ date('Y-m-d') }}">
                         </div>
-                        <!-- Cr. Days -->
-                        <div class="col-sm-1">
-                            <label class="form-label fw-bold text-secondary mb-1" style="font-size:0.7rem;">Cr. Days</label>
-                            <input type="number" class="form-control text-center fw-bold" name="credit_days" placeholder="0" min="0" value="{{ $sale->credit_days ?? '0' }}">
+
+                        <!-- Estimated Delivery Date -->
+                        <div class="col-sm-2 col-md-2">
+                            <label class="form-label fw-bold text-secondary mb-1" style="font-size:0.7rem;"><i class="fas fa-clock text-warning me-1"></i>Est. Delivery Date</label>
+                            <input type="text" name="estimated_delivery_date" class="form-control datepicker-custom text-center fw-bold" id="estDeliveryDateInput" value="{{ date('Y-m-d', strtotime('+15 days')) }}" placeholder="YYYY-MM-DD">
                         </div>
+
+                        <!-- Order Status (Excel badges: Pending, Ready, Delivered, Cancelled) -->
+                        <div class="col-sm-2 col-md-2">
+                            <label class="form-label fw-bold text-secondary mb-1" style="font-size:0.7rem;"><i class="fas fa-tag text-info me-1"></i>Order Status</label>
+                            <select name="sale_status" id="saleStatusSelect" class="form-select fw-bold text-center" style="height: 26px; font-size: 0.78rem;">
+                                <option value="pending" class="text-danger fw-bold" selected>🔴 Pending</option>
+                                <option value="ready" class="text-primary fw-bold">🔵 Ready</option>
+                                <option value="delivered" class="text-success fw-bold">🟢 Delivered</option>
+                                <option value="cancelled" class="text-warning fw-bold">🟡 Cancelled</option>
+                            </select>
+                        </div>
+
+                        <!-- Actual Delivery Date -->
+                        <div class="col-sm-2 col-md-1">
+                            <label class="form-label fw-bold text-secondary mb-1" style="font-size:0.7rem;"><i class="fas fa-truck text-success me-1"></i>Deliv. Date</label>
+                            <input type="text" name="delivery_date" class="form-control datepicker-custom text-center fw-bold" id="actualDeliveryDateInput" value="" placeholder="-">
+                        </div>
+
                         <!-- M.Bill / Remarks -->
-                        <div class="col-sm-2">
-                            <label class="form-label fw-bold text-secondary mb-1" style="font-size:0.7rem;">M.Bill / Remarks</label>
-                            <input type="text" class="form-control" name="reference" id="remarks" placeholder="Enter remarks">
+                        <div class="col-sm-3 col-md-2">
+                            <label class="form-label fw-bold text-secondary mb-1" style="font-size:0.7rem;"><i class="fas fa-comment-dots text-secondary me-1"></i>Remarks</label>
+                            <input type="text" class="form-control" name="reference" id="remarks" placeholder="e.g. Self Collected">
                         </div>
+
                         <!-- Customer & Walk-in Toggle -->
-                        <div class="col-sm-4">
+                        <div class="col-sm-4 col-md-3">
                             <div class="d-flex justify-content-between align-items-center mb-1">
-                                <label class="form-label fw-bold text-secondary mb-0" style="font-size:0.7rem;">Customer</label>
+                                <label class="form-label fw-bold text-secondary mb-0" style="font-size:0.7rem;"><i class="fas fa-user text-primary me-1"></i>Customer</label>
                                 <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 rounded-pill fw-bold" data-bs-toggle="modal" data-bs-target="#addCustomerModal" style="font-size: 0.65rem;">
                                     <i class="fas fa-user-plus me-1"></i>New
                                 </button>
                             </div>
                             <div id="customerInputWrapper">
-                                <input type="text" class="form-control fw-bold" name="walkin_name" id="walkinNameInput" value="Walk-in Customer" placeholder="Enter Walk-in Name...">
+                                <input type="text" class="form-control fw-bold" name="walkin_name" id="walkinNameInput" value="Walk-in Customer" placeholder="Enter Customer Name...">
                                 <select class="form-select d-none" id="customerSelect" name="customer" style="width:100%">
                                     <option value=""></option>
                                 </select>
                             </div>
                         </div>
-                        <!-- Walkin & Save Button -->
-                        <div class="col-sm-1 d-flex flex-column align-items-end justify-content-end">
+
+                        <!-- Walk-in switch & Quick Save -->
+                        <div class="col-sm-2 col-md-1 d-flex flex-column align-items-end justify-content-end">
                             <div class="d-flex align-items-center gap-1 mb-1">
                                 <div class="form-check form-switch mb-0 d-flex align-items-center p-0">
                                     <input class="form-check-input ms-0" type="checkbox" role="switch" id="walkinToggle" name="is_walkin" value="1" checked style="cursor: pointer;">
                                     <label class="form-check-label fw-bold ms-1" for="walkinToggle" style="color: #2563eb; font-size: 0.72rem; cursor: pointer;">Walk-in</label>
                                 </div>
                             </div>
-                            <button type="button" class="btn btn-sm btn-success w-100 fw-bold py-1 shadow-sm" id="btnHeaderSaveSale" style="font-size: 0.75rem;"><i class="fas fa-check me-1"></i>Save Sale</button>
+                            <button type="button" class="btn btn-sm btn-success w-100 fw-bold py-1 shadow-sm" id="btnHeaderSaveSale" style="font-size: 0.75rem;"><i class="fas fa-check me-1"></i>Save</button>
                         </div>
                     </div>
                 </div>
@@ -644,16 +667,16 @@
                                     <thead>
                                         <tr>
                                             <th style="width:25px;" class="text-center">#</th>
-                                            <th class="col-product" style="min-width: 140px;">PRODUCT</th>
+                                            <th class="col-product" style="min-width: 160px;">PRODUCT / SPECIFICATIONS</th>
+                                            <th class="col-model" style="width: 95px;">MODEL</th>
+                                            <th class="col-serial" style="width: 85px;">SERIAL NO</th>
                                             <th class="col-stock" style="width: 55px;">STOCK</th>
-                                            <th class="col-qty" style="width: 95px;">QTY</th>
-                                            <th class="col-size" style="width: 55px;">SIZE</th>
-                                            <th class="col-color" style="width: 60px;">COLOR</th>
-                                            <th class="col-pieces" style="width: 55px;">PCS</th>
-                                            <th class="col-price-p" style="width: 75px;">PRICE</th>
+                                            <th class="col-qty" style="width: 85px;">QTY</th>
+                                            <th class="col-pieces" style="width: 50px;">UNIT</th>
+                                            <th class="col-price-p" style="width: 85px;">PRICE</th>
                                             <th class="col-disc" style="width: 75px;">DISCOUNT</th>
-                                            <th class="col-amount" style="width: 85px;">AMOUNT</th>
-                                            <th class="col-action" style="width: 32px;">×</th>
+                                            <th class="col-amount" style="width: 90px;">AMOUNT</th>
+                                            <th class="col-action" style="width: 30px;">×</th>
                                         </tr>
                                     </thead>
                                     <tbody id="salesTableBody">
@@ -661,7 +684,7 @@
                                             <!-- # ROW INDEX -->
                                             <td class="text-center fw-bold text-muted row-index" style="vertical-align:middle; font-size:0.75rem;">1</td>
 
-                                            <!-- PRODUCT -->
+                                            <!-- PRODUCT / SPECIFICATIONS -->
                                             <td class="col-product">
                                                 <select class="form-select product" style="width:100%">
                                                     <option value=""></option>
@@ -674,6 +697,16 @@
                                                 <input type="hidden" class="size-mode-text">
                                             </td>
 
+                                            <!-- MODEL -->
+                                            <td class="col-model">
+                                                <input type="text" class="form-control model-input text-center fw-semibold" name="model[]" placeholder="e.g. LTZ-35KW">
+                                            </td>
+
+                                            <!-- PRODUCT SERIAL NO -->
+                                            <td class="col-serial">
+                                                <input type="text" class="form-control serial-no-input text-center font-monospace" name="serial_no[]" placeholder="e.g. 10001">
+                                            </td>
+
                                             <!-- STOCK -->
                                             <td class="col-stock">
                                                 <input type="text" class="form-control stock text-center input-readonly" readonly tabindex="-1">
@@ -681,10 +714,10 @@
                                                 <input type="hidden" class="variant-stock-value">
                                             </td>
 
-                                            <!-- Qty cell with Sub-Unit toggle on Right and Left-Aligned Cursor -->
-                                            <td style="width:95px;min-width:95px;" class="col-qty-wrapper">
+                                            <!-- QTY -->
+                                            <td style="width:85px;min-width:85px;" class="col-qty-wrapper">
                                                 <div class="d-flex align-items-center gap-1">
-                                                    <input type="number" step="any" class="form-control carton-qty text-start" name="carton_qty[]" placeholder="0" min="0" value="" style="flex: 1; min-width: 0; height: 26px; font-size: 0.85rem; padding-left: 6px;">
+                                                    <input type="number" step="any" class="form-control carton-qty text-center fw-bold" name="carton_qty[]" placeholder="1" min="0" value="1" style="flex: 1; min-width: 0; height: 26px; font-size: 0.85rem; padding: 1px 4px;">
                                                     <button type="button" class="btn btn-sm btn-outline-primary qty-unit-toggle px-1 py-0 d-none" 
                                                             data-unit-mode="main" title="Toggle Unit (Ctn ↔ Pcs / Kg ↔ Gm / Ft ↔ In)" style="font-size: 0.65rem; height: 26px; min-width: 28px; font-weight: 700; border-radius: 4px; flex-shrink: 0;">
                                                         Kg
@@ -693,33 +726,23 @@
                                                 <input type="hidden" class="hidden-sub-unit-mode" name="sub_unit_mode[]" value="main">
                                             </td>
 
-                                            <!-- Loose Pieces -->
+                                            <!-- Loose Pieces (hidden) -->
                                             <td style="width:70px;min-width:70px;" class="d-none">
                                                 <input type="number" class="form-control loose-pcs-input text-end" name="loose_qty[]" placeholder="" min="0" value="">
                                             </td>
 
-                                            <!-- Size (Display - readonly) -->
-                                            <td class="col-size">
-                                                <input type="text" class="form-control size-display text-center input-readonly" readonly tabindex="-1" placeholder="-">
+                                            <!-- UNIT (Display - readonly) -->
+                                            <td class="col-pieces">
+                                                <input type="text" class="form-control unit-display text-center input-readonly" readonly tabindex="-1" placeholder="Pcs" value="Pcs">
+                                                <input type="hidden" class="total-pieces" name="total_pieces[]" value="1">
+                                                <input type="hidden" class="sales-qty" name="qty[]" value="1">
                                                 <input type="hidden" class="pack-qty" name="pack_qty[]" value="1">
                                             </td>
-
-                                            <!-- Color (Display - readonly) -->
-                                            <td class="col-color">
-                                                <input type="text" class="form-control color-display text-center input-readonly" readonly tabindex="-1" placeholder="-">
-                                            </td>
-
-                                            <!-- Total Pieces (Calculated) -->
-                                            <td class="col-pieces">
-                                                <input type="text" class="form-control total-pieces text-end input-readonly" name="total_pieces[]" readonly placeholder="0" tabindex="-1">
-                                                <!-- Hidden qty field for backend compatibility -->
-                                                <input type="hidden" class="sales-qty" name="qty[]" value="0">
-                                            </td>
                                          
-                                            <!-- Price/Piece (EDITABLE) -->
+                                            <!-- PRICE (EDITABLE) -->
                                             <td class="col-price-p">
                                                 <div class="d-flex align-items-center gap-1">
-                                                    <input type="text" class="form-control visible-price text-end" name="visible_price[]" placeholder="0" style="flex: 1; min-width: 0;">
+                                                    <input type="text" class="form-control visible-price text-end fw-bold" name="visible_price[]" placeholder="0" style="flex: 1; min-width: 0;">
                                                     <button type="button" class="btn btn-sm btn-outline-primary price-mode-row-toggle px-1 py-0" 
                                                             data-mode="retail" title="Retail Mode" style="font-size: 0.65rem; height: 24px; min-width: 20px; font-weight: bold;">
                                                         R
@@ -731,7 +754,7 @@
                                                 <input type="hidden" class="weight-per-piece">
                                             </td>
 
-                                            <!-- SINGLE DISCOUNT COLUMN -->
+                                            <!-- DISCOUNT -->
                                             <td class="col-disc">
                                                 <div class="discount-wrapper">
                                                     <input type="number"
@@ -746,9 +769,9 @@
                                                 <input type="hidden" class="discount-amount" value="0">
                                             </td>
 
-                                            <!-- NET AMOUNT -->
+                                            <!-- AMOUNT -->
                                             <td class="col-amount">
-                                                <input type="text" class="form-control sales-amount text-end input-readonly" name="total[]" value="0" readonly tabindex="-1">
+                                                <input type="text" class="form-control sales-amount text-end input-readonly fw-bold text-dark" name="total[]" value="0" readonly tabindex="-1">
                                                 <input type="hidden" class="gross-amount">
                                             </td>
 
@@ -760,7 +783,7 @@
                                     </tbody>
                                     <tfoot>
                                         <tr>
-                                            <td colspan="9" class="text-end fw-bold text-uppercase text-secondary" style="font-size:0.78rem;">Grid Total:</td>
+                                            <td colspan="9" class="text-end fw-bold text-uppercase text-secondary" style="font-size:0.78rem;">Invoice Total:</td>
                                             <td class="text-end fw-bold text-success fs-6"><span id="totalAmount">0.00</span></td>
                                             <td></td>
                                         </tr>
@@ -773,7 +796,7 @@
                     <!-- RIGHT PANEL: Summary & Payment Methods (col-lg-4 col-xl-3) -->
                     <div class="col-lg-4 col-xl-3">
                         <div class="d-flex flex-column h-100 gap-2">
-                            <!-- Executive Summary Card -->
+                            <!-- Executive Summary Card (Excel Orders Sheet Flow) -->
                             <div class="card-panel p-3 bg-white" style="border-radius:6px;">
                                 <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom">
                                     <span class="fw-bold text-dark" style="font-size:0.85rem;"><i class="fas fa-calculator text-primary me-1"></i>Summary</span>
@@ -781,11 +804,11 @@
                                 </div>
                                 
                                 <div class="summary-row">
-                                    <span class="text-muted">Total Amount</span>
+                                    <span class="text-muted fw-semibold">Invoice Total</span>
                                     <span class="fw-bold text-dark" id="tGross">0.00</span>
                                 </div>
                                 <div class="summary-row">
-                                    <span class="text-muted">Line Discount</span>
+                                    <span class="text-muted fw-semibold">Discount</span>
                                     <span class="fw-bold text-danger" id="tLineDisc">0.00</span>
                                 </div>
                                 <div class="summary-row">
@@ -793,19 +816,19 @@
                                     <span class="summary-val-net" id="tSub">0.00</span>
                                 </div>
                                 <div class="summary-row">
-                                    <span class="text-muted">Total Paid</span>
+                                    <span class="text-muted fw-semibold">Advance Payment</span>
                                     <span class="fw-bold text-success" id="receiptsTotalBadge">0.00</span>
                                 </div>
                                 <div class="summary-row pt-1">
-                                    <span class="fw-bold text-danger">Change</span>
-                                    <span class="summary-val-change" id="walkinChange">-0.00</span>
+                                    <span class="fw-bold text-dark">Balance Amount</span>
+                                    <span class="summary-val-change" id="walkinChange">0.00</span>
                                 </div>
                             </div>
 
                             <!-- Payment Methods Card -->
                             <div class="card-panel p-3 bg-white flex-grow-1 d-flex flex-column" style="border-radius:6px;">
                                 <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom">
-                                    <span class="fw-bold text-dark" style="font-size:0.82rem;"><i class="fas fa-wallet text-success me-1"></i>Payment Methods</span>
+                                    <span class="fw-bold text-dark" style="font-size:0.82rem;"><i class="fas fa-wallet text-success me-1"></i>Advance / Payment</span>
                                     <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 fw-bold" id="btnAddRV" style="font-size:0.7rem;"><i class="fas fa-plus me-1"></i>Add Account</button>
                                 </div>
 
@@ -831,26 +854,31 @@
                 <!-- BOTTOM SUMMARY STRIP -->
                 <div class="bottom-summary-strip">
                     <div class="d-flex align-items-center gap-2">
-                        <span class="text-muted fw-semibold" style="font-size:0.8rem;">Net Total</span>
-                        <span class="fs-5 fw-bold text-primary" id="walkinNetTotal">0.00</span>
+                        <span class="text-muted fw-semibold" style="font-size:0.8rem;">Invoice Total:</span>
+                        <span class="fs-6 fw-bold text-dark" id="bottomInvoiceTotal">0.00</span>
                     </div>
 
                     <div class="d-flex align-items-center gap-2">
-                        <span class="text-muted fw-semibold" style="font-size:0.8rem;">Discount (Rs.)</span>
+                        <span class="text-muted fw-semibold" style="font-size:0.8rem;">Discount:</span>
                         <div class="input-group input-group-sm" style="width: 130px;">
                             <input type="number" class="form-control text-end fw-bold text-danger" id="walkinDiscountRs" value="0" placeholder="0">
-                            <span class="input-group-text bg-light text-muted">%</span>
+                            <span class="input-group-text bg-light text-muted">Rs</span>
                         </div>
                     </div>
 
                     <div class="d-flex align-items-center gap-2">
-                        <span class="text-muted fw-semibold" style="font-size:0.8rem;">Payments</span>
+                        <span class="text-muted fw-semibold" style="font-size:0.8rem;">Net Total:</span>
+                        <span class="fs-5 fw-bold text-primary" id="walkinNetTotal">0.00</span>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-muted fw-semibold" style="font-size:0.8rem;">Advance Paid:</span>
                         <span class="fs-6 fw-bold text-success" id="bottomPaymentsTotal">0.00</span>
                     </div>
 
                     <div class="d-flex align-items-center gap-2">
-                        <span class="text-muted fw-semibold" style="font-size:0.8rem;">Change</span>
-                        <span class="fs-6 fw-bold text-danger" id="bottomChangeVal">-0.00</span>
+                        <span class="text-muted fw-semibold" style="font-size:0.8rem;">Balance:</span>
+                        <span class="fs-6 fw-bold text-danger" id="bottomChangeVal">0.00</span>
                     </div>
 
                     <button type="button" class="btn btn-save-complete" id="btnSaveAndComplete2">

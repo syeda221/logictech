@@ -134,7 +134,7 @@
     <!-- # ROW INDEX -->
     <td class="text-center fw-bold text-muted row-index" style="vertical-align:middle; font-size:0.75rem;">1</td>
 
-    <!-- PRODUCT -->
+    <!-- PRODUCT / SPECIFICATIONS -->
     <td class="col-product">
       <select class="form-select product" style="width:100%">
         <option value=""></option>
@@ -147,6 +147,16 @@
       <input type="hidden" class="size-mode-text">
     </td>
 
+    <!-- MODEL -->
+    <td class="col-model">
+      <input type="text" class="form-control model-input text-center fw-semibold" name="model[]" placeholder="e.g. LTZ-35KW">
+    </td>
+
+    <!-- PRODUCT SERIAL NO -->
+    <td class="col-serial">
+      <input type="text" class="form-control serial-no-input text-center font-monospace" name="serial_no[]" placeholder="e.g. 10001">
+    </td>
+
     <!-- STOCK -->
     <td class="col-stock">
       <input type="text" class="form-control stock text-center input-readonly" readonly tabindex="-1">
@@ -154,10 +164,10 @@
       <input type="hidden" class="variant-stock-value">
     </td>
 
-    <!-- Qty cell with Sub-Unit toggle on Right and Left-Aligned Cursor -->
-    <td style="width:95px;min-width:95px;" class="col-qty-wrapper">
+    <!-- QTY -->
+    <td style="width:85px;min-width:85px;" class="col-qty-wrapper">
       <div class="d-flex align-items-center gap-1">
-        <input type="number" step="any" class="form-control carton-qty text-start" name="carton_qty[]" placeholder="0" min="0" value="" style="flex: 1; min-width: 0; height: 26px; font-size: 0.85rem; padding-left: 6px;">
+        <input type="number" step="any" class="form-control carton-qty text-center fw-bold" name="carton_qty[]" placeholder="1" min="0" value="1" style="flex: 1; min-width: 0; height: 26px; font-size: 0.85rem; padding: 1px 4px;">
         <button type="button" class="btn btn-sm btn-outline-primary qty-unit-toggle px-1 py-0 d-none" 
                 data-unit-mode="main" title="Toggle Unit (Ctn ↔ Pcs / Kg ↔ Gm / Ft ↔ In)" style="font-size: 0.65rem; height: 26px; min-width: 28px; font-weight: 700; border-radius: 4px; flex-shrink: 0;">
           Kg
@@ -166,33 +176,23 @@
       <input type="hidden" class="hidden-sub-unit-mode" name="sub_unit_mode[]" value="main">
     </td>
 
-    <!-- Loose Pieces -->
+    <!-- Loose Pieces (hidden) -->
     <td style="width:70px;min-width:70px;" class="d-none">
       <input type="number" class="form-control loose-pcs-input text-end" name="loose_qty[]" placeholder="" min="0" value="">
     </td>
 
-    <!-- Size (Display - readonly) -->
-    <td class="col-size">
-       <input type="text" class="form-control size-display text-center input-readonly" readonly tabindex="-1" placeholder="-">
+    <!-- UNIT (Display - readonly) -->
+    <td class="col-pieces">
+       <input type="text" class="form-control unit-display text-center input-readonly" readonly tabindex="-1" placeholder="Pcs" value="Pcs">
+       <input type="hidden" class="total-pieces" name="total_pieces[]" value="1">
+       <input type="hidden" class="sales-qty" name="qty[]" value="1">
        <input type="hidden" class="pack-qty" name="pack_qty[]" value="1">
     </td>
-
-    <!-- Color (Display - readonly) -->
-    <td class="col-color">
-      <input type="text" class="form-control color-display text-center input-readonly" readonly tabindex="-1" placeholder="-">
-    </td>
-
-    <!-- Total Pieces (Calculated) -->
-    <td class="col-pieces">
-      <input type="text" class="form-control total-pieces text-end input-readonly" name="total_pieces[]" readonly placeholder="0" tabindex="-1">
-      <!-- Hidden qty field for backend compatibility -->
-      <input type="hidden" class="sales-qty" name="qty[]" value="0">
-    </td>
  
-    <!-- Price/Piece (EDITABLE) -->
+    <!-- PRICE (EDITABLE) -->
     <td class="col-price-p">
       <div class="d-flex align-items-center gap-1">
-        <input type="text" class="form-control visible-price text-end" name="visible_price[]" placeholder="0" style="flex: 1; min-width: 0;">
+        <input type="text" class="form-control visible-price text-end fw-bold" name="visible_price[]" placeholder="0" style="flex: 1; min-width: 0;">
         <button type="button" class="btn btn-sm ${btnClass} price-mode-row-toggle px-1 py-0" 
                 data-mode="${lastSelectedPriceMode}" title="${btnTitle}" style="font-size: 0.65rem; height: 24px; min-width: 20px; font-weight: bold;">
           ${btnText}
@@ -204,7 +204,7 @@
       <input type="hidden" class="weight-per-piece">
     </td>
 
-    <!-- SINGLE DISCOUNT COLUMN -->
+    <!-- DISCOUNT -->
     <td class="col-disc">
       <div class="discount-wrapper">
         <input type="number"
@@ -219,9 +219,9 @@
       <input type="hidden" class="discount-amount" value="0">
     </td>
 
-    <!-- NET AMOUNT -->
+    <!-- AMOUNT -->
     <td class="col-amount">
-      <input type="text" class="form-control sales-amount text-end input-readonly" name="total[]" value="0" readonly tabindex="-1">
+      <input type="text" class="form-control sales-amount text-end input-readonly fw-bold text-dark" name="total[]" value="0" readonly tabindex="-1">
       <input type="hidden" class="gross-amount">
     </td>
 
@@ -247,27 +247,41 @@
             // Fill Item Code
             $row.find('.item-code-display').val(pRes.item_code || '');
 
+            // Auto-fill Model / Specs if empty
+            if (!$row.find('.model-input').val()) {
+                $row.find('.model-input').val(pRes.model || pRes.brand || '');
+            }
+
+            if (pRes.unit_name) {
+                $row.find('.unit-display').val(pRes.unit_name);
+            } else if (pRes.size_mode === 'by_kg') {
+                $row.find('.unit-display').val('Kg');
+            } else if (pRes.size_mode === 'by_meter') {
+                $row.find('.unit-display').val('Mtr');
+            } else {
+                $row.find('.unit-display').val('Pcs');
+            }
+
             // Populate Fields
-            // Store retail price (box price) in hidden field and visible if needed
-             $row.find('.retail-price').val(pRes.retail_price || 0);
-             $row.find('.wholesale-price').val(pRes.wholesale_price || 0);
-             $row.find('.weight-per-piece').val(pRes.weight_per_piece || 0);
+            $row.find('.retail-price').val(pRes.retail_price || 0);
+            $row.find('.wholesale-price').val(pRes.wholesale_price || 0);
+            $row.find('.weight-per-piece').val(pRes.weight_per_piece || 0);
              
-             let rowMode = $row.find('.price-mode-row-toggle').attr('data-mode') || 'retail';
-             let wsPrice = parseFloat(pRes.wholesale_price) || 0;
-             let rate = (rowMode === 'wholesale' && wsPrice > 0) ? wsPrice : (pRes.retail_price || 0);
+            let rowMode = $row.find('.price-mode-row-toggle').attr('data-mode') || 'retail';
+            let wsPrice = parseFloat(pRes.wholesale_price) || 0;
+            let rate = (rowMode === 'wholesale' && wsPrice > 0) ? wsPrice : (pRes.retail_price || 0);
 
-             // Visible price logic: usually per piece, but ensure consistent display
-             if (pRes.size_mode == "by_cartons") {
-                 $row.find('.visible-price').val(pRes.sale_price_per_piece || rate || 0);
-             } else if (pRes.size_mode == "by_pieces" || pRes.size_mode == "by_kg" || pRes.size_mode == "by_gm" || pRes.size_mode == "by_meter") {
-                 $row.find('.visible-price').val(pRes.sale_price_per_piece || rate || 0);
-             } else {
-                 $row.find('.visible-price').val(pRes.price_per_m2 || rate || 0);
-             }
+            // Visible price logic: usually per piece, but ensure consistent display
+            if (pRes.size_mode == "by_cartons") {
+                $row.find('.visible-price').val(pRes.sale_price_per_piece || rate || 0);
+            } else if (pRes.size_mode == "by_pieces" || pRes.size_mode == "by_kg" || pRes.size_mode == "by_gm" || pRes.size_mode == "by_meter") {
+                $row.find('.visible-price').val(pRes.sale_price_per_piece || rate || 0);
+            } else {
+                $row.find('.visible-price').val(pRes.price_per_m2 || rate || 0);
+            }
 
-             $row.find('.pack-qty').val(pRes.pieces_per_box || 1);
-             $row.find('.price-per-piece').val($row.find('.visible-price').val() || 0);
+            $row.find('.pack-qty').val(pRes.pieces_per_box || 1);
+            $row.find('.price-per-piece').val($row.find('.visible-price').val() || 0);
 
             $row.find('.size-h').val(pRes.height || '-');
             $row.find('.size-w').val(pRes.width || '-');
@@ -474,20 +488,22 @@
             orderDisc = (tNet * orderPct) / 100;
         }
 
+        const totalDiscount = tLineDisc + orderDisc;
+        const currentInvoiceTotal = Math.max(0, tGross - totalDiscount);
         const prev = toNum($('#previousBalance').val());
         const receipts = toNum($('#receiptsTotal').text());
-        const payable = Math.max(0, tNet - orderDisc + prev - receipts);
-        const currentInvoiceTotal = Math.max(0, tNet - orderDisc);
+        const payable = Math.max(0, currentInvoiceTotal + prev - receipts);
 
         $('#tQty').text(tQty.toFixed(0));
         $('#tGross').text(tGross.toFixed(2));
-        $('#tLineDisc').text(tLineDisc.toFixed(2));
-        $('#tSub').text(tNet.toFixed(2));
+        $('#bottomInvoiceTotal').text(tGross.toFixed(2));
+        $('#tLineDisc').text(totalDiscount.toFixed(2));
+        $('#tSub').text(currentInvoiceTotal.toFixed(2));
         $('#tOrderDisc').text(orderDisc.toFixed(2));
         $('#tPrev').text(prev.toFixed(2));
         $('#tPayable').text(payable.toFixed(2));
-        $('#totalAmount').text(tNet.toFixed(2));
-        $('#walkinNetTotal').text(tNet.toFixed(2));
+        $('#totalAmount').text(currentInvoiceTotal.toFixed(2));
+        $('#walkinNetTotal').text(currentInvoiceTotal.toFixed(2));
         $('#bottomPaymentsTotal').text(receipts.toFixed(2));
         $('#receiptsTotalBadge').text(receipts.toFixed(2));
         $('#itemsRowCount').text($('#salesTableBody tr').length);
@@ -495,21 +511,34 @@
         // Display current bill total after all discounts
         $('#tCurrentBill').text(currentInvoiceTotal.toFixed(2));
 
-        const walkinPaid = receipts;
-        const change = walkinPaid - currentInvoiceTotal;
-        const changeStr = change.toFixed(2);
-        $('#walkinChange').text(changeStr);
-        $('#bottomChangeVal').text(changeStr);
-        $('#backendChange').val(change > 0 ? change.toFixed(2) : 0);
-        if (change >= 0) {
-            $('#walkinChange, #bottomChangeVal').removeClass('text-warning text-danger').addClass('text-success');
+        // Balance Amount Calculation (Excel Orders Sheet Flow: Invoice Total - Discount - Advance Payment)
+        const balanceAmount = currentInvoiceTotal - receipts;
+        let balanceDisplay = '';
+        if (balanceAmount > 0) {
+            balanceDisplay = balanceAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            $('#walkinChange, #bottomChangeVal')
+                .removeClass('text-success text-warning bg-success text-white')
+                .addClass('text-danger')
+                .text(balanceDisplay);
+        } else if (balanceAmount === 0) {
+            balanceDisplay = '0.00';
+            $('#walkinChange, #bottomChangeVal')
+                .removeClass('text-danger text-warning')
+                .addClass('text-success')
+                .text(balanceDisplay);
         } else {
-            $('#walkinChange, #bottomChangeVal').removeClass('text-success text-warning').addClass('text-danger');
+            const change = Math.abs(balanceAmount);
+            balanceDisplay = '-' + change.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            $('#walkinChange, #bottomChangeVal')
+                .removeClass('text-danger text-warning')
+                .addClass('text-success')
+                .text(balanceDisplay);
         }
 
+        $('#backendChange').val(balanceAmount <= 0 ? Math.abs(balanceAmount).toFixed(2) : 0);
         $('#subTotal1').val(tGross.toFixed(2));
-        $('#subTotal2').val(tNet.toFixed(2));
-        $('#discountAmount').val(orderDisc.toFixed(2));
+        $('#subTotal2').val(currentInvoiceTotal.toFixed(2));
+        $('#discountAmount').val(totalDiscount.toFixed(2));
         $('#totalBalance').val(currentInvoiceTotal.toFixed(2));
         $('input[name="cash"]').val(receipts.toFixed(2));
 

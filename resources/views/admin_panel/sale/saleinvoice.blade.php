@@ -436,6 +436,12 @@
                     <div class="info-box-header">Reference</div>
                     <div><span class="info-label">Inv #:</span> <strong>{{ $sale->invoice_no }}</strong></div>
                     <div><span class="info-label">Date:</span> {{ $sale->created_at ? $sale->created_at->format('d/m/Y') : date('d/m/Y') }}</div>
+                    @if($sale->estimated_delivery_date)
+                    <div><span class="info-label">Est. Deliv:</span> <strong>{{ \Carbon\Carbon::parse($sale->estimated_delivery_date)->format('d/m/Y') }}</strong></div>
+                    @endif
+                    @if($sale->delivery_date)
+                    <div><span class="info-label">Delivered:</span> <strong>{{ \Carbon\Carbon::parse($sale->delivery_date)->format('d/m/Y') }}</strong></div>
+                    @endif
                     @if($sale->reference)
                     <div style="margin-top:4px; padding-top:4px; border-top:1px dashed #ddd;">
                         <span class="info-label">Remarks:</span>
@@ -508,6 +514,12 @@
                                 @if (!empty($item['item_code']))
                                     <span class="text-muted fw-normal ms-1"
                                         style="font-size: 11px;">({{ $item['item_code'] }})</span>
+                                @endif
+                                @if (!empty($item['model']))
+                                    <span class="badge bg-primary-subtle text-primary border border-primary ms-1" style="font-size: 9.5px; padding: 1px 4px;">Mod: {{ $item['model'] }}</span>
+                                @endif
+                                @if (!empty($item['serial_no']))
+                                    <span class="badge bg-light text-dark border ms-1 font-monospace" style="font-size: 9.5px; padding: 1px 4px;">S/N: {{ $item['serial_no'] }}</span>
                                 @endif
                             </div>
 

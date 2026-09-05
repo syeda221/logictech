@@ -20,6 +20,14 @@
             } else {
                 $statusBadge = '<span class="badge badge-success border border-success">Posted</span>';
             }
+        } elseif ($sale->sale_status === 'pending') {
+            $statusBadge = '<span class="badge text-white" style="background-color: #ef4444;"><i class="fas fa-hourglass-half me-1"></i>Pending</span>';
+        } elseif ($sale->sale_status === 'ready') {
+            $statusBadge = '<span class="badge text-white" style="background-color: #2563eb;"><i class="fas fa-box me-1"></i>Ready</span>';
+        } elseif ($sale->sale_status === 'delivered') {
+            $statusBadge = '<span class="badge text-white" style="background-color: #10b981;"><i class="fas fa-truck me-1"></i>Delivered</span>';
+        } elseif ($sale->sale_status === 'cancelled') {
+            $statusBadge = '<span class="badge text-dark" style="background-color: #f59e0b;"><i class="fas fa-ban me-1"></i>Cancelled</span>';
         } elseif ($sale->sale_status === 'booked') {
             $statusBadge = '<span class="badge badge-warning text-dark border border-warning"><i class="fas fa-bookmark me-1"></i>Booked</span>';
         } elseif ($sale->sale_status === 'returned') {
