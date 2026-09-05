@@ -704,13 +704,13 @@
                                     </tbody>
                                     <tfoot>
                                         <tr id="gridAlertRow" class="d-none">
-                                            <td colspan="11" class="p-1 border-0" style="background-color: #fef2f2 !important;">
-                                                <div class="d-flex align-items-center justify-content-between px-2 py-1 rounded border border-danger text-danger fw-bold" style="background-color: #fee2e2; font-size: 0.78rem;">
+                                            <td colspan="11" class="p-1 border-0" style="background-color: transparent !important;">
+                                                <div id="gridAlertBox" class="alert alert-warning d-flex align-items-center justify-content-between px-2 py-1 mb-0 rounded border border-warning shadow-sm" style="font-size: 0.78rem; font-weight: 600; color: #856404; background-color: #fff3cd;">
                                                     <div class="d-flex align-items-center gap-1">
-                                                        <i class="fas fa-exclamation-triangle text-danger me-1"></i>
-                                                        <span id="gridAlertText">Warning: Discount limit exceeded!</span>
+                                                        <i class="fas fa-exclamation-triangle text-warning me-1 alert-icon" style="font-size: 0.85rem;"></i>
+                                                        <span id="gridAlertText">Discount 100% se zyada nahi ho sakta!</span>
                                                     </div>
-                                                    <button type="button" class="btn-close py-0" style="font-size: 0.65rem;" onclick="$('#gridAlertRow').addClass('d-none');"></button>
+                                                    <button type="button" class="btn-close py-0" style="font-size: 0.65rem;" onclick="$('#gridAlertRow').addClass('d-none');" aria-label="Close"></button>
                                                 </div>
                                             </td>
                                         </tr>
