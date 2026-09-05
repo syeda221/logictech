@@ -760,11 +760,14 @@
                                                     <input type="number"
                                                            class="form-control discount-value text-end"
                                                            name="item_disc[]"
-                                                           placeholder="0">
+                                                           placeholder="0"
+                                                           min="0"
+                                                           max="100"
+                                                           title="Max 100% in % mode, or Total Amount in PKR mode">
                                                     <input type="hidden" class="discount-type-hidden" name="discount_type[]" value="percent">
                                                     <button type="button"
                                                             class="btn btn-outline-secondary discount-toggle"
-                                                            data-type="percent" tabindex="-1">%</button>
+                                                            data-type="percent" tabindex="-1" title="Toggle % / PKR">%</button>
                                                 </div>
                                                 <input type="hidden" class="discount-amount" value="0">
                                             </td>

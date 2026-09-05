@@ -1273,16 +1273,16 @@ class SaleController extends Controller
                     $lineTotal = $totalPieces * $dbPrice;
                 }
 
-                // Apply Discount correctly
+                // Apply Discount correctly with restrictions (max 100% in %, max line total in PKR)
                 if ($discType === 'pkr') {
-                    // User entered a fixed PKR amount
-                    $calcDiscountAmount  = $discount;
-                    // Back-calculate the equivalent percent for storage/reporting (avoid division by zero)
-                    $calcDiscountPercent = $lineTotal > 0 ? round(($discount / $lineTotal) * 100, 4) : 0;
+                    // User entered a fixed PKR amount -> cannot exceed line gross amount
+                    $calcDiscountAmount  = min($lineTotal, max(0, $discount));
+                    // Back-calculate the equivalent percent for storage/reporting
+                    $calcDiscountPercent = $lineTotal > 0 ? round(($calcDiscountAmount / $lineTotal) * 100, 4) : 0;
                 } else {
-                    // User entered a percentage
-                    $calcDiscountPercent = $discount;
-                    $calcDiscountAmount  = round($lineTotal * $discount / 100, 2);
+                    // User entered a percentage -> cannot exceed 100%
+                    $calcDiscountPercent = min(100, max(0, $discount));
+                    $calcDiscountAmount  = round($lineTotal * $calcDiscountPercent / 100, 2);
                 }
 
                 $lineTotal = max(0, $lineTotal - $calcDiscountAmount);
@@ -1331,10 +1331,10 @@ class SaleController extends Controller
                 $total_items += $totalPieces;
             }
 
-            // Update Sale Totals
+            // Update Sale Totals (Extra discount cannot exceed total bill)
             $sale->total_bill_amount = $total_bill;
-            $sale->total_extradiscount = $request->total_extra_cost ?? 0;
-            $sale->total_net = $total_bill - $sale->total_extradiscount;
+            $sale->total_extradiscount = min($total_bill, max(0, (float)($request->total_extra_cost ?? 0)));
+            $sale->total_net = max(0, $total_bill - $sale->total_extradiscount);
             $sale->total_items = $total_items;
 
             $sale->cash = $request->cash ?? 0;

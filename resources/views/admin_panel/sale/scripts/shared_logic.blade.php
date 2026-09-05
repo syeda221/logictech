@@ -210,11 +210,14 @@
         <input type="number"
                class="form-control discount-value text-end"
                name="item_disc[]"
-               placeholder="0">
+               placeholder="0"
+               min="0"
+               max="100"
+               title="Max 100% in % mode, or Total Amount in PKR mode">
         <input type="hidden" class="discount-type-hidden" name="discount_type[]" value="percent">
         <button type="button"
                 class="btn btn-outline-secondary discount-toggle"
-                data-type="percent" tabindex="-1">%</button>
+                data-type="percent" tabindex="-1" title="Toggle % / PKR">%</button>
       </div>
       <input type="hidden" class="discount-amount" value="0">
     </td>
@@ -433,16 +436,34 @@
         $row.find('.total-pieces').val(pcsDisplay);
         $row.find('.price-per-piece').val(unitPrice);
 
-        const discValue = toNum($row.find('.discount-value').val());
-        const discType = $row.find('.discount-toggle').data('type');
-        let dam = toNum($row.find('.discount-amount').val());
+        let discValue = toNum($row.find('.discount-value').val());
+        const discType = $row.find('.discount-toggle').data('type') || $row.find('.discount-type-hidden').val() || 'percent';
+        let dam = 0;
 
-        // Discount Calculation
+        // Restriction Check & Clamping:
+        if (discValue < 0) {
+            discValue = 0;
+            $row.find('.discount-value').val(0);
+        }
+
         if (discType === 'percent') {
+            if (discValue > 100) {
+                discValue = 100;
+                $row.find('.discount-value').val(100);
+                showAlert('warning', 'Discount 100% se zyada nahi ho sakta!');
+            }
             dam = discValue > 0 ? (gross * discValue) / 100 : 0;
         } else {
+            // PKR mode: cannot exceed line gross amount
+            if (gross > 0 && discValue > gross) {
+                discValue = gross;
+                $row.find('.discount-value').val(gross.toFixed(2));
+                showAlert('warning', 'Discount total amount (Rs. ' + gross.toFixed(2) + ') se zyada nahi ho sakta!');
+            }
             dam = discValue > 0 ? discValue : 0;
         }
+
+        dam = Math.min(gross, Math.max(0, dam));
         $row.find('.discount-amount').val(dam.toFixed(2));
 
         const netRow = Math.max(0, gross - dam);
@@ -1190,25 +1211,84 @@
         // ... existing bindings ...
 
         // Inputs -> Calc
-        $(document).on('input', '.carton-qty, .loose-pcs-input, .pack-qty, .discount-value, .visible-price',
-            function() {
-                // If user manually changes the visible price, also update the hidden price-per-piece
-                if ($(this).hasClass('visible-price')) {
-                    const $row = $(this).closest('tr');
-                    const newPrice = toNum($(this).val());
-                    $row.find('.price-per-piece').val(newPrice);
-                    $row.find('.retail-price').val(newPrice);
-                }
+        $(document).on('input change', '.carton-qty, .loose-pcs-input, .pack-qty, .visible-price', function() {
+            if ($(this).hasClass('visible-price')) {
+                const $row = $(this).closest('tr');
+                const newPrice = toNum($(this).val());
+                $row.find('.price-per-piece').val(newPrice);
+                $row.find('.retail-price').val(newPrice);
+            }
 
-                computeRow($(this).closest('tr'));
-                updateGrandTotals();
-                refreshPostedState();
-            });
+            computeRow($(this).closest('tr'));
+            updateGrandTotals();
+            refreshPostedState();
+        });
+
+        // Discount Input live validation & clamping
+        $(document).on('input change', '.discount-value', function() {
+            const $row = $(this).closest('tr');
+            const discType = $row.find('.discount-toggle').data('type') || $row.find('.discount-type-hidden').val() || 'percent';
+            let val = parseFloat($(this).val()) || 0;
+            const gross = toNum($row.find('.gross-amount').val());
+
+            if (val < 0) {
+                $(this).val(0);
+                val = 0;
+            }
+
+            if (discType === 'percent') {
+                if (val > 100) {
+                    $(this).val(100);
+                    showAlert('warning', 'Discount 100% se zyada nahi ho sakta!');
+                }
+            } else {
+                if (gross > 0 && val > gross) {
+                    $(this).val(gross.toFixed(2));
+                    showAlert('warning', 'Discount total amount (Rs. ' + gross.toFixed(2) + ') se zyada nahi ho sakta!');
+                }
+            }
+
+            computeRow($row);
+            updateGrandTotals();
+            refreshPostedState();
+        });
 
         $(document).on('input', '.discount-amount', function() {
             computeRow($(this).closest('tr'), true);
             updateGrandTotals();
             refreshPostedState();
+        });
+
+        // Order Level Discount Restrictions
+        $(document).on('input change', '#walkinDiscountRs', function() {
+            let val = toNum($(this).val());
+            let tGross = toNum($('#bottomInvoiceTotal').text()) || toNum($('#tGross').text()) || 0;
+            
+            // Calculate total net before order discount
+            let totalLineNet = 0;
+            $('#salesTableBody tr').each(function() {
+                totalLineNet += toNum($(this).find('.sales-amount').val()) || 0;
+            });
+            const maxAllowed = totalLineNet > 0 ? totalLineNet : tGross;
+
+            if (val < 0) {
+                $(this).val(0);
+            } else if (maxAllowed > 0 && val > maxAllowed) {
+                $(this).val(maxAllowed.toFixed(2));
+                showAlert('warning', 'Discount total bill amount (Rs. ' + maxAllowed.toFixed(2) + ') se zyada nahi ho sakta!');
+            }
+            updateGrandTotals();
+        });
+
+        $(document).on('input change', '#discountPercent', function() {
+            let val = toNum($(this).val());
+            if (val < 0) {
+                $(this).val(0);
+            } else if (val > 100) {
+                $(this).val(100);
+                showAlert('warning', 'Additional discount 100% se zyada nahi ho sakta!');
+            }
+            updateGrandTotals();
         });
 
         // Delete Row
@@ -1288,11 +1368,30 @@
         // Discount Toggle: % <-> PKR
         $(document).on('click', '.discount-toggle', function() {
             const $btn = $(this);
-            const currentType = $btn.data('type');
+            const $row = $btn.closest('tr');
+            const currentType = $btn.data('type') || 'percent';
             const newType = currentType === 'percent' ? 'pkr' : 'percent';
             $btn.data('type', newType).text(newType === 'percent' ? '%' : 'PKR');
+            $btn.attr('title', newType === 'percent' ? 'Percentage Mode (Max: 100%)' : 'PKR Mode (Max: Total Amount)');
             // Sync hidden input so form submission carries correct type
             $btn.closest('.discount-wrapper').find('.discount-type-hidden').val(newType);
+
+            const $valInput = $row.find('.discount-value');
+            let curVal = toNum($valInput.val());
+            const gross = toNum($row.find('.gross-amount').val()) || 0;
+
+            if (newType === 'percent') {
+                $valInput.attr('max', '100').attr('title', 'Max: 100%');
+                if (curVal > 100) {
+                    $valInput.val(100);
+                }
+            } else {
+                $valInput.attr('max', gross > 0 ? gross : '').attr('title', gross > 0 ? 'Max: Rs. ' + gross.toFixed(2) : 'Max: Total Amount');
+                if (gross > 0 && curVal > gross) {
+                    $valInput.val(gross.toFixed(2));
+                }
+            }
+
             computeRow($btn.closest('tr'));
             updateGrandTotals();
         });
