@@ -810,9 +810,14 @@
 
                     <div class="d-flex align-items-center gap-2">
                         <span class="text-muted fw-semibold" style="font-size:0.8rem;">Discount:</span>
-                        <div class="input-group input-group-sm" style="width: 130px;">
+                        <span class="fs-6 fw-bold text-danger" id="bottomTotalDiscount">0.00</span>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-muted fw-semibold" style="font-size:0.8rem;">Extra Disc:</span>
+                        <div class="input-group input-group-sm" style="width: 120px;">
                             <input type="number" class="form-control text-end fw-bold text-danger" id="walkinDiscountRs" value="{{ isset($sale) && $sale->is_walkin ? $sale->total_extradiscount : '0' }}" placeholder="0">
-                            <span class="input-group-text bg-light text-muted">Rs</span>
+                            <span class="input-group-text bg-light text-muted px-1">Rs</span>
                         </div>
                     </div>
 

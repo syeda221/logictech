@@ -869,9 +869,14 @@
 
                     <div class="d-flex align-items-center gap-2">
                         <span class="text-muted fw-semibold" style="font-size:0.8rem;">Discount:</span>
-                        <div class="input-group input-group-sm" style="width: 130px;">
+                        <span class="fs-6 fw-bold text-danger" id="bottomTotalDiscount">0.00</span>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-muted fw-semibold" style="font-size:0.8rem;">Extra Disc:</span>
+                        <div class="input-group input-group-sm" style="width: 120px;">
                             <input type="number" class="form-control text-end fw-bold text-danger" id="walkinDiscountRs" value="0" placeholder="0">
-                            <span class="input-group-text bg-light text-muted">Rs</span>
+                            <span class="input-group-text bg-light text-muted px-1">Rs</span>
                         </div>
                     </div>
 
@@ -903,6 +908,25 @@
                     <button type="button" class="btn btn-outline-secondary btn-sm px-3 fw-bold" id="btnEstimate"><i class="fas fa-file-invoice me-1"></i>Estimate</button>
                     <button type="button" class="btn btn-outline-secondary btn-sm px-3 fw-bold" id="btnPrint2"><i class="fas fa-receipt me-1"></i>Thermal Print</button>
                     <button type="button" class="btn btn-outline-secondary btn-sm px-3 fw-bold" id="btnDcThermal"><i class="fas fa-truck me-1"></i>DC</button>
+                </div>
+
+                {{-- Hidden elements required for calculations and controllers --}}
+                <div class="d-none">
+                    <span id="tQty">0</span>
+                    <input type="number" name="discountPercent" id="discountPercent" value="0">
+                    <span id="tOrderDisc">0.00</span>
+                    <span id="tCurrentBill">0.00</span>
+                    <span id="tPrev">0.00</span>
+                    <span id="tPayable">0.00</span>
+                    <div id="receiptsTotal">0.00</div>
+                    <div id="walkinReceiptsContainer"></div>
+                    <input type="hidden" name="subTotal1" id="subTotal1" value="0">
+                    <input type="hidden" name="total_subtotal" id="subTotal2" value="0">
+                    <input type="hidden" name="total_extra_cost" id="discountAmount" value="0">
+                    <input type="hidden" name="total_net" id="totalBalance" value="0">
+                    <input type="hidden" name="cash" value="0">
+                    <input type="hidden" name="card" value="0">
+                    <input type="hidden" name="change" id="backendChange" value="0">
                 </div>
             </form>
         </div>
@@ -940,9 +964,6 @@
                     @endforeach
                 @endif
             </div>
-        </div>
-    </div>
-            </form>
         </div>
     </div>
 
