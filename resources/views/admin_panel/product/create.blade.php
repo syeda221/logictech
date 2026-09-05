@@ -594,13 +594,13 @@
                                                 <span class="text-muted fw-normal" style="font-size: 0.72rem; text-transform: none;">Choose whether this item is Raw Material or Finished Goods</span>
                                             </label>
                                             <div class="btn-group w-100 p-1 bg-light rounded-3 border" role="group" aria-label="Item Classification">
-                                                <input type="radio" class="btn-check" name="item_type" id="type_raw_material" value="raw_material" checked autocomplete="off">
+                                                <input type="radio" class="btn-check" name="item_type" id="type_raw_material" value="raw_material" {{ request('item_type') !== 'finish_goods' ? 'checked' : '' }} autocomplete="off">
                                                 <label class="btn btn-outline-warning rounded-2 py-2 fw-bold text-dark d-flex align-items-center justify-content-center gap-2" for="type_raw_material">
                                                     <i class="fas fa-boxes-stacked"></i>
                                                     <span>Raw Material</span>
                                                 </label>
 
-                                                <input type="radio" class="btn-check" name="item_type" id="type_finish_goods" value="finish_goods" autocomplete="off">
+                                                <input type="radio" class="btn-check" name="item_type" id="type_finish_goods" value="finish_goods" {{ request('item_type') === 'finish_goods' ? 'checked' : '' }} autocomplete="off">
                                                 <label class="btn btn-outline-success rounded-2 py-2 fw-bold text-dark d-flex align-items-center justify-content-center gap-2" for="type_finish_goods">
                                                     <i class="fas fa-microchip"></i>
                                                     <span>Finished Goods</span>

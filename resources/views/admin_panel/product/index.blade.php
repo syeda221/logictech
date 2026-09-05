@@ -502,12 +502,15 @@
                     <i class="fas fa-file-download"></i> Export CSV
                 </a>
                 @if (auth()->user()->can('products.create') || auth()->user()->email === 'admin@admin.com')
-                    <button type="button" class="btn-hdr btn-hdr-warning" id="openImportModalBtn">
+                    <button type="button" class="btn-hdr btn-hdr-outline" id="openImportModalBtn">
                         <i class="fas fa-file-upload"></i> Import CSV
                     </button>
-                    <a href="create_prodcut" class="btn-hdr btn-hdr-primary">
-                        <i class="fas fa-plus"></i> Add Component / Product
-                    </a>
+                    <button type="button" class="btn-hdr btn-hdr-warning" onclick="openCreateProductModal('raw_material')" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #ffffff; border: none; font-weight: 700; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.35);">
+                        <i class="fas fa-boxes-stacked"></i> + Raw Material
+                    </button>
+                    <button type="button" class="btn-hdr btn-hdr-success" onclick="openCreateProductModal('finish_goods')" style="background: linear-gradient(135deg, #10b981, #059669); color: #ffffff; border: none; font-weight: 700; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);">
+                        <i class="fas fa-microchip"></i> + Finished Goods
+                    </button>
                 @endif
             </div>
         </div>
@@ -960,9 +963,8 @@
             </div>
         </div>
     </div>
-</div>
-
-
+{{-- ── Create Product / Component Modal (Raw Material & Finished Goods) ── --}}
+@include('admin_panel.product.partials.create_product_modal')
 
 @endsection
 

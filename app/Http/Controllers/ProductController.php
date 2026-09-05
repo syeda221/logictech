@@ -441,8 +441,9 @@ class ProductController extends Controller
         $products   = $query->latest()->paginate(20)->withQueryString();
         $categories = Category::orderBy('name')->get();
         $brands     = Brand::orderBy('name')->get();
+        $units      = Unit::orderBy('name')->get();
 
-        return view('admin_panel.product.index', compact('products', 'categories', 'brands'));
+        return view('admin_panel.product.index', compact('products', 'categories', 'brands', 'units'));
     }
 
     public function productview($id)
