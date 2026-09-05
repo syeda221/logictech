@@ -100,7 +100,8 @@
                 data: function(params) {
                     return {
                         term: params.term,
-                        page: params.page || 1
+                        page: params.page || 1,
+                        item_type: 'finish_goods'
                     };
                 },
                 processResults: function(data, params) {

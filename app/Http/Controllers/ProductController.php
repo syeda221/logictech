@@ -101,7 +101,7 @@ class ProductController extends Controller
         $term = $request->get('term') ?? $request->get('q') ?? '';
 
         $query = Product::query()
-            ->select('id', 'item_name', 'item_code', 'barcode_path', 'size_mode', 'unit_id', 'height', 'width', 'pieces_per_box', 'purchase_price_per_box', 'purchase_price_per_m2', 'purchase_price_per_piece', 'pieces_per_m2', 'purchase_discount_percent', 'sale_discount_percent', 'color', 'sale_price_per_piece')
+            ->select('id', 'item_name', 'item_code', 'barcode_path', 'size_mode', 'unit_id', 'height', 'width', 'pieces_per_box', 'purchase_price_per_box', 'purchase_price_per_m2', 'purchase_price_per_piece', 'pieces_per_m2', 'purchase_discount_percent', 'sale_discount_percent', 'color', 'sale_price_per_piece', 'item_type')
             ->with(['unit'])
             ->withSum('warehouseStocks', 'total_pieces') /* Sum PIECES, not boxes */
             ->where('is_active', true) /* Only active products */
@@ -110,6 +110,17 @@ class ProductController extends Controller
                     ->orWhere('item_code', 'like', "%{$term}%")
                     ->orWhere('barcode_path', 'like', "%{$term}%");
             });
+
+        if ($request->filled('item_type')) {
+            $type = $request->get('item_type');
+            if ($type === 'finish_goods') {
+                $query->whereIn('item_type', ['finish_goods', 'both']);
+            } elseif ($type === 'raw_material') {
+                $query->whereIn('item_type', ['raw_material', 'both']);
+            } else {
+                $query->where('item_type', $type);
+            }
+        }
 
         $products = $query->paginate(10); // Lazy loading (10 per request)
 

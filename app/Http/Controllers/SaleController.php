@@ -105,7 +105,11 @@ class SaleController extends Controller
         $activePrefix = $defaultSeries ? $defaultSeries->prefix : 'INV';
         $nextInvoiceNumber = \App\Models\InvoiceSeries::generateNextNo($activePrefix);
 
-        $recentProducts = Product::latest()->take(12)->get();
+        $recentProducts = Product::where('is_active', true)
+            ->whereIn('item_type', ['finish_goods', 'both'])
+            ->latest()
+            ->take(12)
+            ->get();
 
         // Filter accounts (Cash/Bank) for Payment Voucher
         $accounts = \App\Models\Account::whereHas('head', function($q) {
@@ -131,6 +135,7 @@ class SaleController extends Controller
                     ->where('warehouse_stocks.warehouse_id', $warehouseId);
             })
             ->where('products.is_active', true) /* Only active products */
+            ->whereIn('products.item_type', ['finish_goods', 'both']) /* Only finish goods */
             ->where(function ($query) use ($q) {
                 $query->where('products.item_name', 'like', "%{$q}%")
                     ->orWhere('products.item_code', 'like', "%{$q}%")
@@ -942,9 +947,14 @@ class SaleController extends Controller
 
         // 3. Reuse nextInvoiceNumber var for current invoice no (view expects this variable name)
         $nextInvoiceNumber = $sale->invoice_no;
+        $recentProducts = Product::where('is_active', true)
+            ->whereIn('item_type', ['finish_goods', 'both'])
+            ->latest()
+            ->take(12)
+            ->get();
 
         // 4. Return the Edit Sale View
-        return view('admin_panel.sale.edit_sale', compact('warehouse', 'customer', 'nextInvoiceNumber', 'accounts', 'sale'));
+        return view('admin_panel.sale.edit_sale', compact('warehouse', 'customer', 'nextInvoiceNumber', 'accounts', 'sale', 'recentProducts'));
     }
 
     public function updatesale(Request $request, $id)
