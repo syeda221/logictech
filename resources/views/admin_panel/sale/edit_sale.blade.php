@@ -708,7 +708,7 @@
                                                 <div id="gridAlertBox" class="alert alert-warning d-flex align-items-center justify-content-between px-2 py-1 mb-0 rounded border border-warning shadow-sm" style="font-size: 0.78rem; font-weight: 600; color: #856404; background-color: #fff3cd;">
                                                     <div class="d-flex align-items-center gap-1">
                                                         <i class="fas fa-exclamation-triangle text-warning me-1 alert-icon" style="font-size: 0.85rem;"></i>
-                                                        <span id="gridAlertText">Discount 100% se zyada nahi ho sakta!</span>
+                                                        <span id="gridAlertText">Discount cannot exceed 100%!</span>
                                                     </div>
                                                     <button type="button" class="btn-close py-0" style="font-size: 0.65rem;" onclick="$('#gridAlertRow').addClass('d-none');" aria-label="Close"></button>
                                                 </div>

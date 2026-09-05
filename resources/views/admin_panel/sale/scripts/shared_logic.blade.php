@@ -482,7 +482,7 @@
             if (discValue > 100) {
                 discValue = 100;
                 $row.find('.discount-value').val(100);
-                showGridAlert('Discount 100% se zyada nahi ho sakta!', 'warning');
+                showGridAlert('Discount cannot exceed 100%!', 'warning');
             }
             dam = discValue > 0 ? (gross * discValue) / 100 : 0;
         } else {
@@ -490,7 +490,7 @@
             if (gross > 0 && discValue > gross) {
                 discValue = gross;
                 $row.find('.discount-value').val(gross.toFixed(2));
-                showGridAlert('Discount total amount (Rs. ' + gross.toFixed(2) + ') se zyada nahi ho sakta!', 'warning');
+                showGridAlert('Discount cannot exceed the total amount (Rs. ' + gross.toFixed(2) + ')!', 'warning');
             }
             dam = discValue > 0 ? discValue : 0;
         }
@@ -1271,12 +1271,12 @@
             if (discType === 'percent') {
                 if (val > 100) {
                     $(this).val(100);
-                    showGridAlert('Discount 100% se zyada nahi ho sakta!', 'warning');
+                    showGridAlert('Discount cannot exceed 100%!', 'warning');
                 }
             } else {
                 if (gross > 0 && val > gross) {
                     $(this).val(gross.toFixed(2));
-                    showGridAlert('Discount total amount (Rs. ' + gross.toFixed(2) + ') se zyada nahi ho sakta!', 'warning');
+                    showGridAlert('Discount cannot exceed the total amount (Rs. ' + gross.toFixed(2) + ')!', 'warning');
                 }
             }
 
@@ -1307,7 +1307,7 @@
                 $(this).val(0);
             } else if (maxAllowed > 0 && val > maxAllowed) {
                 $(this).val(maxAllowed.toFixed(2));
-                showGridAlert('Discount total bill amount (Rs. ' + maxAllowed.toFixed(2) + ') se zyada nahi ho sakta!', 'warning');
+                showGridAlert('Discount cannot exceed total bill amount (Rs. ' + maxAllowed.toFixed(2) + ')!', 'warning');
             }
             updateGrandTotals();
         });
@@ -1318,7 +1318,7 @@
                 $(this).val(0);
             } else if (val > 100) {
                 $(this).val(100);
-                showGridAlert('Additional discount 100% se zyada nahi ho sakta!', 'warning');
+                showGridAlert('Additional discount cannot exceed 100%!', 'warning');
             }
             updateGrandTotals();
         });
@@ -1416,13 +1416,13 @@
                 $valInput.attr('max', '100').attr('title', 'Max: 100%');
                 if (curVal > 100) {
                     $valInput.val(100);
-                    showGridAlert('Discount 100% se zyada nahi ho sakta!', 'warning');
+                    showGridAlert('Discount cannot exceed 100%!', 'warning');
                 }
             } else {
                 $valInput.attr('max', gross > 0 ? gross : '').attr('title', gross > 0 ? 'Max: Rs. ' + gross.toFixed(2) : 'Max: Total Amount');
                 if (gross > 0 && curVal > gross) {
                     $valInput.val(gross.toFixed(2));
-                    showGridAlert('Discount total amount (Rs. ' + gross.toFixed(2) + ') se zyada nahi ho sakta!', 'warning');
+                    showGridAlert('Discount cannot exceed the total amount (Rs. ' + gross.toFixed(2) + ')!', 'warning');
                 }
             }
 
