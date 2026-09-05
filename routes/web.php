@@ -157,7 +157,7 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/product/validate-form', [ProductController::class, 'validateForm'])->name('product.validate');
     Route::get('/products/{id}/edit', [ProductController::class, 'edit'])->middleware('permission:products.edit')->name('products.edit');
-    Route::get('/generate-barcode-image', [ProductController::class, 'generateBarcode'])->name('generate-barcode-image');
+    Route::get('/generate-barcode-image/{id?}', [ProductController::class, 'generateBarcode'])->name('generate-barcode-image');
 
     // ── Product Import / Export ──
     Route::get('/products/export',   [App\Http\Controllers\ProductImportExportController::class, 'export'])
@@ -173,9 +173,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/products/import/confirm',  [App\Http\Controllers\ProductImportExportController::class, 'importConfirm'])
         ->middleware('permission:products.create')->name('products.import.confirm');
 
-    // Route::get('/barcode/{id}', [ProductController::class, 'barcode'])->name('product.barcode');
     // Searches
-    Route::get('/generate-barcode-image', [ProductController::class, 'generateBarcode'])->name('generate-barcode-image');
     Route::get('/get-subcategories/{category_id}', [ProductController::class, 'getSubcategories'])->name('fetch-subcategories');
     Route::get('/get-all-subcategories', [ProductController::class, 'getAllSubcategoriesJson'])->name('get-all-subcategories');
     Route::get('/get-categories', [ProductController::class, 'getCategoriesJson'])->name('get-categories');

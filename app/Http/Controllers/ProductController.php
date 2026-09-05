@@ -523,15 +523,83 @@ class ProductController extends Controller
     }
 
     // ===== Barcode =====
-    public function generateBarcode(Request $request)
+    public function generateBarcode(Request $request, $id = null)
     {
-        $barcodeNumber = $request->filled('code') ? $request->code : rand(100000000000, 999999999999);
-        $barcodePNG = (new DNS1D)->getBarcodePNG($barcodeNumber, 'C39', 3, 50);
-        $barcodeImage = 'data:image/png;base64,'.$barcodePNG;
+        // Resolve target product ID from param, query, or loose query key (e.g. ?7)
+        $productId = $id ?? $request->id;
+        if (! $productId && ! empty($request->query())) {
+            $firstKey = array_key_first($request->query());
+            if (is_numeric($firstKey)) {
+                $productId = (int) $firstKey;
+            }
+        }
 
-        return response()->json([
-            'barcode_number' => $barcodeNumber,
+        $product = null;
+        if ($productId) {
+            $product = Product::with(['category_relation', 'brand', 'unit'])->find($productId);
+        }
+
+        if ($product) {
+            $barcodeNumber = ! empty($product->barcode_path) ? $product->barcode_path : ($product->item_code ?? ('ITEM-'.str_pad($product->id, 4, '0', STR_PAD_LEFT)));
+
+            if ($product->size_mode === 'by_size') {
+                $m2 = ($product->height * $product->width) / 10000;
+                $tradePrice = $m2 * (float) $product->purchase_price_per_m2;
+                $retailPrice = $m2 * (float) $product->price_per_m2;
+                $priceUnit = 'm²';
+            } else {
+                $tradePrice = (float) $product->purchase_price_per_piece;
+                $retailPrice = (float) $product->sale_price_per_piece ?: (float) $product->sale_price_per_box;
+                $priceUnit = $product->unit ? $product->unit->name : 'Pc';
+            }
+
+            $productData = [
+                'id' => $product->id,
+                'name' => $product->item_name,
+                'code' => $product->item_code,
+                'barcode' => $barcodeNumber,
+                'category' => $product->category_relation->name ?? '-',
+                'brand' => $product->brand->name ?? '-',
+                'item_type' => $product->item_type ?? 'raw_material',
+                'item_type_label' => ($product->item_type === 'finish_goods') ? 'Finished Goods' : 'Raw Material',
+                'sale_price' => number_format($retailPrice, 2),
+                'purchase_price' => number_format($tradePrice, 2),
+                'price_unit' => $priceUnit,
+                'unit' => $product->unit ? $product->unit->name : 'Pcs',
+                'image' => $product->image ? asset('uploads/products/'.$product->image) : null,
+            ];
+        } else {
+            $barcodeNumber = $request->filled('code') ? $request->code : rand(100000000000, 999999999999);
+            $productData = null;
+        }
+
+        // Generate Barcode Base64 PNG using C128 / C39
+        try {
+            $dns = new DNS1D();
+            $barcodePNG = $dns->getBarcodePNG((string) $barcodeNumber, 'C128', 2, 55);
+            $barcodeImage = 'data:image/png;base64,'.$barcodePNG;
+        } catch (\Exception $e) {
+            $dns = new DNS1D();
+            $barcodePNG = $dns->getBarcodePNG((string) $barcodeNumber, 'C39', 2, 55);
+            $barcodeImage = 'data:image/png;base64,'.$barcodePNG;
+        }
+
+        // Return JSON for AJAX/fetch requests
+        if ($request->ajax() || $request->wantsJson() || $request->has('json')) {
+            return response()->json([
+                'success' => true,
+                'barcode_number' => (string) $barcodeNumber,
+                'barcode_image' => $barcodeImage,
+                'product' => $productData,
+            ]);
+        }
+
+        // Return dedicated clean barcode printable view for direct URL visit
+        return view('admin_panel.product.barcode', [
+            'product' => $product,
+            'barcode_number' => (string) $barcodeNumber,
             'barcode_image' => $barcodeImage,
+            'product_data' => $productData,
         ]);
     }
 

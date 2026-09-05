@@ -722,10 +722,14 @@
                                                 <i class="fas fa-pencil-alt"></i> Edit
                                             </a>
                                         @endif
-                                        <a href="{{ route('generate-barcode-image', $product->id) }}"
-                                            class="btn-act btn-act-barcode" title="Generate Barcode">
+                                        <button type="button" class="btn-act btn-act-barcode view-barcode-btn"
+                                            data-id="{{ $product->id }}"
+                                            data-name="{{ $product->item_name }}"
+                                            data-code="{{ $product->item_code }}"
+                                            data-type="{{ $product->item_type ?? 'raw_material' }}"
+                                            title="Generate & View Barcode">
                                             <i class="fas fa-barcode"></i>
-                                        </a>
+                                        </button>
                                         @if (auth()->user()->can('products.edit') || auth()->user()->email === 'admin@admin.com')
                                             <button type="button"
                                                 class="btn-act {{ $product->is_active ? 'btn-act-deact' : 'btn-act-act' }} toggle-active-btn"
@@ -821,9 +825,13 @@
                                 <i class="fas fa-pencil-alt"></i> Edit
                             </a>
                         @endif
-                        <a href="{{ route('generate-barcode-image', $product->id) }}" class="btn-act btn-act-barcode">
+                        <button type="button" class="btn-act btn-act-barcode view-barcode-btn"
+                            data-id="{{ $product->id }}"
+                            data-name="{{ $product->item_name }}"
+                            data-code="{{ $product->item_code }}"
+                            data-type="{{ $product->item_type ?? 'raw_material' }}">
                             <i class="fas fa-barcode"></i> Barcode
-                        </a>
+                        </button>
                         @if (auth()->user()->can('products.edit') || auth()->user()->email === 'admin@admin.com')
                             <button type="button"
                                 class="btn-act {{ $product->is_active ? 'btn-act-deact' : 'btn-act-act' }} toggle-active-btn"
@@ -1196,6 +1204,144 @@ $(document).ready(function () {
         } else {
             $('#subCategorySelect').html('<option value="">Select Sub-Category</option>');
         }
+    });
+
+    // ── View & Generate Barcode SweetAlert2 Modal ──
+    function escapeHtml(str) {
+        if (!str) return '';
+        return $('<div>').text(str).html();
+    }
+
+    $(document).on('click', '.view-barcode-btn', function (e) {
+        e.preventDefault();
+        const btn = $(this);
+        const productId = btn.data('id');
+        const productName = btn.data('name') || 'Product';
+
+        Swal.fire({
+            title: 'Generating Barcode…',
+            html: `<div class="d-flex align-items-center justify-content-center gap-2 py-3">
+                     <div class="spinner-border text-primary" role="status" style="width:1.8rem; height:1.8rem;"></div>
+                     <span style="font-size:.88rem; color:#64748b;">Loading barcode for <b>${escapeHtml(productName)}</b></span>
+                   </div>`,
+            showConfirmButton: false,
+            allowOutsideClick: false,
+            didOpen: () => {
+                $.ajax({
+                    url: `/generate-barcode-image/${productId}`,
+                    type: 'GET',
+                    dataType: 'json',
+                    headers: { 'Accept': 'application/json' },
+                    success: function (res) {
+                        if (res && res.success) {
+                            const barcodeNumber = res.barcode_number;
+                            const barcodeImg = res.barcode_image;
+                            const p = res.product || {};
+                            const pTypeBadge = (p.item_type === 'finish_goods')
+                                ? '<span style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; border-radius:6px; padding:3px 8px; font-size:.72rem; font-weight:700;">⚙️ Finished Goods</span>'
+                                : '<span style="background:#fffbeb; color:#d97706; border:1px solid #fde68a; border-radius:6px; padding:3px 8px; font-size:.72rem; font-weight:700;">📦 Raw Material</span>';
+
+                            const priceHtml = p.sale_price ? `<div style="font-size:1.15rem; font-weight:800; color:#10b981;">Rs. ${p.sale_price} <small style="font-size:.7rem; color:#64748b; font-weight:500;">/ ${p.price_unit || 'Pc'}</small></div>` : '<div style="font-size:.9rem; color:#94a3b8;">-</div>';
+
+                            const htmlContent = `
+                                <div style="text-align:center; padding: 4px 8px;">
+                                    <div style="display:flex; justify-content:center; align-items:center; gap:6px; margin-bottom:8px;">
+                                        ${pTypeBadge}
+                                        ${p.code ? `<span style="background:#f1f5f9; color:#475569; border:1px solid #e2e8f0; border-radius:6px; padding:3px 8px; font-size:.72rem; font-weight:700; font-family:monospace;">${escapeHtml(p.code)}</span>` : ''}
+                                    </div>
+                                    <h4 style="font-weight:800; color:#0f172a; margin-bottom:14px; font-size:1.08rem; line-height:1.35;">
+                                        ${escapeHtml(p.name || productName)}
+                                    </h4>
+
+                                    <div style="background:#ffffff; border:2px dashed #cbd5e1; border-radius:12px; padding:18px 14px; margin:0 auto 16px auto; max-width:320px; box-shadow:0 4px 14px rgba(15,23,42,0.04);">
+                                        <div style="font-size:.72rem; font-weight:800; letter-spacing:1.5px; color:#64748b; text-transform:uppercase; margin-bottom:6px;">
+                                            LogicTech
+                                        </div>
+                                        <div style="display:flex; justify-content:center; align-items:center; min-height:60px; margin:8px 0;">
+                                            <img src="${barcodeImg}" alt="Barcode" style="max-width:100%; height:55px; image-rendering:pixelated;" />
+                                        </div>
+                                        <div style="font-family:'Courier New', monospace; font-size:1.1rem; font-weight:800; letter-spacing:3px; color:#1e293b; margin-top:4px;">
+                                            ${barcodeNumber}
+                                        </div>
+                                    </div>
+
+                                    <div style="display:flex; justify-content:space-around; align-items:center; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 14px; margin-bottom:16px;">
+                                        <div style="text-align:left;">
+                                            <div style="font-size:.68rem; font-weight:700; color:#64748b; text-transform:uppercase;">Category</div>
+                                            <div style="font-size:.82rem; font-weight:600; color:#1e293b;">${escapeHtml(p.category || '-')}</div>
+                                        </div>
+                                        <div style="text-align:right;">
+                                            <div style="font-size:.68rem; font-weight:700; color:#64748b; text-transform:uppercase;">Sale Price</div>
+                                            ${priceHtml}
+                                        </div>
+                                    </div>
+
+                                    <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+                                        <button type="button" id="swalPrintBarcodeBtn" class="btn btn-primary btn-sm px-3" style="background:#6366f1; border-color:#6366f1; border-radius:8px; font-weight:600; display:inline-flex; align-items:center; gap:6px;">
+                                            <i class="fas fa-print"></i> Print Label
+                                        </button>
+                                        <button type="button" id="swalCopyBarcodeBtn" class="btn btn-light btn-sm px-3" style="border:1px solid #cbd5e1; border-radius:8px; font-weight:600; display:inline-flex; align-items:center; gap:6px;">
+                                            <i class="fas fa-copy"></i> Copy Code
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+
+                            Swal.fire({
+                                title: '',
+                                html: htmlContent,
+                                showCloseButton: true,
+                                showConfirmButton: false,
+                                width: '440px',
+                                padding: '1.2rem',
+                                customClass: {
+                                    popup: 'rounded-4 border-0 shadow-lg'
+                                },
+                                didRender: () => {
+                                    $('#swalPrintBarcodeBtn').on('click', function () {
+                                        const printUrl = `/generate-barcode-image/${productId}`;
+                                        const printWin = window.open(printUrl, '_blank', 'width=450,height=550,menubar=no,toolbar=no,location=no,status=no');
+                                        if (printWin) {
+                                            printWin.focus();
+                                        }
+                                    });
+
+                                    $('#swalCopyBarcodeBtn').on('click', function () {
+                                        const copyText = barcodeNumber;
+                                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                                            navigator.clipboard.writeText(copyText).then(() => {
+                                                const copyBtn = $('#swalCopyBarcodeBtn');
+                                                copyBtn.html('<i class="fas fa-check text-success"></i> Copied!');
+                                                setTimeout(() => {
+                                                    copyBtn.html('<i class="fas fa-copy"></i> Copy Code');
+                                                }, 2000);
+                                            });
+                                        } else {
+                                            const tempInput = document.createElement('input');
+                                            tempInput.value = copyText;
+                                            document.body.appendChild(tempInput);
+                                            tempInput.select();
+                                            document.execCommand('copy');
+                                            document.body.removeChild(tempInput);
+                                            const copyBtn = $('#swalCopyBarcodeBtn');
+                                            copyBtn.html('<i class="fas fa-check text-success"></i> Copied!');
+                                            setTimeout(() => {
+                                                copyBtn.html('<i class="fas fa-copy"></i> Copy Code');
+                                            }, 2000);
+                                        }
+                                    });
+                                }
+                            });
+                        } else {
+                            Swal.fire('Error', 'Unable to generate barcode for this product.', 'error');
+                        }
+                    },
+                    error: function () {
+                        Swal.fire('Error', 'Failed to communicate with server.', 'error');
+                    }
+                });
+            }
+        });
     });
 
 });  // ── end $(document).ready ──
