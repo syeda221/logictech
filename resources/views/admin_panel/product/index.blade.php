@@ -963,6 +963,8 @@
             </div>
         </div>
     </div>
+</div>
+
 {{-- ── Create Product / Component Modal (Raw Material & Finished Goods) ── --}}
 @include('admin_panel.product.partials.create_product_modal')
 
