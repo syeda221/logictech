@@ -607,12 +607,7 @@
 
                         <!-- Customer & Walk-in Toggle -->
                         <div class="col-sm-4 col-md-3">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <label class="form-label fw-bold text-secondary mb-0" style="font-size:0.7rem;"><i class="fas fa-user text-primary me-1"></i>Customer</label>
-                                <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 rounded-pill fw-bold" data-bs-toggle="modal" data-bs-target="#addCustomerModal" style="font-size: 0.65rem;">
-                                    <i class="fas fa-user-plus me-1"></i>New
-                                </button>
-                            </div>
+                            <label class="form-label fw-bold text-secondary mb-1" style="font-size:0.7rem;"><i class="fas fa-user text-primary me-1"></i>Customer</label>
                             <div id="customerInputWrapper">
                                 <input type="text" class="form-control fw-bold" name="walkin_name" id="walkinNameInput" value="Walk-in Customer" placeholder="Enter Customer Name...">
                                 <select class="form-select d-none" id="customerSelect" name="customer" style="width:100%">
