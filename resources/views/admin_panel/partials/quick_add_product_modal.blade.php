@@ -6,7 +6,7 @@
                 <h5 class="modal-title fw-bold" id="quickAddProductModalLabel">
                     <i class="fas fa-microchip text-primary me-2"></i>Quick Add Material / Component
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" data-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="quickAddProductForm">
                 @csrf
@@ -76,7 +76,7 @@
                     </div>
                 </div>
                 <div class="modal-footer border-top-0 pt-0">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal" data-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary px-4 fw-bold" id="btnQuickSaveProduct">
                         <i class="fas fa-save me-1"></i>Save to Inventory
                     </button>
@@ -174,55 +174,74 @@ $(document).ready(function() {
                 $('#quickAddProductForm')[0].reset();
                 $('#quickAddProductModal').modal('hide');
 
-                // ✅ Auto-fill last row in purchase table with the new product
+                // ✅ Auto-fill into sales or purchase table with the new product
                 if (response.product && response.product.id) {
                     var prod = response.product;
-                    var $rows = $('#purchaseTableBody tr');
-                    var $targetRow = $rows.last(); // Use last row
+                    var prodName = prod.item_name || prod.text || prod.name;
+                    var prodId = prod.id;
 
-                    // If last row already has a product selected, add a new blank row first
-                    var lastRowProductId = $targetRow.find('.product-select2').val();
-                    if (lastRowProductId) {
-                        // Add new row and use it
-                        $('#btnAdd').trigger('click');
-                        $targetRow = $('#purchaseTableBody tr').last();
+                    // Sales Screen
+                    if ($('#salesTableBody').length) {
+                        let $targetRow = $('#salesTableBody tr:last');
+                        const lastProdVal = $targetRow.find('.product').val();
+
+                        if (!$targetRow.length || lastProdVal) {
+                            if (typeof addNewRow === 'function') {
+                                addNewRow();
+                            } else {
+                                $('#btnAdd').trigger('click');
+                            }
+                            $targetRow = $('#salesTableBody tr:last');
+                        }
+
+                        const $select = $targetRow.find('.product');
+                        if ($select.find(`option[value="${prodId}"]`).length === 0) {
+                            $select.append(new Option(prodName, prodId, true, true));
+                        } else {
+                            $select.val(prodId).trigger('change.select2');
+                        }
+                        $select.trigger('change');
+                    } 
+                    // Purchase Screen
+                    else if ($('#purchaseTableBody').length) {
+                        var $rows = $('#purchaseTableBody tr');
+                        var $targetRow = $rows.last();
+
+                        var lastRowProductId = $targetRow.find('.product-select2').val();
+                        if (lastRowProductId) {
+                            $('#btnAdd').trigger('click');
+                            $targetRow = $('#purchaseTableBody tr').last();
+                        }
+
+                        var $select = $targetRow.find('.product-select2');
+                        var newOpt = new Option(prod.text || prod.item_name, prod.id, true, true);
+                        $(newOpt).data('data', {
+                            id: prod.id,
+                            text: prod.text || prod.item_name,
+                            name: prod.item_name,
+                            item_name: prod.item_name,
+                            sku: prod.item_code,
+                            size_mode: prod.size_mode || 'by_pieces',
+                            pieces_per_box: prod.pieces_per_box || 1,
+                            unit_name: prod.unit_name || 'Pcs',
+                            purchase_price_per_piece: prod.purchase_price_per_piece || 0,
+                            trade_price: prod.trade_price || 0,
+                            stock: 0,
+                            stock_pieces: 0,
+                            variant_data: ''
+                        });
+                        $select.append(newOpt).trigger('change');
+
+                        $targetRow.find('.hidden-size-mode').val(prod.size_mode || 'by_pieces');
+                        $targetRow.find('.hidden-pieces-per-box').val(prod.pieces_per_box || 1);
+                        $targetRow.find('.price').val(prod.purchase_price_per_piece || 0);
+                        $targetRow.find('.unit-toggle-btn').text('Pcs').attr('data-unit', 'Pcs');
+                        $targetRow.find('.unit-input-val').val('Pcs');
+
+                        if (typeof recalcRow === 'function') recalcRow($targetRow);
+                        if (typeof recalcAll === 'function') recalcAll();
+                        $targetRow.find('.main-qty-input').focus().select();
                     }
-
-                    // Create Select2 option and trigger selection
-                    var $select = $targetRow.find('.product-select2');
-                    var newOpt = new Option(prod.text, prod.id, true, true);
-                    $(newOpt).data('data', {
-                        id: prod.id,
-                        text: prod.text,
-                        name: prod.item_name,
-                        item_name: prod.item_name,
-                        sku: prod.item_code,
-                        size_mode: prod.size_mode || 'by_pieces',
-                        pieces_per_box: prod.pieces_per_box || 1,
-                        unit_name: prod.unit_name || 'Pcs',
-                        purchase_price_per_piece: prod.purchase_price_per_piece || 0,
-                        trade_price: prod.trade_price || 0,
-                        stock: 0,
-                        stock_pieces: 0,
-                        variant_data: ''
-                    });
-                    $select.append(newOpt).trigger('change');
-
-                    // Manually populate row fields
-                    $targetRow.find('.hidden-size-mode').val(prod.size_mode || 'by_pieces');
-                    $targetRow.find('.hidden-pieces-per-box').val(prod.pieces_per_box || 1);
-                    $targetRow.find('.price').val(prod.purchase_price_per_piece || 0);
-                    $targetRow.find('.unit-toggle-btn').text('Pcs').attr('data-unit', 'Pcs');
-                    $targetRow.find('.unit-input-val').val('Pcs');
-
-                    // Trigger recalc
-                    if (typeof recalcRow === 'function') {
-                        recalcRow($targetRow);
-                    }
-                    if (typeof recalcAll === 'function') {
-                        recalcAll();
-                    }
-                    $targetRow.find('.main-qty-input').focus().select();
                 }
 
                 if (typeof Swal !== 'undefined') {

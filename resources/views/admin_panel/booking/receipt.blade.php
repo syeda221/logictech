@@ -36,7 +36,7 @@
 </div>
 
 <div class="section">
-    <strong>Customer:</strong> {{ $booking->customer_relation->customer_name ?? 'N/A' }}<br>
+    <strong>Customer:</strong> {{ $booking->walkin_name ?? ($booking->customer_relation->customer_name ?? 'Walk-in Customer') }}<br>
     <strong>Reference:</strong> {{ $booking->reference }}
 </div>
 

@@ -299,14 +299,14 @@
     <div class="receipt-container">
         <!-- Header -->
         @php
-            $companyLogo = \App\Models\Setting::get('company_logo') ?: \App\Models\Setting::get('web_site_logo');
+            $companyLogo = \App\Models\Setting::getLogoUrl();
         @endphp
         @if(!empty($companyLogo))
             <div class="receipt-logo">
-                <img src="{{ asset(ltrim($companyLogo, '/')) }}" alt="Company Logo">
+                <img src="{{ $companyLogo }}" alt="Company Logo">
             </div>
         @endif
-        <div class="company-name">{{ \App\Models\Setting::get('company_name', 'Three Stars Medical') }}</div>
+        <div class="company-name">{{ \App\Models\Setting::get('company_name', 'LOGIC TECH ENGINEERING') }}</div>
         <div class="company-info">
             <div>{{ \App\Models\Setting::get('company_address', 'Hyderabad') }}</div>
             <div>Ph: {{ \App\Models\Setting::get('company_phone', '0327-9226901') }}</div>

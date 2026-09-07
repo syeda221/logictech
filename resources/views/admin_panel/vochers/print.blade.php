@@ -220,8 +220,16 @@
     <div class="page">
 
         {{-- ── HEADER ── --}}
+        @php
+            $vchLogo = \App\Models\Setting::getLogoUrl();
+        @endphp
         <div class="vch-header">
-            <h1>{{ \App\Models\Setting::get('company_name', 'prowave technogies') }}</h1>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                @if(!empty($vchLogo))
+                    <img src="{{ $vchLogo }}" alt="Company Logo" style="max-height: 50px; max-width: 150px; object-fit: contain;">
+                @endif
+                <h1>{{ \App\Models\Setting::get('company_name', 'LOGIC TECH ENGINEERING') }}</h1>
+            </div>
             <span class="vch-badge">RECEIPT VOUCHER</span>
         </div>
         <hr class="sep">

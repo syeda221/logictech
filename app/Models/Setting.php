@@ -73,6 +73,56 @@ class Setting extends Model
     }
 
     /**
+     * Get company logo source (Base64 data URI if file exists on disk, or asset URL)
+     * This guarantees 100% reliable rendering in HTML invoices, print views, PDFs, and thermal receipts across all environments.
+     */
+    public static function getLogoUrl(): ?string
+    {
+        $logo = self::get('company_logo') ?: self::get('web_site_logo');
+        if (empty($logo)) {
+            return null;
+        }
+
+        if (str_starts_with($logo, 'data:') || str_starts_with($logo, 'http://') || str_starts_with($logo, 'https://')) {
+            return $logo;
+        }
+
+        $cleanPath = ltrim($logo, '/');
+
+        $candidates = array_unique([
+            public_path($cleanPath),
+            base_path($cleanPath),
+            base_path('public/' . $cleanPath),
+            base_path('public_html/' . $cleanPath),
+            base_path('public_html/public/' . $cleanPath),
+            public_path('uploads/settings/' . basename($cleanPath)),
+            base_path('uploads/settings/' . basename($cleanPath)),
+            public_path('uploads/' . basename($cleanPath)),
+            base_path('uploads/' . basename($cleanPath)),
+        ]);
+
+        foreach ($candidates as $candidate) {
+            if (!empty($candidate) && file_exists($candidate) && is_file($candidate)) {
+                $ext = strtolower(pathinfo($candidate, PATHINFO_EXTENSION));
+                $mime = match($ext) {
+                    'png' => 'image/png',
+                    'jpg', 'jpeg' => 'image/jpeg',
+                    'svg' => 'image/svg+xml',
+                    'webp' => 'image/webp',
+                    'gif' => 'image/gif',
+                    default => @mime_content_type($candidate) ?: 'image/png'
+                };
+                $content = @file_get_contents($candidate);
+                if ($content !== false && strlen($content) > 0) {
+                    return 'data:' . $mime . ';base64,' . base64_encode($content);
+                }
+            }
+        }
+
+        return asset($cleanPath);
+    }
+
+    /**
      * Cast value to appropriate type
      */
     private static function castValue($value, string $type)

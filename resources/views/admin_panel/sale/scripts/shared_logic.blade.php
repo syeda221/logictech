@@ -677,7 +677,7 @@
         $('#btnPosted, #btnHeaderPosted').prop('disabled', !state);
     }
 
-    function ensureSaved() {
+    function ensureSaved(redirectAfter = false) {
         return new Promise(function(resolve, reject) {
             const existing = $('#booking_id').val();
             let url = '{{ route('sales.store') }}';
@@ -687,18 +687,38 @@
                 method = 'PUT';
             }
 
-            $('#btnSave, #btnHeaderPosted, #btnPosted').prop('disabled', true);
+            $('#btnSave, #btnHeaderPosted, #btnPosted, #btnSaveAndComplete, #btnSaveAndComplete2, #btnHeaderSaveSale').prop('disabled', true);
 
             $.ajax({
                 url: url,
                 type: method,
                 data: serializeForm(),
                 success: function(res) {
-                    $('#btnSave, #btnHeaderPosted, #btnPosted').prop('disabled', false);
+                    $('#btnSave, #btnHeaderPosted, #btnPosted, #btnSaveAndComplete, #btnSaveAndComplete2, #btnHeaderSaveSale').prop('disabled', false);
                     if (res?.ok) {
                         const bid = res.booking_id || existing;
                         $('#booking_id').val(bid);
-                        Swal.fire('Saved', 'Sale saved successfully', 'success');
+                        if (redirectAfter) {
+                            Swal.fire({
+                                title: 'Saved Successfully!',
+                                text: 'Sale booking saved successfully.',
+                                icon: 'success',
+                                showConfirmButton: true,
+                                confirmButtonColor: '#2563eb',
+                                confirmButtonText: 'OK',
+                                timer: 1800,
+                                timerProgressBar: true
+                            }).then(() => {
+                                window.location.href = "{{ route('sale.index') }}";
+                            });
+                        } else {
+                            Swal.fire({
+                                title: 'Saved',
+                                text: 'Sale saved successfully',
+                                icon: 'success',
+                                confirmButtonColor: '#2563eb'
+                            });
+                        }
                         resolve(bid);
                     } else {
                         Swal.fire('Error', res.msg || 'Save failed', 'error');
@@ -706,7 +726,7 @@
                     }
                 },
                 error: function(xhr) {
-                    $('#btnSave, #btnHeaderPosted, #btnPosted').prop('disabled', false);
+                    $('#btnSave, #btnHeaderPosted, #btnPosted, #btnSaveAndComplete, #btnSaveAndComplete2, #btnHeaderSaveSale').prop('disabled', false);
                     let errMsg = 'Save error';
                     if (xhr.responseJSON && xhr.responseJSON.message) {
                         errMsg = xhr.responseJSON.message;
@@ -954,6 +974,12 @@
         if (isWalkin) {
             $('#customerSelect').addClass('d-none').next('.select2-container').addClass('d-none');
             $('#walkinNameInput').removeClass('d-none');
+
+            // Auto-fill advance with full net total for walk-in if only 1 row
+            const netVal = toNum($('#totalBalance').val());
+            if (netVal > 0 && $('.rv-row').length === 1) {
+                $('.rv-amount').first().val(netVal.toFixed(2));
+            }
         } else {
             $('#walkinNameInput').addClass('d-none');
             $('#customerSelect').removeClass('d-none').next('.select2-container').removeClass('d-none');
@@ -1430,8 +1456,25 @@
                 }
                 return;
             }
+            // Walk-in 100% Advance Payment Check for Booking
+            const isWalkin = $('#walkinToggle').is(':checked');
+            const invoiceNet = toNum($('#totalBalance').val());
+            const paidNow = toNum($('#receiptsTotal').text());
+
+            if (isWalkin) {
+                if (paidNow < (invoiceNet - 0.05)) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: '100% Advance Payment Required',
+                        text: 'Walk-in customers do not have a credit ledger. Full amount (Rs. ' + invoiceNet.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ') must be received in advance for booking.',
+                        confirmButtonColor: '#f59e0b'
+                    });
+                    return;
+                }
+            }
+
             $('#action').val('booking');
-            ensureSaved();
+            ensureSaved(true);
         });
 
         // Buttons: Sale (Post)
@@ -1607,15 +1650,43 @@
             });
         });
 
-        // --- Save & Complete (F9) Handler ---
+        // --- Book Order / Save Booking (F9) Handler ---
         $('#btnSaveAndComplete, #btnSaveAndComplete2, #btnHeaderSaveSale').on('click', function() {
-            $('#btnPosted').trigger('click');
+            $('#btnSave').trigger('click');
         });
 
         $(document).on('keydown', function(e) {
             if (e.key === 'F9') {
                 e.preventDefault();
                 $('#btnSaveAndComplete').trigger('click');
+            }
+        });
+
+        // --- Open Quick Products Offcanvas Handler ---
+        $(document).on('click', '#btnOpenQuickProducts, [data-bs-target="#quickProductsOffcanvas"], [data-target="#quickProductsOffcanvas"]', function(e) {
+            e.preventDefault();
+            const el = document.getElementById('quickProductsOffcanvas');
+            if (el) {
+                if (typeof bootstrap !== 'undefined' && bootstrap.Offcanvas) {
+                    const offcanvasInstance = bootstrap.Offcanvas.getInstance(el) || new bootstrap.Offcanvas(el);
+                    offcanvasInstance.show();
+                } else {
+                    $('#quickProductsOffcanvas').addClass('show').css('visibility', 'visible');
+                }
+            }
+        });
+
+        // --- Open Quick Add Product Modal Handler ---
+        $(document).on('click', '#btnOpenCreateProduct, [data-bs-target="#quickAddProductModal"], [data-target="#quickAddProductModal"]', function(e) {
+            e.preventDefault();
+            const el = document.getElementById('quickAddProductModal');
+            if (el) {
+                if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                    const modalInstance = bootstrap.Modal.getInstance(el) || new bootstrap.Modal(el);
+                    modalInstance.show();
+                } else {
+                    $('#quickAddProductModal').modal('show');
+                }
             }
         });
 

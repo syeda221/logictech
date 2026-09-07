@@ -23,9 +23,14 @@ class SaleController extends Controller
         $query = Sale::with(['customer_relation', 'items.product', 'returns'])
             ->whereIn('sale_status', ['draft', 'booked', 'posted', 'returned']);
 
-        // Apply Status Filter
+        // Apply Sale Status Filter
         if ($request->has('status') && $request->status != 'all') {
             $query->where('sale_status', $request->status);
+        }
+
+        // Apply Order / Fulfillment Status Filter
+        if ($request->filled('order_status') && $request->order_status != 'all') {
+            $query->where('order_status', $request->order_status);
         }
 
         // Apply Date Filters
@@ -62,11 +67,13 @@ class SaleController extends Controller
         }
 
         // Order By
-        $orderBy = $request->input('order_by', 'created_at');
+        $orderBy = $request->input('order_by', 'id');
         if ($orderBy === 'invoice_no') {
-            $query->orderBy('invoice_no', 'desc');
+            $query->orderBy('invoice_no', 'desc')->orderBy('id', 'desc');
+        } elseif ($orderBy === 'created_at') {
+            $query->orderBy('created_at', 'desc')->orderBy('id', 'desc');
         } else {
-            $query->orderBy('created_at', 'desc');
+            $query->orderBy('id', 'desc');
         }
 
         $sales = $query->get();
@@ -78,6 +85,7 @@ class SaleController extends Controller
             'posted_count' => $sales->where('sale_status', 'posted')->count(),
             'draft_count' => $sales->where('sale_status', 'draft')->count(),
             'booked_count' => $sales->where('sale_status', 'booked')->count(),
+            'confirmed_booking_count' => $sales->where('sale_status', 'posted')->where('is_booking', 1)->count(),
             'returned_count' => $sales->whereIn('sale_status', ['returned', 1])->count(),
         ];
 
@@ -1072,11 +1080,12 @@ class SaleController extends Controller
         //     throw \Illuminate\Validation\ValidationException::withMessages(['product_id' => 'Duplicate products are not allowed in a single sale. Please merge quantities.']);
         // }
 
-        $status = $request->action === 'post' ? 'posted' : 'booked';
+        $isBookingAction = ($request->action === 'booking' || ($request->filled('is_booking') && $request->is_booking) || ($sale->exists && $sale->is_booking && $request->action !== 'sale' && $request->action !== 'post'));
+        $status = $isBookingAction ? 'booked' : 'posted';
 
         // Concurrency Safe Transaction
         try {
-            return DB::transaction(function () use ($request, $sale, $status, $isWalkin) {
+            return DB::transaction(function () use ($request, $sale, $status, $isBookingAction, $isWalkin) {
 
                 // If this is an update to a previously posted sale, rollback its impact first
                 if ($sale->exists && $sale->sale_status === 'posted') {
@@ -1090,11 +1099,16 @@ class SaleController extends Controller
             $sale->reference = $request->reference;
             $sale->total_amount_Words = $request->total_amount_Words;
 
-            // Order Status (Excel flow: pending, ready, delivered, cancelled, or legacy booked/posted)
-            if ($request->filled('sale_status')) {
+            // Product / Order Status (Condition: pending, ready, delivered, cancelled)
+            if ($request->filled('order_status')) {
+                $sale->order_status = $request->order_status;
+            } elseif (empty($sale->order_status)) {
+                $sale->order_status = 'pending';
+            }
+
+            // Sale Status (Financial workflow: draft, booked, posted, returned)
+            if ($request->filled('sale_status') && in_array($request->sale_status, ['draft', 'booked', 'posted', 'returned'])) {
                 $sale->sale_status = $request->sale_status;
-            } elseif ($request->filled('order_status')) {
-                $sale->sale_status = $request->order_status;
             } else {
                 $sale->sale_status = $status;
             }
@@ -1148,10 +1162,16 @@ class SaleController extends Controller
             $total_items = 0;
 
             // Determine if this is a booking transaction
-            if ($request->action === 'booking' || ($sale->exists && $sale->is_booking)) {
+            if ($isBookingAction) {
                 $sale->is_booking = 1;
+                if ($sale->sale_status !== 'posted') {
+                    $sale->sale_status = 'booked';
+                }
             } else {
                 $sale->is_booking = 0;
+                if ($sale->sale_status !== 'draft' && $sale->sale_status !== 'returned') {
+                    $sale->sale_status = 'posted';
+                }
             }
 
             if ($request->filled('sale_date')) {
@@ -1347,7 +1367,40 @@ class SaleController extends Controller
             $sale->total_net = max(0, $total_bill - $sale->total_extradiscount);
             $sale->total_items = $total_items;
 
-            $sale->cash = $request->cash ?? 0;
+            // Extract Payment Breakdown (Accounts & Amounts)
+            $paymentDetails = [];
+            $accountIds = $request->input('receipt_account_id', []);
+            $amounts = $request->input('receipt_amount', []);
+            $totalReceiptAmount = 0;
+            if (is_array($accountIds)) {
+                foreach ($accountIds as $idx => $accId) {
+                    $amt = (float)($amounts[$idx] ?? 0);
+                    if ($accId && $amt > 0) {
+                        $totalReceiptAmount += $amt;
+                        $paymentDetails[] = [
+                            'account_id' => (int)$accId,
+                            'amount' => $amt,
+                        ];
+                    }
+                }
+            }
+
+            // Fallback for cash if no split receipt amounts provided
+            if ($totalReceiptAmount == 0 && ($request->cash ?? 0) > 0) {
+                $totalReceiptAmount = (float)$request->cash;
+            }
+
+            // Walk-in Customer Validation: Walk-in customers must pay full total amount in advance
+            if ($isWalkin) {
+                if ($totalReceiptAmount < ($sale->total_net - 0.05)) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'receipt_amount' => 'Walk-in customers must pay the full amount in advance (Rs. ' . number_format($sale->total_net, 2) . '). Remaining balance is not allowed for Walk-in customers.'
+                    ]);
+                }
+            }
+
+            $sale->payment_details = !empty($paymentDetails) ? json_encode($paymentDetails) : null;
+            $sale->cash = $totalReceiptAmount;
             $sale->change = ($sale->cash - $sale->total_net);
 
             $sale->save();
@@ -2170,9 +2223,31 @@ class SaleController extends Controller
                 );
             }
 
-            // 4. AUTO RECEIPT (ENTRY 2: THE PAYMENT)
+            // 4. AUTO RECEIPT (ENTRY 2: THE PAYMENT - Advance receipt into selected account)
             $transactionService = app(\App\Services\TransactionService::class);
-            $transactionService->createReceiptFromSale($sale);
+            $accountIds = [];
+            $amounts = [];
+            if (!empty($sale->payment_details)) {
+                $details = json_decode($sale->payment_details, true);
+                if (is_array($details)) {
+                    foreach ($details as $p) {
+                        if (!empty($p['account_id']) && !empty($p['amount'])) {
+                            $accountIds[] = (int)$p['account_id'];
+                            $amounts[] = (float)$p['amount'];
+                        }
+                    }
+                }
+            }
+
+            // Fallback: If no payment_details but sale has cash
+            if (empty($accountIds) && ($sale->cash ?? 0) > 0) {
+                $accountIds = [$balanceService->getCashAccountId()];
+                $amounts = [(float)$sale->cash];
+            }
+
+            if (!empty($accountIds)) {
+                $transactionService->createReceiptFromSale($sale, $accountIds, $amounts);
+            }
 
             DB::commit();
 
@@ -2243,5 +2318,133 @@ class SaleController extends Controller
         $prefix = $request->prefix;
         $invoiceNo = \App\Models\InvoiceSeries::generateNextNo($prefix);
         return response()->json(['invoice_no' => $invoiceNo]);
+    }
+
+    /**
+     * AJAX endpoint to update sale order state / condition (pending, ready, delivered, cancelled)
+     */
+    public function updateOrderStatus(Request $request, $id)
+    {
+        $request->validate([
+            'order_status' => 'required|in:pending,ready,delivered,cancelled',
+        ]);
+
+        $sale = Sale::findOrFail($id);
+        $sale->order_status = strtolower($request->order_status);
+        $sale->save();
+
+        $badgeHtml = match ($sale->order_status) {
+            'ready' => '<span class="erp-badge state-ready"><i class="fas fa-box me-1"></i>Ready</span>',
+            'delivered' => '<span class="erp-badge state-delivered"><i class="fas fa-truck me-1"></i>Delivered</span>',
+            'cancelled' => '<span class="erp-badge state-cancelled"><i class="fas fa-ban me-1"></i>Cancelled</span>',
+            default => '<span class="erp-badge state-pending"><i class="fas fa-hourglass-half me-1"></i>Pending</span>',
+        };
+
+        return response()->json([
+            'success' => true,
+            'message' => 'State updated to ' . ucfirst($sale->order_status) . ' successfully!',
+            'order_status' => $sale->order_status,
+            'badge_html' => $badgeHtml,
+        ]);
+    }
+
+    /**
+     * AJAX endpoint to retrieve sale items and delivery details for the delivery specifications modal
+     */
+    public function getDeliveryDetails($id)
+    {
+        $sale = Sale::with(['items.product.brand', 'customer_relation'])->findOrFail($id);
+
+        $items = $sale->items->map(function ($item) {
+            $brandName = $item->product->brand->name ?? '';
+            
+            // Extract custom specs / color
+            $specs = $item->color ?? '';
+            if (!empty($specs)) {
+                $b64 = base64_decode($specs, true);
+                if ($b64 !== false) {
+                    $json = json_decode($b64, true);
+                    if (is_array($json)) {
+                        $specs = $json['color'] ?? ($json['spec'] ?? ($json['specs'] ?? ''));
+                    }
+                } else {
+                    $json = json_decode($specs, true);
+                    if (is_array($json)) {
+                        $specs = $json['color'] ?? ($json['spec'] ?? ($json['specs'] ?? ''));
+                    }
+                }
+            }
+
+            $rawQty = (float)($item->total_pieces ?: ($item->qty ?: 1));
+            $formattedQty = ($rawQty == (int)$rawQty) ? (int)$rawQty : (float)$rawQty;
+
+            return [
+                'id' => $item->id,
+                'product_id' => $item->product_id,
+                'product_name' => $item->product_name ?: ($item->product->item_name ?? 'Product'),
+                'item_code' => $item->product->item_code ?? '',
+                'brand' => $brandName,
+                'model' => $item->model ?? '',
+                'serial_no' => $item->serial_no ?? '',
+                'specs' => $specs,
+                'qty' => $formattedQty,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'sale' => [
+                'id' => $sale->id,
+                'invoice_no' => $sale->invoice_no,
+                'customer_name' => $sale->customer_relation->customer_name ?? ($sale->walkin_name ?? 'Walk-in Customer'),
+                'order_status' => $sale->order_status,
+                'delivery_date' => $sale->delivery_date ? \Carbon\Carbon::parse($sale->delivery_date)->format('Y-m-d') : date('Y-m-d'),
+                'items' => $items,
+            ]
+        ]);
+    }
+
+    /**
+     * AJAX endpoint to save specifications for each item and mark status as Delivered
+     */
+    public function saveDeliveryDetails(Request $request, $id)
+    {
+        $sale = Sale::findOrFail($id);
+
+        if ($request->has('items') && is_array($request->items)) {
+            foreach ($request->items as $itemId => $itemData) {
+                $saleItem = \App\Models\SaleItem::where('sale_id', $sale->id)->where('id', $itemId)->first();
+                if ($saleItem) {
+                    if (isset($itemData['model'])) {
+                        $saleItem->model = trim($itemData['model']);
+                    }
+                    if (isset($itemData['serial_no'])) {
+                        $saleItem->serial_no = trim($itemData['serial_no']);
+                    }
+                    if (isset($itemData['specs'])) {
+                        $saleItem->color = trim($itemData['specs']);
+                    }
+                    $saleItem->save();
+                }
+            }
+        }
+
+        if ($request->filled('delivery_date')) {
+            $sale->delivery_date = $request->delivery_date;
+        } else {
+            $sale->delivery_date = now()->toDateString();
+        }
+
+        $sale->order_status = 'delivered';
+        $sale->save();
+
+        $badgeHtml = '<span class="erp-badge state-delivered"><i class="fas fa-truck me-1"></i>Delivered</span>';
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Product specifications saved and order marked as Delivered!',
+            'order_status' => 'delivered',
+            'badge_html' => $badgeHtml,
+        ]);
     }
 }

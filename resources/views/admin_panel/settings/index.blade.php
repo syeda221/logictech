@@ -62,7 +62,7 @@
                                 <div class="tab-pane fade show active" id="company" role="tabpanel">
                                     <!-- Company Logo Section -->
                                     @php
-                                        $companyLogo = \App\Models\Setting::get('company_logo') ?: \App\Models\Setting::get('web_site_logo');
+                                        $companyLogo = \App\Models\Setting::getLogoUrl();
                                         $hasLogo = !empty($companyLogo);
                                     @endphp
                                     <div class="card mb-4 border shadow-sm" style="background-color: #f8fafc;">
@@ -77,7 +77,7 @@
                                                 <div class="col-md-4 text-center mb-3 mb-md-0">
                                                     <div id="logoPreviewContainer" class="p-3 bg-white border rounded shadow-sm d-inline-flex align-items-center justify-content-center" style="min-width: 170px; min-height: 110px; width: 100%; max-width: 220px; height: 110px;">
                                                         <img id="logoPreview" 
-                                                             src="{{ $hasLogo ? asset(ltrim($companyLogo, '/')) : '' }}" 
+                                                             src="{{ $hasLogo ? $companyLogo : '' }}" 
                                                              alt="Company Logo Preview" 
                                                              style="max-width: 100%; max-height: 90px; object-fit: contain; {{ !$hasLogo ? 'display: none;' : '' }}" />
                                                         <div id="noLogoText" class="text-muted text-center" style="{{ $hasLogo ? 'display: none;' : '' }}">

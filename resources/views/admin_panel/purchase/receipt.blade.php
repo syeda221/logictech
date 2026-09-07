@@ -127,9 +127,17 @@
     <a href="javascript:window.print()" class="btn-print no-print">PRINT RECEIPT</a>
 
     <div class="header">
-        <div class="company-name">{{ \App\Models\Setting::get('company_name', 'prowave technogies') }}</div>
-        <div class="sub-header">{{ \App\Models\Setting::get('company_address', 'Hyderabad') }}</div>
-        <div class="sub-header">{{ \App\Models\Setting::get('company_phone', '0327-9226901') }}</div>
+        @php
+            $purLogo = \App\Models\Setting::getLogoUrl();
+        @endphp
+        @if(!empty($purLogo))
+            <div style="text-align: center; margin-bottom: 6px;">
+                <img src="{{ $purLogo }}" alt="Company Logo" style="max-width: 140px; max-height: 60px; object-fit: contain; display: block; margin: 0 auto;">
+            </div>
+        @endif
+        <div class="company-name">{{ \App\Models\Setting::get('company_name', 'LOGIC TECH ENGINEERING') }}</div>
+        <div class="sub-header">{{ \App\Models\Setting::get('company_address', '01-KM Sharaqpur Road') }}</div>
+        <div class="sub-header">{{ \App\Models\Setting::get('company_phone', '92 300 5308035') }}</div>
     </div>
 
     <div class="divider"></div>

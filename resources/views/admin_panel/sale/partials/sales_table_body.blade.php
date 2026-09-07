@@ -9,37 +9,42 @@
             $pNames = $sale->product;
         }
 
-        $statusBadge = '<span class="badge badge-warning text-dark border border-warning">Draft</span>';
+        // 1. Sale Status (Accounting/Workflow)
+        $saleStatusBadge = '<span class="erp-badge badge-draft"><i class="fas fa-file-alt me-1"></i>Draft</span>';
         $isExchange = \Illuminate\Support\Str::startsWith($sale->reference, 'Exchange for');
         
         if ($sale->sale_status === 'posted') {
             if ($sale->is_booking) {
-                $statusBadge = '<span class="badge badge-success border border-success"><i class="fas fa-check-circle me-1"></i>Confirmed Booking</span>';
+                $saleStatusBadge = '<span class="erp-badge badge-posted"><i class="fas fa-check-circle me-1"></i>Confirmed Booking</span>';
             } elseif ($isExchange) {
-                $statusBadge = '<span class="badge badge-info text-white border border-info"><i class="fas fa-exchange-alt me-1"></i>Exchange</span>';
+                $saleStatusBadge = '<span class="erp-badge badge-exchange"><i class="fas fa-exchange-alt me-1"></i>Exchange</span>';
             } else {
-                $statusBadge = '<span class="badge badge-success border border-success">Posted</span>';
+                $saleStatusBadge = '<span class="erp-badge badge-posted"><i class="fas fa-check-circle me-1"></i>Posted</span>';
             }
-        } elseif ($sale->sale_status === 'pending') {
-            $statusBadge = '<span class="badge text-white" style="background-color: #ef4444;"><i class="fas fa-hourglass-half me-1"></i>Pending</span>';
-        } elseif ($sale->sale_status === 'ready') {
-            $statusBadge = '<span class="badge text-white" style="background-color: #2563eb;"><i class="fas fa-box me-1"></i>Ready</span>';
-        } elseif ($sale->sale_status === 'delivered') {
-            $statusBadge = '<span class="badge text-white" style="background-color: #10b981;"><i class="fas fa-truck me-1"></i>Delivered</span>';
-        } elseif ($sale->sale_status === 'cancelled') {
-            $statusBadge = '<span class="badge text-dark" style="background-color: #f59e0b;"><i class="fas fa-ban me-1"></i>Cancelled</span>';
         } elseif ($sale->sale_status === 'booked') {
-            $statusBadge = '<span class="badge badge-warning text-dark border border-warning"><i class="fas fa-bookmark me-1"></i>Booked</span>';
-        } elseif ($sale->sale_status === 'returned') {
-            $statusBadge = '<span class="badge badge-danger border border-danger">Returned</span>';
-        } elseif ($sale->sale_status == 1) {
-            $statusBadge = '<span class="badge badge-danger border border-danger">Return</span>';
-        } elseif ($sale->sale_status === null) {
-            $statusBadge = '<span class="badge badge-success border border-success">Sale</span>';
+            $saleStatusBadge = '<span class="erp-badge badge-booked"><i class="fas fa-bookmark me-1"></i>Booked</span>';
+        } elseif ($sale->sale_status === 'returned' || $sale->sale_status == 1) {
+            $saleStatusBadge = '<span class="erp-badge badge-returned"><i class="fas fa-undo me-1"></i>Returned</span>';
+        } elseif ($sale->sale_status === 'draft') {
+            $saleStatusBadge = '<span class="erp-badge badge-draft"><i class="fas fa-file-alt me-1"></i>Draft</span>';
+        } else {
+            $saleStatusBadge = '<span class="erp-badge badge-posted"><i class="fas fa-check-circle me-1"></i>Posted</span>';
         }
 
         if ($sale->returns && $sale->returns->count() > 0) {
-            $statusBadge .= '<br><small class="badge badge-danger border border-danger mt-1"><i class="fas fa-undo-alt me-1"></i> Partial Return</small>';
+            $saleStatusBadge .= '<div class="mt-1"><span class="erp-badge badge-partial-return"><i class="fas fa-undo-alt me-1"></i>Partial Return</span></div>';
+        }
+
+        // 2. Product / Order Condition Status (pending, ready, delivered, cancelled)
+        $ordStatus = strtolower($sale->order_status ?? 'pending');
+        if ($ordStatus === 'ready') {
+            $orderStatusBadge = '<span class="erp-badge state-ready"><i class="fas fa-box me-1"></i>Ready</span>';
+        } elseif ($ordStatus === 'delivered') {
+            $orderStatusBadge = '<span class="erp-badge state-delivered"><i class="fas fa-truck me-1"></i>Delivered</span>';
+        } elseif ($ordStatus === 'cancelled') {
+            $orderStatusBadge = '<span class="erp-badge state-cancelled"><i class="fas fa-ban me-1"></i>Cancelled</span>';
+        } else {
+            $orderStatusBadge = '<span class="erp-badge state-pending"><i class="fas fa-hourglass-half me-1"></i>Pending</span>';
         }
 
         $inline_val = $sale->items ? $sale->items->sum('discount_amount') : 0;
@@ -55,35 +60,48 @@
                 $refunded = $refundPayment->amount;
             }
         }
+        // Customer Name determination
+        $custDisplayName = optional($sale->customer_relation)->customer_name;
+        $isWalkin = false;
+        if (empty($custDisplayName)) {
+            if (!empty($sale->walkin_name)) {
+                $custDisplayName = $sale->walkin_name;
+                $isWalkin = true;
+            } else {
+                $custDisplayName = 'Walk-in Customer';
+                $isWalkin = true;
+            }
+        }
+        $custInitial = strtoupper(substr($custDisplayName, 0, 1));
     @endphp
 
     {{-- Desktop Table Row (≥ 768px) --}}
     <tr class="border-bottom-0 d-none d-md-table-row">
-        <td class="ps-3 fw-bold text-muted font-monospace">#{{ $sale->id }}</td>
+        <td class="ps-2 text-center" data-sort="{{ $sale->id }}"><span class="erp-bill-tag">#{{ $sale->id }}</span></td>
         <td>
-            <div class="d-flex align-items-center">
-                <div class="avatar-circle bg-info-subtle text-info me-2 fw-bold d-flex align-items-center justify-content-center rounded-circle"
-                    style="width: 32px; height: 32px; font-size: 14px; background-color: #e0f2fe; color: #0369a1;">
-                    {{ strtoupper(substr(optional($sale->customer_relation)->customer_name ?? 'C', 0, 1)) }}
+            <div class="d-flex align-items-center gap-1.5" style="max-width: 140px;">
+                <div class="erp-avatar {{ $isWalkin ? 'erp-avatar-walkin' : 'erp-avatar-registered' }}">
+                    {{ $custInitial }}
                 </div>
-                <span class="fw-medium text-dark">{{ optional($sale->customer_relation)->customer_name ?? 'N/A' }}</span>
+                <div class="d-flex flex-column text-truncate">
+                    <span class="fw-bold text-dark text-truncate" style="font-size: 0.78rem;" title="{{ $custDisplayName }}">{{ $custDisplayName }}</span>
+                    @if ($isWalkin && !empty($sale->walkin_name))
+                        <span class="text-muted text-truncate" style="font-size: 0.65rem; font-weight: 500;">Walk-in</span>
+                    @endif
+                </div>
             </div>
         </td>
-        <td class="font-monospace text-dark">{{ $sale->reference ?? '-' }}</td>
-        <td title="{{ $pNames }}" class="text-muted small">
-            {{ \Illuminate\Support\Str::limit($pNames, 40) }}
+        <td><span class="font-monospace text-muted" style="font-size: 0.75rem;">{{ $sale->reference ?? '-' }}</span></td>
+        <td title="{{ $pNames }}" class="text-muted small" style="max-width: 120px;">
+            <div class="text-truncate" style="max-width: 120px;">
+                {{ \Illuminate\Support\Str::limit($pNames, 22) }}
+            </div>
         </td>
-        <td class="text-center font-monospace">
+        <td class="text-center font-monospace fw-semibold text-dark" style="font-size: 0.78rem;">
             {{ $sale->total_items > 0 ? $sale->total_items : $sale->qty }}
         </td>
-        <td class="text-end fw-bold text-dark font-monospace">
+        <td class="text-end fw-bold text-dark font-monospace" style="font-size: 0.78rem;">
             Rs. {{ number_format($gross_subtotal, 2) }}
-        </td>
-        <td class="text-end text-dark font-monospace">
-            Rs. {{ number_format($inline_val, 2) }}
-            @if ($inline_val > 0)
-                <div class="text-muted small mt-1" style="font-size: 10px;">({{ number_format($inline_pct, 1) }}%)</div>
-            @endif
         </td>
         <td class="text-end text-dark font-monospace">
             @if ($sale->total_extradiscount > 0)
@@ -91,15 +109,15 @@
                     $add_val = $sale->total_extradiscount;
                     $add_pct = $bill_amount > 0 ? ($add_val / $bill_amount) * 100 : 0;
                 @endphp
-                <span class="badge rounded-pill border px-2 py-1" style="background-color: #fff8e1; color: #b78103; border-color: #ffe082 !important; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
-                    <i class="fas fa-tag" style="font-size: 10px;"></i> Rs. {{ number_format($add_val, 2) }}
+                <span class="badge rounded-pill border px-1.5 py-0.5" style="background-color: #fffbeb; color: #b45309; border-color: #fde68a !important; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; gap: 2px;">
+                    <i class="fas fa-tag" style="font-size: 8px;"></i> Rs. {{ number_format($add_val, 2) }}
                 </span>
-                <div class="text-muted small mt-1" style="font-size: 10px;">({{ number_format($add_pct, 1) }}%)</div>
+                <div class="text-muted small mt-0.5" style="font-size: 9px;">({{ number_format($add_pct, 1) }}%)</div>
             @else
-                <span class="text-muted">Rs. 0.00</span>
+                <span class="text-muted" style="font-size: 0.75rem;">Rs. 0.00</span>
             @endif
         </td>
-        <td class="text-end text-success fw-bold font-monospace">
+        <td class="text-end fw-bold font-monospace" style="color: #047857; font-size: 0.80rem;">
             @if (isset($isExchange) && $isExchange)
                 @if ($collected > 0)
                     Rs. {{ number_format($collected, 2) }}
@@ -108,31 +126,72 @@
                 @else
                     Rs. 0.00
                 @endif
-                <br><span class="badge badge-info text-white border border-info px-1 py-0 mt-1" style="font-size: 10px;"><i class="fas fa-exchange-alt me-1"></i>Exchange</span>
+                <div class="mt-0.5"><span class="erp-badge badge-exchange" style="font-size: 9px; padding: 1px 4px;"><i class="fas fa-exchange-alt me-1"></i>Exchange</span></div>
             @else
                 Rs. {{ number_format($sale->total_net, 2) }}
             @endif
         </td>
-        <td class="text-nowrap small text-muted">
+        <td class="text-nowrap small text-muted font-monospace" style="font-size: 0.75rem;">
             {{ $sale->created_at->format('d/m/Y') }}
         </td>
-        <td>{!! $statusBadge !!}</td>
-        <td class="pe-3 text-center">
-            <div class="dropdown">
-                <button class="btn btn-premium-action dropdown-toggle" type="button" data-toggle="dropdown" aria-expanded="false">
+        <td class="text-nowrap text-center">{!! $saleStatusBadge !!}</td>
+        <td class="text-nowrap text-center sale-state-cell" data-sale-id="{{ $sale->id }}">{!! $orderStatusBadge !!}</td>
+        <td class="pe-2 text-center text-nowrap">
+            <div class="dropdown d-inline-block">
+                <button class="btn btn-erp-table-action dropdown-toggle shadow-none" type="button" data-toggle="dropdown" aria-expanded="false">
                     <i class="fas fa-ellipsis-v small me-1"></i> Actions
                 </button>
-                <ul class="dropdown-menu dropdown-menu-right border-0 shadow-lg rounded-3">
+                <ul class="dropdown-menu dropdown-menu-right border-0 shadow-lg rounded-3 py-2" style="min-width: 175px;">
                     @can('sales.edit')
                         <li>
                             <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('sales.edit', $sale->id) }}">
-                                <i class="fas fa-edit text-primary fa-fw"></i> Edit (Simple)
+                                <i class="fas fa-edit text-primary fa-fw"></i> Edit
                             </a>
                         </li>
+                    @endcan
+
+                    @can('sales.view')
                         <li>
-                            <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('pos.index') }}?edit_id={{ $sale->id }}">
-                                <i class="fas fa-cash-register text-success fa-fw"></i> Edit (POS Sale)
+                            <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('sales.invoice', $sale->id) }}" target="_blank">
+                                <i class="fas fa-file-invoice text-info fa-fw"></i> View Invoice
                             </a>
+                        </li>
+                    @endcan
+
+                    @can('sales.edit')
+                        {{-- Nested State Menu with Radio Buttons --}}
+                        <li class="dropdown-submenu">
+                            <a class="dropdown-item dropdown-submenu-toggle d-flex align-items-center justify-content-between py-2" href="javascript:void(0)">
+                                <span><i class="fas fa-tasks text-info fa-fw me-1"></i> State</span>
+                                <i class="fas fa-chevron-left small text-muted"></i>
+                            </a>
+                            <div class="dropdown-submenu-menu shadow-lg">
+                                <div class="px-3 py-1 border-bottom text-uppercase fw-bold text-muted" style="font-size: 10px; letter-spacing: 0.5px;">Select State</div>
+
+                                <label class="state-radio-item" onclick="changeSaleOrderStatus(event, {{ $sale->id }}, 'pending', this, '{{ $sale->sale_status }}')">
+                                    <input type="radio" name="order_state_{{ $sale->id }}" value="pending" {{ $ordStatus === 'pending' ? 'checked' : '' }}>
+                                    <span class="badge rounded-circle p-1" style="background-color: #ef4444; width: 8px; height: 8px; display: inline-block;"></span>
+                                    <span class="fw-medium">🔴 Pending</span>
+                                </label>
+
+                                <label class="state-radio-item" onclick="changeSaleOrderStatus(event, {{ $sale->id }}, 'ready', this, '{{ $sale->sale_status }}')">
+                                    <input type="radio" name="order_state_{{ $sale->id }}" value="ready" {{ $ordStatus === 'ready' ? 'checked' : '' }}>
+                                    <span class="badge rounded-circle p-1" style="background-color: #2563eb; width: 8px; height: 8px; display: inline-block;"></span>
+                                    <span class="fw-medium">🔵 Ready</span>
+                                </label>
+
+                                <label class="state-radio-item" onclick="changeSaleOrderStatus(event, {{ $sale->id }}, 'delivered', this, '{{ $sale->sale_status }}')">
+                                    <input type="radio" name="order_state_{{ $sale->id }}" value="delivered" {{ $ordStatus === 'delivered' ? 'checked' : '' }}>
+                                    <span class="badge rounded-circle p-1" style="background-color: #10b981; width: 8px; height: 8px; display: inline-block;"></span>
+                                    <span class="fw-medium">🟢 Delivered</span>
+                                </label>
+
+                                <label class="state-radio-item" onclick="changeSaleOrderStatus(event, {{ $sale->id }}, 'cancelled', this, '{{ $sale->sale_status }}')">
+                                    <input type="radio" name="order_state_{{ $sale->id }}" value="cancelled" {{ $ordStatus === 'cancelled' ? 'checked' : '' }}>
+                                    <span class="badge rounded-circle p-1" style="background-color: #f59e0b; width: 8px; height: 8px; display: inline-block;"></span>
+                                    <span class="fw-medium">🟡 Cancelled</span>
+                                </label>
+                            </div>
                         </li>
                     @endcan
 
@@ -149,39 +208,9 @@
                         @endcan
                     @endif
 
-                    <li><hr class="dropdown-divider"></li>
-
-                    @can('sales.view')
-                        <li>
-                            <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('sales.invoice', $sale->id) }}" target="_blank">
-                                <i class="fas fa-file-invoice text-info fa-fw"></i> View Invoice
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('sales.invoice', ['id' => $sale->id, 'type' => 'estimate']) }}" target="_blank">
-                                <i class="fas fa-calculator text-secondary fa-fw"></i> View Estimate
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('sales.dc', $sale->id) }}" target="_blank">
-                                <i class="fas fa-shipping-fast text-warning fa-fw"></i> Delivery Challan (DC)
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('sales.dc_thermal', $sale->id) }}" target="_blank">
-                                <i class="fas fa-truck text-muted fa-fw"></i> DC Thermal
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('sales.receipt', $sale->id) }}" target="_blank">
-                                <i class="fas fa-receipt text-success fa-fw"></i> Receipt
-                            </a>
-                        </li>
-                    @endcan
-
-                    @if ($sale->sale_status !== 'returned')
+                    @if ($sale->sale_status === 'posted')
                         @can('sales.create')
-                            <li><hr class="dropdown-divider"></li>
+                            <li><hr class="dropdown-divider my-1"></li>
                             <li>
                                 <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-danger" href="{{ route('sale.return.show', $sale->id) }}">
                                     <i class="fas fa-undo fa-fw"></i> Return Sale
@@ -196,27 +225,32 @@
 
     {{-- Mobile Table Card Row (< 768px) --}}
     @php
-        $cardBorderColor = '#10b981'; // Green for posted
-        if ($sale->sale_status === 'draft') $cardBorderColor = '#f59e0b';
-        elseif ($sale->sale_status === 'booked') $cardBorderColor = '#06b6d4';
-        elseif ($sale->sale_status === 'returned' || $sale->sale_status == 1) $cardBorderColor = '#ef4444';
+        $cardBorderColor = '#059669'; // Emerald for posted
+        if ($sale->sale_status === 'draft') $cardBorderColor = '#64748b';
+        elseif ($sale->sale_status === 'booked') $cardBorderColor = '#2563eb';
+        elseif ($sale->sale_status === 'returned' || $sale->sale_status == 1) $cardBorderColor = '#dc2626';
     @endphp
     <tr class="d-table-row d-md-none border-0">
         <td colspan="12" class="p-0 border-0 bg-transparent">
             <div class="sale-mcard p-3 bg-white rounded-3 border mb-3 shadow-sm" style="border-left: 4px solid {{ $cardBorderColor }} !important;">
                 <div class="d-flex align-items-center justify-content-between mb-2">
                     <div class="d-flex align-items-center gap-2">
-                        <span class="fw-bold text-dark fs-6 font-monospace">#{{ $sale->reference ?? $sale->invoice_no ?? $sale->id }}</span>
+                        <span class="erp-bill-tag">#{{ $sale->reference ?? $sale->invoice_no ?? $sale->id }}</span>
                     </div>
-                    <div>{!! $statusBadge !!}</div>
+                    <div class="d-flex align-items-center gap-1">{!! $saleStatusBadge !!} <span class="sale-state-cell" data-sale-id="{{ $sale->id }}">{!! $orderStatusBadge !!}</span></div>
                 </div>
 
                 <div class="d-flex align-items-center gap-2 my-2">
-                    <div class="avatar-circle text-info fw-bold d-flex align-items-center justify-content-center rounded-circle" style="width: 34px; height: 34px; font-size: 13px; background-color: #e0f2fe; color: #0369a1;">
-                        {{ strtoupper(substr(optional($sale->customer_relation)->customer_name ?? 'C', 0, 1)) }}
+                    <div class="erp-avatar {{ $isWalkin ? 'erp-avatar-walkin' : 'erp-avatar-registered' }}">
+                        {{ $custInitial }}
                     </div>
                     <div>
-                        <div class="fw-bold text-dark small">{{ optional($sale->customer_relation)->customer_name ?? 'Walk-in Customer' }}</div>
+                        <div class="fw-bold text-dark small">
+                            {{ $custDisplayName }}
+                            @if ($isWalkin && !empty($sale->walkin_name))
+                                <span class="badge bg-light text-muted border ms-1" style="font-size: 9px; font-weight: 600;">Walk-in</span>
+                            @endif
+                        </div>
                         <div class="text-muted small" style="font-size: 11px;">
                             <i class="far fa-calendar-alt me-1"></i> {{ $sale->created_at->format('d/m/Y') }}
                             <span class="ms-2"><i class="fas fa-box me-1"></i> {{ $sale->total_items > 0 ? $sale->total_items : $sale->qty }} Items</span>
@@ -227,22 +261,50 @@
                 <div class="row g-2 bg-light rounded-2 p-2 my-2 text-center" style="font-size: 0.8rem;">
                     <div class="col-6">
                         <div class="text-muted small">Subtotal</div>
-                        <div class="fw-bold text-dark">Rs. {{ number_format($gross_subtotal, 2) }}</div>
+                        <div class="fw-bold text-dark font-monospace">Rs. {{ number_format($gross_subtotal, 2) }}</div>
                     </div>
                     <div class="col-6">
                         <div class="text-muted small">Net Total</div>
-                        <div class="fw-bold text-success">Rs. {{ number_format($sale->total_net, 2) }}</div>
+                        <div class="fw-bold text-success font-monospace">Rs. {{ number_format($sale->total_net, 2) }}</div>
                     </div>
                 </div>
 
                 {{-- Mobile Action Buttons Grid --}}
                 <div class="d-grid gap-2 mt-2" style="display: grid; grid-template-columns: 1fr 1fr;">
                     @can('sales.edit')
-                        <a href="{{ route('sales.edit', $sale->id) }}" class="btn btn-sm btn-outline-primary fw-bold" style="border-radius: 8px;">
-                            <i class="fas fa-edit me-1"></i> Edit (Simple)
-                        </a>
-                        <a href="{{ route('pos.index') }}?edit_id={{ $sale->id }}" class="btn btn-sm btn-outline-success fw-bold" style="border-radius: 8px;">
-                            <i class="fas fa-cash-register me-1"></i> Edit (POS)
+                        <div class="dropdown" style="grid-column: span 2;">
+                            <button class="btn btn-sm btn-erp-outline w-100 dropdown-toggle fw-bold d-flex align-items-center justify-content-center gap-1" type="button" data-toggle="dropdown" aria-expanded="false" style="border-radius: 8px;">
+                                <i class="fas fa-tasks me-1 text-info"></i> Change State
+                            </button>
+                            <div class="dropdown-menu border-0 shadow-lg rounded-3 w-100 p-2">
+                                <div class="px-2 py-1 border-bottom text-uppercase fw-bold text-muted mb-1" style="font-size: 10px; letter-spacing: 0.5px;">Select State</div>
+                                <label class="state-radio-item" onclick="changeSaleOrderStatus(event, {{ $sale->id }}, 'pending', this, '{{ $sale->sale_status }}')">
+                                    <input type="radio" name="m_order_state_{{ $sale->id }}" value="pending" {{ $ordStatus === 'pending' ? 'checked' : '' }}>
+                                    <span class="badge rounded-circle p-1" style="background-color: #ef4444; width: 8px; height: 8px; display: inline-block;"></span>
+                                    <span class="fw-medium">🔴 Pending</span>
+                                </label>
+                                <label class="state-radio-item" onclick="changeSaleOrderStatus(event, {{ $sale->id }}, 'ready', this, '{{ $sale->sale_status }}')">
+                                    <input type="radio" name="m_order_state_{{ $sale->id }}" value="ready" {{ $ordStatus === 'ready' ? 'checked' : '' }}>
+                                    <span class="badge rounded-circle p-1" style="background-color: #2563eb; width: 8px; height: 8px; display: inline-block;"></span>
+                                    <span class="fw-medium">🔵 Ready</span>
+                                </label>
+                                <label class="state-radio-item" onclick="changeSaleOrderStatus(event, {{ $sale->id }}, 'delivered', this, '{{ $sale->sale_status }}')">
+                                    <input type="radio" name="m_order_state_{{ $sale->id }}" value="delivered" {{ $ordStatus === 'delivered' ? 'checked' : '' }}>
+                                    <span class="badge rounded-circle p-1" style="background-color: #10b981; width: 8px; height: 8px; display: inline-block;"></span>
+                                    <span class="fw-medium">🟢 Delivered</span>
+                                </label>
+                                <label class="state-radio-item" onclick="changeSaleOrderStatus(event, {{ $sale->id }}, 'cancelled', this, '{{ $sale->sale_status }}')">
+                                    <input type="radio" name="m_order_state_{{ $sale->id }}" value="cancelled" {{ $ordStatus === 'cancelled' ? 'checked' : '' }}>
+                                    <span class="badge rounded-circle p-1" style="background-color: #f59e0b; width: 8px; height: 8px; display: inline-block;"></span>
+                                    <span class="fw-medium">🟡 Cancelled</span>
+                                </label>
+                            </div>
+                        </div>
+                    @endcan
+
+                    @can('sales.edit')
+                        <a href="{{ route('sales.edit', $sale->id) }}" class="btn btn-sm btn-erp-outline fw-bold justify-content-center" style="border-radius: 8px;">
+                            <i class="fas fa-edit me-1 text-primary"></i> Edit
                         </a>
                     @endcan
 
@@ -250,7 +312,7 @@
                         @can('sales.create')
                             <form action="{{ route('sales.confirm', $sale->id) }}" method="POST" class="confirm-booking-form m-0">
                                 @csrf
-                                <button type="submit" class="btn btn-sm btn-success w-100 fw-bold" style="border-radius: 8px;">
+                                <button type="submit" class="btn btn-sm btn-success w-100 fw-bold justify-content-center" style="border-radius: 8px;">
                                     <i class="fas fa-check-circle me-1"></i> Confirm
                                 </button>
                             </form>
@@ -258,20 +320,14 @@
                     @endif
 
                     @can('sales.view')
-                        <a href="{{ route('sales.invoice', $sale->id) }}" target="_blank" class="btn btn-sm btn-outline-info fw-bold" style="border-radius: 8px;">
-                            <i class="fas fa-file-invoice me-1"></i> Invoice
-                        </a>
-                        <a href="{{ route('sales.receipt', $sale->id) }}" target="_blank" class="btn btn-sm btn-outline-success fw-bold" style="border-radius: 8px;">
-                            <i class="fas fa-receipt me-1"></i> Receipt
-                        </a>
-                        <a href="{{ route('sales.dc', $sale->id) }}" target="_blank" class="btn btn-sm btn-outline-warning fw-bold text-dark" style="border-radius: 8px;">
-                            <i class="fas fa-shipping-fast me-1"></i> DC
+                        <a href="{{ route('sales.invoice', $sale->id) }}" target="_blank" class="btn btn-sm btn-erp-outline fw-bold justify-content-center" style="border-radius: 8px;">
+                            <i class="fas fa-file-invoice me-1 text-info"></i> Invoice
                         </a>
                     @endcan
 
-                    @if ($sale->sale_status !== 'returned')
+                    @if ($sale->sale_status === 'posted')
                         @can('sales.create')
-                            <a href="{{ route('sale.return.show', $sale->id) }}" class="btn btn-sm btn-outline-danger fw-bold" style="border-radius: 8px;">
+                            <a href="{{ route('sale.return.show', $sale->id) }}" class="btn btn-sm btn-erp-outline-danger fw-bold justify-content-center" style="border-radius: 8px;">
                                 <i class="fas fa-undo me-1"></i> Return
                             </a>
                         @endcan
@@ -281,3 +337,5 @@
         </td>
     </tr>
 @endforeach
+
+

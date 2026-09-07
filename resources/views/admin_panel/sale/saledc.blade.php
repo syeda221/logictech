@@ -224,9 +224,17 @@
 
     <div class="invoice-container">
         <!-- Company Header -->
+        @php
+            $dcLogo = \App\Models\Setting::getLogoUrl();
+        @endphp
         <div class="company-info">
-            <div class="company-name">{{ \App\Models\Setting::get('company_name', 'prowave technogies') }}</div>
-            <div style="font-size: 12px;">{{ \App\Models\Setting::get('company_address', 'Hyderabad') }}</div>
+            @if(!empty($dcLogo))
+                <div style="text-align: center; margin-bottom: 8px;">
+                    <img src="{{ $dcLogo }}" alt="Company Logo" style="max-width: 180px; max-height: 65px; object-fit: contain;">
+                </div>
+            @endif
+            <div class="company-name">{{ \App\Models\Setting::get('company_name', 'LOGIC TECH ENGINEERING') }}</div>
+            <div style="font-size: 12px;">{{ \App\Models\Setting::get('company_address', '01-KM Sharaqpur Road') }}</div>
         </div>
 
         <div class="invoice-title">Delivery Challan</div>

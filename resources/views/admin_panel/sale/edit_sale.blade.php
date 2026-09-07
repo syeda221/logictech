@@ -12,170 +12,382 @@
     </div>
     <link href="{{ asset('assets/vendors/bootstrap5/css/bootstrap.min.css') }}" rel="stylesheet">
     <link href="{{ asset('assets/vendors/select2/css/select2.min.css') }}" rel="stylesheet" />
+    <link href="{{ asset('assets/css/flatpickr.min.css') }}" rel="stylesheet" />
     <style>
-        /* ================= ULTRA-COMPACT EXCEL-LIKE ERP UI ================= */
+        /* Compact Flatpickr Calendar Styling */
+        .flatpickr-calendar {
+            width: 246px !important;
+            font-size: 11px !important;
+            border: 1.5px solid #bfdbfe !important;
+            border-radius: 10px !important;
+            box-shadow: 0 8px 24px -4px rgba(37, 99, 235, 0.18) !important;
+            font-family: inherit !important;
+            background: #ffffff !important;
+            padding: 0 !important;
+        }
+        .flatpickr-calendar .flatpickr-months {
+            height: 28px !important;
+            background: #2563eb !important;
+            border-radius: 8px 8px 0 0 !important;
+            align-items: center !important;
+        }
+        .flatpickr-calendar .flatpickr-month {
+            height: 28px !important;
+            color: #ffffff !important;
+            fill: #ffffff !important;
+        }
+        .flatpickr-current-month {
+            font-size: 11px !important;
+            padding: 2px 0 0 0 !important;
+            height: 28px !important;
+        }
+        .flatpickr-current-month .numInputWrapper {
+            width: 46px !important;
+        }
+        .flatpickr-current-month input.cur-year {
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            color: #ffffff !important;
+        }
+        .flatpickr-current-month .flatpickr-monthDropdown-months {
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            color: #ffffff !important;
+            padding: 0 2px !important;
+            background: #2563eb !important;
+        }
+        .flatpickr-months .flatpickr-prev-month, 
+        .flatpickr-months .flatpickr-next-month {
+            height: 28px !important;
+            padding: 4px 8px !important;
+            color: #ffffff !important;
+            fill: #ffffff !important;
+        }
+        .flatpickr-months .flatpickr-prev-month svg, 
+        .flatpickr-months .flatpickr-next-month svg {
+            width: 10px !important;
+            height: 10px !important;
+            fill: #ffffff !important;
+        }
+        .flatpickr-weekdays {
+            height: 20px !important;
+            background: #eff6ff !important;
+            border-bottom: 1px solid #dbeafe !important;
+        }
+        span.flatpickr-weekday {
+            font-size: 9.5px !important;
+            font-weight: 700 !important;
+            color: #1e40af !important;
+            line-height: 20px !important;
+        }
+        .flatpickr-days {
+            width: 240px !important;
+            padding: 2px !important;
+        }
+        .dayContainer {
+            width: 240px !important;
+            min-width: 240px !important;
+            max-width: 240px !important;
+            padding: 1px !important;
+        }
+        .flatpickr-day {
+            max-width: 31px !important;
+            height: 26px !important;
+            line-height: 26px !important;
+            font-size: 10.5px !important;
+            margin: 1px !important;
+            border-radius: 5px !important;
+            font-weight: 500 !important;
+        }
+        .flatpickr-day.selected, 
+        .flatpickr-day.startRange, 
+        .flatpickr-day.endRange {
+            background: #2563eb !important;
+            border-color: #2563eb !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
+        }
+        .flatpickr-day:hover {
+            background: #eff6ff !important;
+            border-color: #bfdbfe !important;
+            color: #1e40af !important;
+        }
+        .flatpickr-day.today {
+            border-color: #2563eb !important;
+            font-weight: 700 !important;
+        }
+
+        /* Pill Date Wrapper */
+        .erp-pill-date-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .erp-pill-date-wrapper input {
+            padding-right: 28px !important;
+            cursor: pointer !important;
+        }
+        .erp-pill-date-wrapper .date-icon {
+            position: absolute;
+            right: 10px;
+            pointer-events: none;
+            font-size: 0.75rem;
+            z-index: 5;
+        }
+
+        /* ================= ENTERPRISE ERP DESIGN SYSTEM ================= */
+        :root {
+            --erp-primary: #2563eb;
+            --erp-primary-hover: #1d4ed8;
+            --erp-primary-light: #eff6ff;
+            --erp-border-blue: #bfdbfe;
+            --erp-border-subtle: #dbeafe;
+            --erp-text-dark: #0f172a;
+            --erp-text-muted: #64748b;
+            --erp-text-navy: #1e40af;
+            --erp-card-bg: #ffffff;
+            --erp-row-hover: #f0f7ff;
+        }
+
         body {
             background-color: #f8fafc !important;
-            font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+            color: #1e293b !important;
         }
 
         .main-container {
-            border: 1px solid #94a3b8 !important;
-            border-radius: 4px !important;
-            box-shadow: none !important;
+            border: 1.5px solid #dbeafe !important;
+            border-radius: 12px !important;
+            box-shadow: 0 1px 4px rgba(37, 99, 235, 0.04) !important;
             background-color: #ffffff !important;
-            padding: 6px !important;
-            font-size: .78rem;
+            padding: 1rem !important;
             max-width: 100%;
         }
 
+        .erp-page-header {
+            margin-bottom: 0.85rem;
+        }
+        .erp-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #0f172a;
+            letter-spacing: -0.01em;
+            margin-bottom: 2px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .erp-subtitle {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-bottom: 0;
+            font-weight: 400;
+        }
+
+        /* Top Panel Card */
         .card-panel {
-            background-color: #f8fafc !important;
-            border: 1px solid #cbd5e1 !important;
-            border-radius: 3px !important;
-            padding: 6px !important;
-            height: 100%;
+            background-color: #ffffff !important;
+            border: 1.5px solid #dbeafe !important;
+            border-radius: 10px !important;
+            padding: 0.75rem 0.85rem !important;
+            box-shadow: 0 1px 3px rgba(37, 99, 235, 0.03) !important;
         }
 
-        .totals-card {
-            background-color: #f1f5f9 !important;
-            border: 1px solid #cbd5e1 !important;
-            border-radius: 3px !important;
-            padding: 6px !important;
-        }
-
-        /* Section Titles */
         .section-title {
             font-weight: 700 !important;
             text-transform: uppercase;
-            font-size: 0.72rem !important;
-            letter-spacing: 0.5px !important;
-            color: #1e293b !important;
-            margin-bottom: 4px !important;
+            font-size: 0.75rem !important;
+            letter-spacing: 0.04em !important;
+            color: #1e40af !important;
+            margin-bottom: 0 !important;
             border-left: 3px solid #2563eb !important;
-            padding-left: 6px !important;
+            padding-left: 8px !important;
+            display: flex;
+            align-items: center;
+        }
+
+        /* Form Labels & Controls */
+        .form-label {
+            font-size: 0.68rem !important;
+            font-weight: 700 !important;
+            color: #1e40af !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.04em !important;
+            margin-bottom: 0.25rem !important;
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
 
         .form-control,
-        .form-select,
-        .select2-container--default .select2-selection--single {
-            border: 1px solid #cbd5e1 !important;
-            border-radius: 3px !important;
-            padding: 2px 6px !important;
+        .form-select {
+            border: 1.5px solid #bfdbfe !important;
+            border-radius: 50px !important;
+            padding: 0.25rem 0.75rem !important;
             font-weight: 500 !important;
-            color: #1e293b !important;
+            color: #0f172a !important;
             background-color: #ffffff !important;
             transition: all 0.15s ease-in-out !important;
-            height: 26px !important;
+            height: 34px !important;
             font-size: 0.78rem !important;
+        }
+
+        .form-control:hover,
+        .form-select:hover {
+            border-color: #60a5fa !important;
+            background-color: #f8fbff !important;
         }
 
         .form-control:focus,
         .form-select:focus,
         .select2-container--default.select2-container--focus .select2-selection--single {
             border-color: #2563eb !important;
-            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1) !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+            background-color: #ffffff !important;
             outline: none !important;
         }
 
-        /* Read-only fields */
-        .input-readonly {
-            background-color: #f1f5f9 !important;
-            border-color: #cbd5e1 !important;
-            color: #475569 !important;
-            font-weight: 600 !important;
+        .input-readonly,
+        input[readonly].input-readonly {
+            background-color: #eff6ff !important;
+            border-color: #bfdbfe !important;
+            color: #1e40af !important;
+            font-weight: 700 !important;
             cursor: not-allowed !important;
         }
 
-        /* Compact Buttons */
-        .btn-action-primary {
+        /* Pill Group for Invoice Prefix & Number */
+        .erp-pill-group {
+            border: 1.5px solid #bfdbfe !important;
+            border-radius: 50px !important;
+            overflow: hidden !important;
+            display: flex !important;
+            align-items: center !important;
+            background: #ffffff !important;
+            height: 34px !important;
+            transition: all 0.15s ease-in-out !important;
+        }
+        .erp-pill-group:hover {
+            border-color: #60a5fa !important;
+        }
+        .erp-pill-group:focus-within {
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+        }
+        .erp-pill-group .input-inv {
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            background-color: #eff6ff !important;
+            font-family: monospace !important;
+            font-weight: 700 !important;
+            color: #1e40af !important;
+            text-align: center !important;
+            height: 100% !important;
+            padding: 0 10px !important;
+            font-size: 0.80rem !important;
+            flex-grow: 1 !important;
+            outline: none !important;
+        }
+
+        /* Pill Style Action Buttons */
+        .btn-erp-pill-primary {
             background-color: #2563eb !important;
             border: 1px solid #1d4ed8 !important;
             color: #ffffff !important;
             font-weight: 600 !important;
-            border-radius: 3px !important;
-            padding: 4px 12px !important;
-            transition: all 0.15s;
-            font-size: 0.78rem !important;
+            font-size: 0.75rem !important;
+            border-radius: 50px !important;
+            height: 32px !important;
+            padding: 0 14px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 5px !important;
+            box-shadow: 0 1px 2px rgba(37, 99, 235, 0.25) !important;
+            transition: all 0.15s ease !important;
+            white-space: nowrap !important;
+            cursor: pointer;
         }
-        .btn-action-primary:hover {
+        .btn-erp-pill-primary:hover {
             background-color: #1d4ed8 !important;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 6px -1px rgba(37, 99, 235, 0.35) !important;
             color: #ffffff !important;
         }
 
-        .btn-action-secondary {
+        .btn-erp-pill-outline {
             background-color: #ffffff !important;
-            border: 1px solid #cbd5e1 !important;
-            color: #475569 !important;
+            border: 1.5px solid #bfdbfe !important;
+            color: #1e40af !important;
             font-weight: 600 !important;
-            border-radius: 3px !important;
-            padding: 4px 12px !important;
-            transition: all 0.15s;
-            font-size: 0.78rem !important;
+            font-size: 0.75rem !important;
+            border-radius: 50px !important;
+            height: 32px !important;
+            padding: 0 12px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 5px !important;
+            transition: all 0.15s ease !important;
+            white-space: nowrap !important;
+            cursor: pointer;
         }
-        .btn-action-secondary:hover {
-            background-color: #f1f5f9 !important;
-            color: #1e293b !important;
+        .btn-erp-pill-outline:hover {
+            background-color: #eff6ff !important;
+            border-color: #3b82f6 !important;
+            color: #1d4ed8 !important;
         }
 
-        /* Transaction Grid / Table */
+        /* Table & Grid System */
         .table-responsive {
-            border: 1px solid #cbd5e1 !important;
-            border-radius: 2px !important;
+            border: 1.5px solid #bfdbfe !important;
+            border-radius: 8px !important;
             overflow-x: auto !important;
             overflow-y: visible !important;
             box-shadow: none !important;
-            min-height: 100px;
             background-color: #ffffff;
-        }
-
-        .minw-350 {
-            min-width: 280px;
-            width: 280px;
-            flex-shrink: 0;
         }
 
         .sales-table {
             border-collapse: collapse !important;
             margin-bottom: 0 !important;
             width: 100%;
-            min-width: 900px;
         }
 
         .sales-table thead th {
-            background-color: #e2e8f0 !important;
-            color: #0f172a !important;
+            background-color: #eff6ff !important;
+            color: #1e40af !important;
             font-weight: 700 !important;
             text-transform: uppercase;
-            font-size: 10px !important;
-            letter-spacing: 0.3px;
-            padding: 3px 4px !important;
-            border: 1px solid #94a3b8 !important;
-            border-bottom: 2px solid #64748b !important;
+            font-size: 0.70rem !important;
+            letter-spacing: 0.04em;
+            padding: 0.45rem 0.35rem !important;
+            border: 1px solid #bfdbfe !important;
+            border-bottom: 2px solid #60a5fa !important;
             vertical-align: middle !important;
             text-align: center;
             white-space: nowrap;
         }
 
-        .sales-table thead th.col-product {
-            text-align: left !important;
-            padding-left: 4px !important;
-        }
-
         .sales-table tbody td {
-            border: 1px solid #cbd5e1 !important;
+            border: 1px solid #dbeafe !important;
             padding: 0 !important;
             background-color: #ffffff;
             vertical-align: middle !important;
         }
 
-        /* ⚡ FLAT BORDERLESS GRID INPUTS - COMPACT ⚡ */
+        .sales-table tbody tr:hover td {
+            background-color: #f0f7ff !important;
+        }
+
+        /* Table Grid Inputs */
         .sales-table tbody .form-control,
         .sales-table tbody .form-select {
             border: none !important;
             border-radius: 0 !important;
             box-shadow: none !important;
-            height: 26px !important;
+            height: 28px !important;
             margin: 0 !important;
             padding: 1px 4px !important;
             width: 100% !important;
@@ -186,30 +398,25 @@
             font-size: 0.76rem !important;
         }
 
-        .sales-table tbody td.col-product .form-select {
-            text-align: left !important;
-            padding-left: 12px !important;
+        .sales-table tbody .form-control:focus,
+        .sales-table tbody .form-select:focus {
+            outline: none !important;
+            background-color: #eff6ff !important;
+            box-shadow: inset 0 0 0 1.5px #2563eb !important;
         }
 
         .sales-table tbody .input-readonly,
         .sales-table tbody input[readonly],
         .sales-table tbody select[disabled] {
-            background-color: #f1f5f9 !important;
+            background-color: #f8fafc !important;
             cursor: not-allowed !important;
             color: #475569 !important;
             font-weight: 600 !important;
         }
 
-        .sales-table tbody .form-control:focus,
-        .sales-table tbody .form-select:focus {
-            outline: none !important;
-            background-color: #eff6ff !important;
-            box-shadow: inset 0 0 0 1px #2563eb !important;
-        }
-
         /* Select2 Specific flat borderless styling */
         .sales-table tbody .select2-container--default .select2-selection--single {
-            height: 26px !important;
+            height: 28px !important;
             padding: 0 !important;
             border: none !important;
             border-radius: 0 !important;
@@ -220,8 +427,8 @@
         }
 
         .sales-table tbody .select2-container--default .select2-selection--single .select2-selection__rendered {
-            line-height: 26px !important;
-            padding-left: 4px !important;
+            line-height: 28px !important;
+            padding-left: 6px !important;
             padding-right: 16px !important;
             font-size: 0.76rem !important;
             color: #1e293b !important;
@@ -230,27 +437,25 @@
         }
 
         .sales-table tbody .select2-container--default .select2-selection--single .select2-selection__arrow {
-            height: 26px !important;
+            height: 28px !important;
             right: 4px !important;
         }
 
-        /* Select2 Focus state */
         .sales-table tbody .select2-container--default.select2-container--focus .select2-selection--single {
             background-color: #eff6ff !important;
-            box-shadow: inset 0 0 0 1px #2563eb !important;
+            box-shadow: inset 0 0 0 1.5px #2563eb !important;
         }
 
-        /* Elegant flat block layout for discount input + toggle */
+        /* Discount Input Wrapper */
         .sales-table tbody .discount-wrapper {
             display: flex !important;
             align-items: stretch !important;
             width: 100% !important;
-            height: 26px !important;
+            height: 28px !important;
             gap: 0 !important;
             margin: 0 !important;
             padding: 0 !important;
         }
-
         .sales-table tbody .discount-wrapper .discount-value {
             flex-grow: 1 !important;
             border: none !important;
@@ -260,14 +465,13 @@
             background-color: transparent !important;
             padding: 1px 3px !important;
         }
-
         .sales-table tbody .discount-wrapper .discount-toggle {
             border: none !important;
             border-radius: 0 !important;
-            background-color: #e2e8f0 !important;
-            color: #475569 !important;
+            background-color: #eff6ff !important;
+            color: #1e40af !important;
             font-weight: 700 !important;
-            font-size: 0.7rem !important;
+            font-size: 0.70rem !important;
             width: 24px !important;
             min-width: 24px !important;
             height: 100% !important;
@@ -276,218 +480,160 @@
             justify-content: center !important;
             padding: 0 !important;
             cursor: pointer !important;
+            border-left: 1px solid #bfdbfe !important;
         }
-
         .sales-table tbody .discount-wrapper .discount-toggle:hover {
-            background-color: #cbd5e1 !important;
-            color: #0f172a !important;
+            background-color: #dbeafe !important;
+            color: #1d4ed8 !important;
         }
 
         .sales-table tfoot td {
-            background-color: #e2e8f0 !important;
-            border: 1px solid #94a3b8 !important;
-            border-top: 2px solid #64748b !important;
-            padding: 2px 4px !important;
+            background-color: #eff6ff !important;
+            border: 1px solid #bfdbfe !important;
+            border-top: 2px solid #60a5fa !important;
+            padding: 4px 8px !important;
             font-weight: 700 !important;
-            color: #0f172a !important;
-            font-size: 0.78rem !important;
+            color: #1e40af !important;
+            font-size: 0.80rem !important;
         }
 
-        /* Row hover */
-        .sales-table tbody tr:hover td {
-            background-color: #f8fafc !important;
-        }
-
-        /* Column Widths - Compact & Full Width */
-        .col-product { width: auto; min-width: 160px; }
-        .col-model { width: 95px; min-width: 95px; }
-        .col-serial { width: 85px; min-width: 85px; }
-        .col-stock { width: 55px; min-width: 55px; }
-        .col-qty, .col-qty-wrapper { width: 85px; min-width: 85px; }
-        .col-pieces { width: 50px; min-width: 50px; }
-        .col-price-p { width: 85px; min-width: 85px; }
-        .col-disc { width: 75px; min-width: 75px; }
-        .col-disc-amt { width: 70px; min-width: 70px; }
-        .col-amount { width: 90px; min-width: 90px; }
-        .col-action { width: 30px; min-width: 30px; text-align: center; }
-
-        /* Invalid cells & inputs */
-        .invalid-cell {
-            background-color: #fff5f5 !important;
-            border: 1px solid #ef4444 !important;
-        }
-        .invalid-select,
-        .invalid-input {
-            border-color: #ef4444 !important;
-            box-shadow: none !important;
-        }
-        .badge-soft {
-            background: #eef2ff;
-            color: #3730a3;
-            font-weight: 700;
-        }
-
-        /* Walk-in Customer Select Alignment */
-        #customerInputWrapper .select2-container--default .select2-selection--single {
-            height: 26px !important;
-            min-height: 26px !important;
-            padding: 0 !important;
-            display: flex !important;
-            align-items: center !important;
-            border: 1px solid #cbd5e1 !important;
-            border-radius: 3px !important;
-            background-color: #ffffff !important;
-        }
-        #customerInputWrapper .select2-container--default .select2-selection--single .select2-selection__rendered {
-            line-height: 24px !important;
-            padding-left: 6px !important;
-            font-size: 0.78rem !important;
-            color: #1e293b !important;
-            font-weight: 500 !important;
-        }
-        #customerInputWrapper .select2-container--default .select2-selection--single .select2-selection__arrow {
-            height: 24px !important;
-            top: 0 !important;
-            right: 2px !important;
-        }
-        #customerInputWrapper .select2-container--default.select2-container--focus .select2-selection--single {
-            border-color: #2563eb !important;
-            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1) !important;
-        }
-
-        /* Right Summary Panel Flow */
+        /* Summary & Side Panels */
         .summary-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 4px 0;
-            border-bottom: 1px dashed #e2e8f0;
-            font-size: 0.8rem;
+            padding: 6px 0;
+            border-bottom: 1px dashed #dbeafe;
+            font-size: 0.80rem;
         }
         .summary-row:last-child {
             border-bottom: none;
         }
         .summary-val-net {
-            font-size: 1.1rem !important;
-            font-weight: 800 !important;
-            color: #2563eb !important;
+            font-weight: 800;
+            color: #2563eb;
+            font-size: 1.1rem;
+            font-family: monospace;
         }
         .summary-val-change {
-            font-size: 1.1rem !important;
-            font-weight: 800 !important;
-            color: #dc2626 !important;
+            background: #fef2f2;
+            color: #dc2626;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 6px;
+            border: 1px solid #fecaca;
+            font-size: 0.95rem;
+            font-family: monospace;
         }
 
-        /* Bottom Summary Strip */
         .bottom-summary-strip {
-            background-color: #1e293b;
-            color: #ffffff;
-            border-radius: 6px;
-            padding: 8px 16px;
-            margin-top: 8px;
+            background: #ffffff;
+            border: 1.5px solid #dbeafe;
+            border-radius: 10px;
+            padding: 10px 16px;
+            margin-top: 10px;
             display: flex;
-            flex-wrap: wrap;
             align-items: center;
             justify-content: space-between;
+            flex-wrap: wrap;
             gap: 12px;
+            box-shadow: 0 1px 4px rgba(37, 99, 235, 0.04);
         }
-        .bottom-summary-strip span {
-            color: #f8fafc;
-        }
+
         .btn-save-complete {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            border: none;
-            color: #ffffff;
-            font-weight: 700;
-            padding: 8px 24px;
-            border-radius: 6px;
-            font-size: 0.9rem;
-            box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3);
-            transition: all 0.2s;
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            border-radius: 8px !important;
+            padding: 8px 20px !important;
+            font-size: 0.88rem !important;
+            border: none !important;
+            box-shadow: 0 3px 10px rgba(16, 185, 129, 0.25) !important;
+            transition: all 0.2s ease !important;
+            cursor: pointer;
         }
         .btn-save-complete:hover {
-            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            background: #059669 !important;
             transform: translateY(-1px);
-            box-shadow: 0 6px 8px -1px rgba(16, 185, 129, 0.4);
-            color: #ffffff;
+            box-shadow: 0 5px 14px rgba(16, 185, 129, 0.35) !important;
+            color: #ffffff !important;
+        }
+
+        /* Customer input select2 alignment - Pill Style */
+        #customerInputWrapper .select2-container--default .select2-selection--single {
+            height: 34px !important;
+            min-height: 34px !important;
+            padding: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            border: 1.5px solid #bfdbfe !important;
+            border-radius: 50px !important;
+            background-color: #ffffff !important;
+            transition: all 0.15s ease-in-out !important;
+        }
+        #customerInputWrapper .select2-container--default .select2-selection--single:hover {
+            border-color: #60a5fa !important;
+            background-color: #f8fbff !important;
+        }
+        #customerInputWrapper .select2-container--default.select2-container--focus .select2-selection--single {
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+            background-color: #ffffff !important;
+        }
+        #customerInputWrapper .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: 32px !important;
+            padding-left: 14px !important;
+            padding-right: 24px !important;
+            font-size: 0.78rem !important;
+            color: #1e293b !important;
+            font-weight: 500 !important;
+        }
+        #customerInputWrapper .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 32px !important;
+            top: 0 !important;
+            right: 8px !important;
         }
     </style>
 
-    <div class="container-fluid py-0 px-1">
-        <div class="main-container bg-white border mx-auto">
-            <div id="alertBox" class="alert d-none mb-1" role="alert" style="padding:4px 8px; font-size:0.78rem;"></div>
-            <form id="saleForm">
+    <div class="container-fluid py-2 px-2">
+        <div class="main-container bg-white mx-auto">
+            <div id="alertBox" class="alert d-none mb-2" role="alert" style="padding:6px 12px; font-size:0.78rem;"></div>
+            <form id="saleForm" autocomplete="off">
                 @csrf
                 <input type="hidden" name="booking_id" id="booking_id" value="{{ $sale->id ?? '' }}">
                 <input type="hidden" name="action" id="action" value="booking">
 
-                {{-- HEADER - Compact --}}
-                <div class="d-flex justify-content-between align-items-center px-2 py-1 border-bottom" style="min-height:26px;">
+                {{-- TOP HEADER BAR --}}
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 erp-page-header">
                     <div class="d-flex align-items-center gap-2">
-                        <span class="fw-bold text-dark header-text" style="font-size:0.85rem;"><i class="fas fa-edit text-primary me-1"></i>Edit Order / Booking #{{ $sale->invoice_no }}</span>
-                        <span class="badge bg-secondary" id="entryDateTime" style="font-size:0.7rem;">Date: {{ $sale->created_at->format('d/m/Y H:i') }}</span>
+                        <a href="{{ route('sale.index') }}" class="btn btn-erp-pill-outline" title="Back to Sales">
+                            <i class="fas fa-arrow-left"></i> <span>Back</span>
+                        </a>
+                        <div>
+                            <h4 class="erp-title">
+                                <i class="fas fa-edit text-primary"></i> <span id="pageMainHeading">Edit Order / Booking #{{ $sale->invoice_no }}</span>
+                            </h4>
+                            <p class="erp-subtitle">Executive order generation, instant booking ledger, and multi-format dispatch invoicing</p>
+                        </div>
                     </div>
-                    <div class="d-flex align-items-center gap-1">
-                        <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 fw-bold" id="btnHeaderPosted"
-                            disabled style="font-size:0.72rem; height:22px; line-height:20px;">Sale</button>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge" id="entryDateTime" style="background-color: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; font-size:0.75rem; padding: 6px 12px; border-radius: 50px;">Date: {{ $sale->created_at->format('d/m/Y H:i') }}</span>
+                        <button type="button" class="btn btn-erp-pill-outline" id="btnHeaderPosted" disabled style="height: 32px; font-size: 0.75rem;">Sale</button>
                     </div>
                 </div>
 
-                <!-- TOP HORIZONTAL INFORMATION PANEL (EXCEL ORDERS SHEET COLUMNS) -->
-                <div class="p-1 border bg-light mb-1" style="border-radius:3px;">
-                    <div class="row g-1 align-items-end w-100 m-0">
-                        <!-- Order / Invoice No. -->
-                        <div class="col-sm-2 col-md-1">
-                            <label class="form-label fw-bold text-secondary mb-1" style="font-size:0.7rem;"><i class="fas fa-hashtag text-primary me-1"></i>Order No.</label>
-                            <input type="text" class="form-control input-readonly text-center fw-bold" name="Invoice_no"
-                                value="{{ $nextInvoiceNumber ?? ($sale->invoice_no ?? '') }}" readonly>
-                        </div>
-                        
-                        <!-- Credit Days -->
-                        <div class="col-sm-1 col-md-1">
-                            <label class="form-label fw-bold text-secondary mb-1" style="font-size:0.7rem;">Cr. Days</label>
-                            <input type="number" class="form-control text-center" name="credit_days" placeholder="0"
-                                min="0" value="{{ $sale->credit_days ?? '' }}">
-                        </div>
-                        
-                        <!-- Order Date -->
-                        <div class="col-sm-2 col-md-1">
-                            <label class="form-label fw-bold text-secondary mb-1" style="font-size:0.7rem;"><i class="fas fa-calendar-alt text-primary me-1"></i>Order Date</label>
-                            <input type="text" name="sale_date" class="form-control datepicker-custom text-center fw-bold" id="displayDateInput" value="{{ isset($sale) ? $sale->created_at->format('Y-m-d') : date('Y-m-d') }}">
-                        </div>
-
-                        <!-- Estimated Delivery Date -->
-                        <div class="col-sm-2 col-md-1">
-                            <label class="form-label fw-bold text-secondary mb-1" style="font-size:0.7rem;"><i class="fas fa-clock text-warning me-1"></i>Est. Deliv</label>
-                            <input type="text" name="estimated_delivery_date" class="form-control datepicker-custom text-center fw-bold" id="estimatedDeliveryDateInput" value="{{ isset($sale->estimated_delivery_date) ? \Carbon\Carbon::parse($sale->estimated_delivery_date)->format('Y-m-d') : '' }}" placeholder="YYYY-MM-DD">
-                        </div>
-
-                        <!-- Order Status Dropdown -->
-                        <div class="col-sm-2 col-md-1">
-                            <label class="form-label fw-bold text-secondary mb-1" style="font-size:0.7rem;"><i class="fas fa-flag text-info me-1"></i>Status</label>
-                            <select class="form-select fw-bold" name="sale_status" id="saleStatusSelect" style="height: 26px !important; font-size: 0.78rem;">
-                                <option value="pending" class="text-danger fw-bold" {{ ($sale->sale_status ?? 'pending') == 'pending' ? 'selected' : '' }}>🔴 Pending</option>
-                                <option value="ready" class="text-primary fw-bold" {{ ($sale->sale_status ?? '') == 'ready' ? 'selected' : '' }}>🔵 Ready</option>
-                                <option value="delivered" class="text-success fw-bold" {{ ($sale->sale_status ?? '') == 'delivered' ? 'selected' : '' }}>🟢 Delivered</option>
-                                <option value="cancelled" class="text-warning fw-bold" {{ ($sale->sale_status ?? '') == 'cancelled' ? 'selected' : '' }}>🟡 Cancelled</option>
-                            </select>
-                        </div>
-
-                        <!-- Actual Delivery Date -->
-                        <div class="col-sm-2 col-md-1">
-                            <label class="form-label fw-bold text-secondary mb-1" style="font-size:0.7rem;"><i class="fas fa-truck text-success me-1"></i>Deliv. Date</label>
-                            <input type="text" name="delivery_date" class="form-control datepicker-custom text-center fw-bold" id="actualDeliveryDateInput" value="{{ isset($sale->delivery_date) ? \Carbon\Carbon::parse($sale->delivery_date)->format('Y-m-d') : '' }}" placeholder="-">
-                        </div>
-
-                        <!-- M.Bill / Remarks -->
-                        <div class="col-sm-3 col-md-2">
-                            <label class="form-label fw-bold text-secondary mb-1" style="font-size:0.7rem;"><i class="fas fa-comment-dots text-secondary me-1"></i>Remarks</label>
-                            <input type="text" class="form-control" name="reference" id="remarks" value="{{ $sale->reference ?? '' }}" placeholder="e.g. Self Collected">
-                        </div>
-
-                        <!-- Customer & Walk-in Toggle -->
-                        <div class="col-sm-4 col-md-3">
-                            <label class="form-label fw-bold text-secondary mb-1" style="font-size:0.7rem;"><i class="fas fa-user text-primary me-1"></i>Customer</label>
+                <!-- TOP INFORMATION PANEL (PILL TOOLBAR LAYOUT) -->
+                <div class="card-panel mb-2">
+                    <div class="d-flex flex-wrap align-items-end gap-2 w-100">
+                        <!-- Customer & Walk-in Toggle (WIDE & PROMINENT) -->
+                        <div style="flex: 2 1 280px; min-width: 230px;">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label mb-0"><i class="fas fa-user text-primary me-1"></i>Customer</label>
+                                <div class="form-check form-switch mb-0 d-flex align-items-center p-0">
+                                    <input class="form-check-input ms-0 me-1" type="checkbox" role="switch" id="walkinToggle" name="is_walkin" value="1" {{ !isset($sale) || $sale->walkin_name ? 'checked' : '' }} style="cursor: pointer; width: 28px; height: 14px;">
+                                    <label class="form-check-label fw-bold" for="walkinToggle" style="color: #2563eb; font-size: 0.70rem; cursor: pointer;">Walk-in</label>
+                                </div>
+                            </div>
                             <div id="customerInputWrapper">
                                 <input type="text" class="form-control fw-bold {{ (!isset($sale) || $sale->walkin_name) ? '' : 'd-none' }}" name="walkin_name" id="walkinNameInput" value="{{ $sale->walkin_name ?? 'Walk-in Customer' }}" placeholder="Enter Customer Name...">
                                 <select class="form-select {{ (!isset($sale) || $sale->walkin_name) ? 'd-none' : '' }}" id="customerSelect" name="customer" style="width:100%">
@@ -499,16 +645,48 @@
                                 </select>
                             </div>
                         </div>
-
-                        <!-- Walk-in switch & Quick Save -->
-                        <div class="col-sm-2 col-md-1 d-flex flex-column align-items-end justify-content-end">
-                            <div class="d-flex align-items-center gap-1 mb-1">
-                                <div class="form-check form-switch mb-0 d-flex align-items-center p-0">
-                                    <input class="form-check-input ms-0" type="checkbox" role="switch" id="walkinToggle" name="is_walkin" value="1" {{ !isset($sale) || $sale->walkin_name ? 'checked' : '' }} style="cursor: pointer;">
-                                    <label class="form-check-label fw-bold ms-1" for="walkinToggle" style="color: #2563eb; font-size: 0.72rem; cursor: pointer;">Walk-in</label>
-                                </div>
+                        <input type="hidden" name="Invoice_no" value="{{ $nextInvoiceNumber ?? ($sale->invoice_no ?? '') }}">
+                        
+                        <!-- Credit Days (Compact) -->
+                        <div style="width: 80px; min-width: 75px; flex-shrink: 0;">
+                            <label class="form-label">Cr. Days</label>
+                            <input type="number" class="form-control text-center" name="credit_days" placeholder="0"
+                                min="0" value="{{ $sale->credit_days ?? '' }}">
+                        </div>
+                        
+                        <!-- Order Date (Auto-Fetched: Compact with Calendar Icon) -->
+                        <div style="width: 140px; min-width: 135px; flex-shrink: 0;">
+                            <label class="form-label"><i class="fas fa-calendar-alt text-primary me-1"></i>Order Date</label>
+                            <div class="erp-pill-date-wrapper">
+                                <input type="text" name="sale_date" class="form-control datepicker-custom text-center fw-bold bg-white" id="displayDateInput" value="{{ isset($sale) ? $sale->created_at->format('Y-m-d') : date('Y-m-d') }}">
+                                <i class="fas fa-calendar-alt text-primary date-icon"></i>
                             </div>
-                            <button type="button" class="btn btn-sm btn-success w-100 fw-bold py-1 shadow-sm" id="btnHeaderSaveSale" style="font-size: 0.75rem;"><i class="fas fa-check me-1"></i>Save</button>
+                        </div>
+
+                        <!-- Estimated Delivery Date (Auto-Fetched: Compact with Calendar Icon) -->
+                        <div style="width: 140px; min-width: 135px; flex-shrink: 0;">
+                            <label class="form-label"><i class="fas fa-clock text-warning me-1"></i>Est. Deliv</label>
+                            <div class="erp-pill-date-wrapper">
+                                <input type="text" name="estimated_delivery_date" class="form-control datepicker-custom text-center fw-bold bg-white" id="estimatedDeliveryDateInput" value="{{ isset($sale->estimated_delivery_date) ? \Carbon\Carbon::parse($sale->estimated_delivery_date)->format('Y-m-d') : '' }}" placeholder="YYYY-MM-DD">
+                                <i class="fas fa-calendar-day text-warning date-icon"></i>
+                            </div>
+                        </div>
+
+                        <!-- Hidden fields for status & delivery date -->
+                        <input type="hidden" name="order_status" id="orderStatusSelect" value="{{ $sale->order_status ?? 'pending' }}">
+                        <input type="hidden" name="delivery_date" id="actualDeliveryDateInput" value="{{ isset($sale->delivery_date) ? \Carbon\Carbon::parse($sale->delivery_date)->format('Y-m-d') : '' }}">
+
+                        <!-- Remarks (User Choice: WIDE & PROMINENT) -->
+                        <div style="flex: 1.5 1 180px; min-width: 150px;">
+                            <label class="form-label"><i class="fas fa-comment-dots text-primary me-1"></i>Remarks</label>
+                            <input type="text" class="form-control" name="reference" id="remarks" value="{{ $sale->reference ?? '' }}" placeholder="e.g. Self Collected">
+                        </div>
+
+                        <!-- Quick Save / Book Order Button (Hidden) -->
+                        <div class="d-none">
+                            <button type="button" class="btn btn-erp-pill-primary fw-bold" id="btnHeaderSaveSale" style="height: 34px; padding: 0 16px;">
+                                <i class="fas fa-bookmark me-1"></i>Book Order
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -523,13 +701,13 @@
                 <div class="row g-2 align-items-stretch">
                     <!-- LEFT MAIN AREA: Items Grid Table (col-lg-8 col-xl-9) -->
                     <div class="col-lg-8 col-xl-9">
-                        <div class="card-panel d-flex flex-column h-100 p-2 bg-white" style="border-radius:6px;">
+                        <div class="card-panel d-flex flex-column h-100 p-2 bg-white" style="border-radius:10px;">
                             <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
                                 <div class="d-flex align-items-center gap-2">
-                                    <div class="section-title mb-0" style="font-size:0.8rem;">Order Items (<span id="itemsRowCount">{{ isset($sale->items) ? count($sale->items) : 0 }}</span>)</div>
+                                    <div class="section-title mb-0" style="font-size:0.78rem;">Order Items (<span id="itemsRowCount">{{ isset($sale->items) ? count($sale->items) : 0 }}</span>)</div>
                                 </div>
                                 <div class="d-flex gap-1">
-                                    <button type="button" class="btn btn-primary btn-sm py-1 px-3 rounded-pill fw-bold" id="btnAdd" style="font-size:0.75rem;">
+                                    <button type="button" class="btn btn-erp-pill-primary py-1 px-3 fw-bold" id="btnAdd" style="height: 30px; font-size:0.75rem;">
                                         <i class="fas fa-plus me-1"></i>Add Row
                                     </button>
                                 </div>
@@ -677,15 +855,15 @@
                                                                    title="Max 100% in % mode, or Total Amount in PKR mode">
                                                             <input type="hidden" class="discount-type-hidden" name="discount_type[]" value="percent">
                                                             <button type="button"
-                                                                    class="btn btn-outline-secondary discount-toggle"
-                                                                    data-type="percent" tabindex="-1" title="Toggle % / PKR">%</button>
+                                                                   class="btn discount-toggle"
+                                                                   data-type="percent" tabindex="-1" title="Toggle % / PKR">%</button>
                                                         </div>
                                                         <input type="hidden" class="discount-amount" value="{{ $item->discount_amount ?? 0 }}">
                                                     </td>
 
                                                     <!-- AMOUNT -->
                                                     <td class="col-amount">
-                                                        <input type="text" class="form-control sales-amount text-end input-readonly fw-bold text-dark" name="total[]" value="{{ $item->total ?? 0 }}" readonly tabindex="-1">
+                                                        <input type="text" class="form-control sales-amount text-end input-readonly fw-bold text-dark font-monospace" name="total[]" value="{{ $item->total ?? 0 }}" readonly tabindex="-1">
                                                         <input type="hidden" class="gross-amount" value="{{ ($item->total ?? 0) + ($item->discount_amount ?? 0) }}">
                                                     </td>
 
@@ -710,8 +888,8 @@
                                             </td>
                                         </tr>
                                         <tr>
-                                            <td colspan="9" class="text-end fw-bold text-uppercase text-secondary" style="font-size:0.78rem;">Invoice Total:</td>
-                                            <td class="text-end fw-bold text-success fs-6"><span id="totalAmount">0.00</span></td>
+                                            <td colspan="9" class="text-end fw-bold text-uppercase" style="font-size:0.78rem; color: #1e40af;">Invoice Total:</td>
+                                            <td class="text-end fw-bold fs-6" style="color: #059669;"><span id="totalAmount">0.00</span></td>
                                             <td></td>
                                         </tr>
                                     </tfoot>
@@ -724,39 +902,39 @@
                     <div class="col-lg-4 col-xl-3">
                         <div class="d-flex flex-column h-100 gap-2">
                             <!-- Executive Summary Card (Excel Orders Sheet Flow) -->
-                            <div class="card-panel p-3 bg-white" style="border-radius:6px;">
-                                <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom">
+                            <div class="card-panel p-3 bg-white" style="border-radius:10px;">
+                                <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom" style="border-color: #dbeafe !important;">
                                     <span class="fw-bold text-dark" style="font-size:0.85rem;"><i class="fas fa-calculator text-primary me-1"></i>Summary</span>
-                                    <span class="badge bg-primary rounded-pill px-2 py-1" style="font-size:0.7rem;">Live</span>
+                                    <span class="badge rounded-pill px-2 py-1" style="background-color: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; font-size:0.7rem;">Live</span>
                                 </div>
                                 
                                 <div class="summary-row">
                                     <span class="text-muted fw-semibold">Invoice Total</span>
-                                    <span class="fw-bold text-dark" id="tGross">0.00</span>
+                                    <span class="fw-bold text-dark font-monospace" id="tGross">0.00</span>
                                 </div>
                                 <div class="summary-row">
                                     <span class="text-muted fw-semibold">Discount</span>
-                                    <span class="fw-bold text-danger" id="tLineDisc">0.00</span>
+                                    <span class="fw-bold text-danger font-monospace" id="tLineDisc">0.00</span>
                                 </div>
                                 <div class="summary-row">
                                     <span class="fw-bold text-dark">Net Total</span>
-                                    <span class="summary-val-net" id="tSub">0.00</span>
+                                    <span class="summary-val-net font-monospace" id="tSub">0.00</span>
                                 </div>
                                 <div class="summary-row">
                                     <span class="text-muted fw-semibold">Advance Payment</span>
-                                    <span class="fw-bold text-success" id="receiptsTotalBadge">0.00</span>
+                                    <span class="fw-bold font-monospace" style="color: #059669;" id="receiptsTotalBadge">0.00</span>
                                 </div>
                                 <div class="summary-row pt-1">
                                     <span class="fw-bold text-dark">Balance Amount</span>
-                                    <span class="summary-val-change" id="walkinChange">0.00</span>
+                                    <span class="summary-val-change font-monospace" id="walkinChange">0.00</span>
                                 </div>
                             </div>
 
                             <!-- Payment Methods Card -->
-                            <div class="card-panel p-3 bg-white flex-grow-1 d-flex flex-column" style="border-radius:6px;">
-                                <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom">
+                            <div class="card-panel p-3 bg-white flex-grow-1 d-flex flex-column" style="border-radius:10px;">
+                                <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom" style="border-color: #dbeafe !important;">
                                     <span class="fw-bold text-dark" style="font-size:0.82rem;"><i class="fas fa-wallet text-success me-1"></i>Advance / Payment</span>
-                                    <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 fw-bold" id="btnAddRV" style="font-size:0.7rem;"><i class="fas fa-plus me-1"></i>Add Account</button>
+                                    <button type="button" class="btn btn-erp-pill-outline py-0 px-2 fw-bold" id="btnAddRV" style="height: 26px; font-size:0.7rem;"><i class="fas fa-plus me-1"></i>Add Account</button>
                                 </div>
 
                                 <div id="rvWrapper" class="mb-2">
@@ -768,12 +946,32 @@
                                         $receiptLines = collect();
                                         if ($receiptVoucher) {
                                             $receiptLines = $receiptVoucher->details->where('debit', '>', 0);
+                                        } elseif (!empty($sale->payment_details)) {
+                                            $parsedDetails = json_decode($sale->payment_details, true);
+                                            if (is_array($parsedDetails)) {
+                                                $receiptLines = collect($parsedDetails)->map(function($pd) {
+                                                    return (object)[
+                                                        'account_id' => $pd['account_id'],
+                                                        'debit' => $pd['amount']
+                                                    ];
+                                                });
+                                            }
+                                        } elseif (($sale->cash ?? 0) > 0) {
+                                            $defaultCashAcc = $accounts->first(function($a) {
+                                                return str_contains(strtolower($a->title), 'cash');
+                                            });
+                                            $receiptLines = collect([
+                                                (object)[
+                                                    'account_id' => $defaultCashAcc ? $defaultCashAcc->id : null,
+                                                    'debit' => $sale->cash
+                                                ]
+                                            ]);
                                         }
                                         $firstLine = $receiptLines->first();
                                         $otherLines = $receiptLines->skip(1);
                                     @endphp
                                     <div class="d-flex gap-1 align-items-center mb-2 rv-row">
-                                        <select class="form-select form-select-sm rv-account bg-light fw-bold" name="receipt_account_id[]" style="font-size:0.75rem;">
+                                        <select class="form-select form-select-sm rv-account fw-bold" name="receipt_account_id[]" style="font-size:0.75rem;">
                                             @foreach ($accounts as $acc)
                                                 <option value="{{ $acc->id }}" {{ $firstLine && $firstLine->account_id == $acc->id ? 'selected' : ($firstLine ? '' : (str_contains(strtolower($acc->title), 'cash') ? 'selected' : '')) }}>{{ $acc->title }}</option>
                                             @endforeach
@@ -782,7 +980,7 @@
                                     </div>
                                     @foreach ($otherLines as $line)
                                         <div class="d-flex gap-1 align-items-center mb-2 rv-row">
-                                            <select class="form-select form-select-sm rv-account bg-light fw-bold" name="receipt_account_id[]" style="font-size:0.75rem;">
+                                            <select class="form-select form-select-sm rv-account fw-bold" name="receipt_account_id[]" style="font-size:0.75rem;">
                                                 @foreach ($accounts as $acc)
                                                     <option value="{{ $acc->id }}" {{ $line->account_id == $acc->id ? 'selected' : '' }}>{{ $acc->title }}</option>
                                                 @endforeach
@@ -794,7 +992,7 @@
                                 </div>
 
                                 <button type="button" class="btn btn-save-complete w-100 mt-auto py-2" id="btnSaveAndComplete">
-                                    <i class="fas fa-save me-2"></i>Update & Complete (F9)
+                                    <i class="fas fa-bookmark me-2"></i>Book Order (F9)
                                 </button>
                             </div>
                         </div>
@@ -805,50 +1003,50 @@
                 <div class="bottom-summary-strip">
                     <div class="d-flex align-items-center gap-2">
                         <span class="text-muted fw-semibold" style="font-size:0.8rem;">Invoice Total:</span>
-                        <span class="fs-6 fw-bold text-dark" id="bottomInvoiceTotal">0.00</span>
+                        <span class="fs-6 fw-bold text-dark font-monospace" id="bottomInvoiceTotal">0.00</span>
                     </div>
 
                     <div class="d-flex align-items-center gap-2">
                         <span class="text-muted fw-semibold" style="font-size:0.8rem;">Discount:</span>
-                        <span class="fs-6 fw-bold text-danger" id="bottomTotalDiscount">0.00</span>
+                        <span class="fs-6 fw-bold text-danger font-monospace" id="bottomTotalDiscount">0.00</span>
                     </div>
 
                     <div class="d-flex align-items-center gap-2">
                         <span class="text-muted fw-semibold" style="font-size:0.8rem;">Extra Disc:</span>
                         <div class="input-group input-group-sm" style="width: 120px;">
-                            <input type="number" class="form-control text-end fw-bold text-danger" id="walkinDiscountRs" value="{{ isset($sale) && $sale->is_walkin ? $sale->total_extradiscount : '0' }}" placeholder="0">
+                            <input type="number" class="form-control text-end fw-bold text-danger font-monospace" id="walkinDiscountRs" value="{{ isset($sale) && $sale->is_walkin ? $sale->total_extradiscount : '0' }}" placeholder="0">
                             <span class="input-group-text bg-light text-muted px-1">Rs</span>
                         </div>
                     </div>
 
                     <div class="d-flex align-items-center gap-2">
                         <span class="text-muted fw-semibold" style="font-size:0.8rem;">Net Total:</span>
-                        <span class="fs-5 fw-bold text-primary" id="walkinNetTotal">0.00</span>
+                        <span class="fs-5 fw-bold text-primary font-monospace" id="walkinNetTotal">0.00</span>
                     </div>
 
                     <div class="d-flex align-items-center gap-2">
                         <span class="text-muted fw-semibold" style="font-size:0.8rem;">Advance Paid:</span>
-                        <span class="fs-6 fw-bold text-success" id="bottomPaymentsTotal">0.00</span>
+                        <span class="fs-6 fw-bold font-monospace" style="color: #059669;" id="bottomPaymentsTotal">0.00</span>
                     </div>
 
                     <div class="d-flex align-items-center gap-2">
                         <span class="text-muted fw-semibold" style="font-size:0.8rem;">Balance:</span>
-                        <span class="fs-6 fw-bold text-danger" id="bottomChangeVal">0.00</span>
+                        <span class="fs-6 fw-bold text-danger font-monospace" id="bottomChangeVal">0.00</span>
                     </div>
 
                     <button type="button" class="btn btn-save-complete" id="btnSaveAndComplete2">
-                        <i class="fas fa-save me-2"></i>Update & Complete (F9)
+                        <i class="fas fa-bookmark me-2"></i>Book Order (F9)
                     </button>
                 </div>
 
-                {{-- ACTION BUTTONS ROW --}}
-                <div class="d-flex flex-wrap gap-2 justify-content-center py-2 px-3 mt-2 border-top bg-white rounded-3 shadow-sm">
-                    <button type="button" class="btn btn-outline-primary btn-sm px-3 fw-bold" id="btnSave"><i class="fas fa-bookmark me-1"></i>Booking</button>
-                    <button type="button" class="btn btn-primary btn-sm px-4 fw-bold" id="btnPosted" disabled><i class="fas fa-shopping-cart me-1"></i>Sale</button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm px-3 fw-bold" id="btnPrint"><i class="fas fa-print me-1"></i>A4 Print</button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm px-3 fw-bold" id="btnEstimate"><i class="fas fa-file-invoice me-1"></i>Estimate</button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm px-3 fw-bold" id="btnPrint2"><i class="fas fa-receipt me-1"></i>Thermal Print</button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm px-3 fw-bold" id="btnDcThermal"><i class="fas fa-truck me-1"></i>DC</button>
+                {{-- ACTION BUTTONS ROW (HIDDEN) --}}
+                <div class="d-none">
+                    <button type="button" class="btn btn-erp-pill-outline" id="btnSave"><i class="fas fa-bookmark me-1"></i>Booking</button>
+                    <button type="button" class="btn btn-erp-pill-primary" id="btnPosted" disabled><i class="fas fa-shopping-cart me-1"></i>Sale</button>
+                    <button type="button" class="btn btn-erp-pill-outline" id="btnPrint"><i class="fas fa-print me-1"></i>A4 Print</button>
+                    <button type="button" class="btn btn-erp-pill-outline" id="btnEstimate"><i class="fas fa-file-invoice me-1"></i>Estimate</button>
+                    <button type="button" class="btn btn-erp-pill-outline" id="btnPrint2"><i class="fas fa-receipt me-1"></i>Thermal Print</button>
+                    <button type="button" class="btn btn-erp-pill-outline" id="btnDcThermal"><i class="fas fa-truck me-1"></i>DC</button>
                 </div>
 
                 {{-- Hidden elements required for calculations and controllers --}}
@@ -927,6 +1125,26 @@
 
     <script>
         $(document).ready(function() {
+            // Datepicker Initialization with visual calendar popup
+            if (typeof flatpickr !== 'undefined') {
+                flatpickr('#displayDateInput', {
+                    dateFormat: "Y-m-d",
+                    altInput: true,
+                    altFormat: "Y-m-d",
+                    allowInput: true,
+                    altInputClass: "form-control erp-pill-input text-center fw-bold bg-white cursor-pointer",
+                    defaultDate: "{{ isset($sale) ? $sale->created_at->format('Y-m-d') : date('Y-m-d') }}"
+                });
+                flatpickr('#estimatedDeliveryDateInput', {
+                    dateFormat: "Y-m-d",
+                    altInput: true,
+                    altFormat: "Y-m-d",
+                    allowInput: true,
+                    altInputClass: "form-control erp-pill-input text-center fw-bold bg-white cursor-pointer",
+                    defaultDate: "{{ isset($sale->estimated_delivery_date) ? \Carbon\Carbon::parse($sale->estimated_delivery_date)->format('Y-m-d') : '' }}"
+                });
+            }
+
             // ============================================================
             // CUSTOMER SELECT2 AJAX SEARCH (Name or Code)
             // ============================================================

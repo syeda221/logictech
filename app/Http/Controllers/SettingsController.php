@@ -112,7 +112,7 @@ class SettingsController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Settings updated successfully',
-                'logo_url' => $currentLogo ? asset(ltrim($currentLogo, '/')) : null,
+                'logo_url' => Setting::getLogoUrl(),
             ]);
         } catch (\Illuminate\Validation\ValidationException $ve) {
             return response()->json([

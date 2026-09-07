@@ -283,9 +283,17 @@
 
     <div class="invoice-container">
         <!-- Company Header -->
+        @php
+            $purLogo = \App\Models\Setting::getLogoUrl();
+        @endphp
         <div class="company-info">
-            <div class="company-name">{{ \App\Models\Setting::get('company_name', 'prowave technogies') }} - {{ date('Y') }}</div>
-            <div style="font-size: 12px; color: #475569;">{{ \App\Models\Setting::get('company_address', 'Hyderabad') }}</div>
+            @if(!empty($purLogo))
+                <div style="text-align: center; margin-bottom: 8px;">
+                    <img src="{{ $purLogo }}" alt="Company Logo" style="max-width: 180px; max-height: 65px; object-fit: contain;">
+                </div>
+            @endif
+            <div class="company-name">{{ \App\Models\Setting::get('company_name', 'LOGIC TECH ENGINEERING') }} - {{ date('Y') }}</div>
+            <div style="font-size: 12px; color: #475569;">{{ \App\Models\Setting::get('company_address', '01-KM Sharaqpur Road') }}</div>
         </div>
 
         <div class="invoice-title">Purchase Invoice</div>

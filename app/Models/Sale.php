@@ -10,8 +10,8 @@ class Sale extends Model
     protected $fillable = [
         'customer_id', 'walkin_name', 'reference', 'total_amount_Words', 'total_bill_amount',
         'total_extradiscount', 'total_net', 'cash', 'card', 'change',
-        'total_items', 'discount_type', 'sale_status', 'invoice_no', 'is_booking',
-        'credit_days', 'due_date', 'estimated_delivery_date', 'delivery_date'
+        'total_items', 'discount_type', 'sale_status', 'order_status', 'invoice_no', 'is_booking',
+        'credit_days', 'due_date', 'estimated_delivery_date', 'delivery_date', 'payment_details'
     ];
 
     public function customer_relation()
@@ -19,9 +19,19 @@ class Sale extends Model
         return $this->belongsTo(Customer::class, 'customer_id', 'id');
     }
 
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class, 'customer_id', 'id');
+    }
+
     public function product_relation()
     {
         return $this->belongsTo(Product::class, 'product', 'id');
+    }
+
+    public function warehouse()
+    {
+        return $this->belongsTo(Warehouse::class, 'warehouse_id', 'id');
     }
 
     public static function generateInvoiceNo($prefix = null)

@@ -145,17 +145,40 @@ class WebsiteSettingsController extends Controller
         if ($request->hasFile('site_logo')) {
             $file = $request->file('site_logo');
             $fileName = time() . '_logo.' . $file->getClientOriginalExtension();
-            $file->move(public_path('uploads/settings'), $fileName);
+            $destinationPath = public_path('uploads/settings');
+            if (!file_exists($destinationPath)) {
+                @mkdir($destinationPath, 0777, true);
+            }
+            $file->move($destinationPath, $fileName);
+            $logoPath = 'uploads/settings/' . $fileName;
+
+            if (file_exists(base_path('uploads'))) {
+                $rootSettingsDir = base_path('uploads/settings');
+                if (!file_exists($rootSettingsDir)) {
+                    @mkdir($rootSettingsDir, 0777, true);
+                }
+                @copy($destinationPath . '/' . $fileName, $rootSettingsDir . '/' . $fileName);
+            }
+
+            if (file_exists(base_path('public_html'))) {
+                $cpanelSettingsDir = base_path('public_html/uploads/settings');
+                if (!file_exists($cpanelSettingsDir)) {
+                    @mkdir($cpanelSettingsDir, 0777, true);
+                }
+                @copy($destinationPath . '/' . $fileName, $cpanelSettingsDir . '/' . $fileName);
+            }
             
             Setting::updateOrCreate(
                 ['key' => 'web_site_logo'],
                 [
-                    'value' => 'uploads/settings/' . $fileName,
+                    'value' => $logoPath,
                     'type' => 'string',
                     'group' => 'website'
                 ]
             );
+            Setting::set('company_logo', $logoPath, 'company', 'image', 'Company Logo');
             Cache::forget('setting_web_site_logo');
+            Cache::forget('setting_company_logo');
         }
 
         if ($request->hasFile('easypaisa_qr_code')) {

@@ -1378,8 +1378,7 @@
     </style>
 
     {{-- Flatpickr JS --}}
-    
-    <script src="/assets/js/flatpickr.js"></script>
+    <script src="{{ asset('assets/js/flatpickr.js') }}"></script>
     <!-- <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script> -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {

@@ -33,6 +33,16 @@ class TransactionService
             return;
         }
 
+        // Prevent duplicate receipt vouchers for the same invoice
+        $existingRV = VoucherMaster::where('voucher_type', VoucherMaster::TYPE_RECEIPT)
+            ->where('remarks', 'like', "%#{$sale->invoice_no}%")
+            ->first();
+        if ($existingRV) {
+            \Log::info("TransactionService: Receipt Voucher already exists for Invoice #{$sale->invoice_no}, skipping.");
+
+            return;
+        }
+
         // Filter out empty or invalid entries
         $accountIds = array_filter($accountIds, function ($value) {
             return ! empty($value);
@@ -126,7 +136,7 @@ class TransactionService
                 'payment_from' => $sale->customer_id ? 'Customer' : 'Walk-in',
                 'party_type' => $sale->customer_id ? Customer::class : null,
                 'party_id' => $sale->customer_id,
-                'remarks' => "Auto-Receipt for Sale Invoice #{$sale->invoice_no}. Total: $totalPaid",
+                'remarks' => ($sale->is_booking ? "Advance Receipt for Sale Invoice #{$sale->invoice_no}. Total: $totalPaid" : "Auto-Receipt for Sale Invoice #{$sale->invoice_no}. Total: $totalPaid"),
             ];
 
             // 5. Create via VoucherService

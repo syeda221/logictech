@@ -9,7 +9,7 @@
 
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h3>Sale Returns</h3>
-                            <a class="btn btn-primary" href="{{ route('sale.index') }}">Back to Purchases</a>
+                            <a class="btn btn-primary" href="{{ route('sale.index') }}">Back to Sales</a>
                         </div>
 
                         <div class="border mt-1 shadow rounded bg-white">
@@ -19,11 +19,11 @@
                                         <tr>
                                             <th>ID</th>
                                             <th>Invoice #</th>
-                                            <th>customer</th>
+                                            <th>Customer</th>
                                             <th>Warehouse</th>
                                             <th>Return Date</th>
                                             <th>Return Amount</th>
-                                            <th>Original Purchase</th>
+                                            <th>Original Sale</th>
                                             <th>Total Returned</th>
                                             <th>New Net Amount</th>
                                             <th>New Due</th>
@@ -50,7 +50,7 @@
                                                             {{ $return->sale->invoice_no }}</small>
                                                     @endif
                                                 </td>
-                                                <td>{{ $return->customer->customer_name ?? 'N/A' }}</td>
+                                                <td>{{ $return->customer->customer_name ?? ($return->sale->walkin_name ?: 'Walking Customer') }}</td>
                                                 <td>{{ $return->warehouse->warehouse_name ?? 'N/A' }}</td>
                                                 <td>{{ \Carbon\Carbon::parse($return->return_date)->format('d/m/Y') }}</td>
 
@@ -59,7 +59,7 @@
                                                     <strong>-{{ number_format($return->net_amount, 2) }}</strong>
                                                 </td>
 
-                                                {{-- Original Purchase Amount --}}
+                                                {{-- Original Sale Amount --}}
                                                 <td>
                                                     @if ($return->sale)
                                                         {{ number_format($return->original_net_amount, 2) }}

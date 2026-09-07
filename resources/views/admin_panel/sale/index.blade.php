@@ -2,162 +2,544 @@
 
 @section('content')
     <style>
-        /* Modern Sales Management Styles */
-        .sale-stat-card {
+        /* ==========================================================================
+           Enterprise ERP Design System - Sales Management
+           ========================================================================== */
+        
+        :root {
+            --erp-bg-card: #ffffff;
+            --erp-border: #e2e8f0;
+            --erp-border-subtle: #f1f5f9;
+            --erp-text-main: #0f172a;
+            --erp-text-muted: #64748b;
+            --erp-text-light: #94a3b8;
+            --erp-primary: #2563eb;
+            --erp-primary-hover: #1d4ed8;
+            --erp-success: #059669;
+            --erp-warning: #d97706;
+            --erp-danger: #dc2626;
+        }
+
+        /* Page Layout */
+        .erp-page-header {
+            margin-bottom: 1.5rem;
+        }
+        .erp-title {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: #0f172a;
+            letter-spacing: -0.02em;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .erp-subtitle {
+            font-size: 0.815rem;
+            color: #64748b;
+            margin-top: 0.15rem;
+            margin-bottom: 0;
+        }
+
+        /* Top Action Buttons */
+        .btn-erp-primary {
+            background-color: #2563eb;
+            border: 1px solid #1d4ed8;
+            color: #ffffff !important;
+            font-weight: 600;
+            font-size: 0.815rem;
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+            box-shadow: 0 1px 2px rgba(37, 99, 235, 0.2);
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .btn-erp-primary:hover {
+            background-color: #1d4ed8;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-erp-outline {
+            background-color: #ffffff;
+            border: 1px solid #cbd5e1;
+            color: #334155 !important;
+            font-weight: 600;
+            font-size: 0.815rem;
+            border-radius: 8px;
+            padding: 0.5rem 0.9rem;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .btn-erp-outline:hover {
+            background-color: #f8fafc;
+            border-color: #94a3b8;
+            color: #0f172a !important;
+        }
+
+        .btn-erp-outline-danger {
+            background-color: #ffffff;
+            border: 1px solid #fca5a5;
+            color: #dc2626 !important;
+            font-weight: 600;
+            font-size: 0.815rem;
+            border-radius: 8px;
+            padding: 0.5rem 0.9rem;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .btn-erp-outline-danger:hover {
+            background-color: #fef2f2;
+            border-color: #f87171;
+            color: #b91c1c !important;
+        }
+
+        /* KPI Metric Cards */
+        .erp-kpi-card {
             background: #ffffff;
             border: 1px solid #e2e8f0;
             border-radius: 12px;
-            padding: 16px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-            transition: all 0.2s ease-in-out;
+            padding: 1.15rem 1.25rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
-        .sale-stat-card:hover {
+        .erp-kpi-card:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 6px 16px -2px rgba(0, 0, 0, 0.07);
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
-        .sale-stat-icon {
+        .erp-kpi-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+            margin-bottom: 0.35rem;
+        }
+        .erp-kpi-value {
+            font-size: 1.35rem;
+            font-weight: 700;
+            line-height: 1.2;
+            color: #0f172a;
+            letter-spacing: -0.02em;
+        }
+        .erp-kpi-icon {
             width: 44px;
             height: 44px;
             border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 20px;
+            font-size: 1.15rem;
+            flex-shrink: 0;
         }
 
-        /* Clean & Bold Filter Panel */
-        .filter-panel {
-            background-color: #f8fafc !important;
-            border: 2px dashed #cbd5e1 !important;
-            border-radius: 12px !important;
-            padding: 16px !important;
+        /* Filter Panel Single-Row System */
+        .erp-filter-card {
+            background-color: #ffffff;
+            border: 1.5px solid #dbeafe;
+            border-radius: 12px;
+            padding: 0.85rem 1rem;
+            margin-bottom: 1.25rem;
+            box-shadow: 0 1px 4px rgba(37, 99, 235, 0.05);
         }
-        
-        .filter-panel label {
-            font-size: 11px;
-            font-weight: 700 !important;
-            color: #475569 !important;
+        .erp-filter-single-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            width: 100%;
+            flex-wrap: nowrap;
+        }
+        .erp-filter-item {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-width: 0;
+        }
+        .erp-item-quick { flex: 1.1; min-width: 105px; }
+        .erp-item-date { flex: 1; min-width: 95px; }
+        .erp-item-bill { flex: 0.9; min-width: 85px; }
+        .erp-item-status { flex: 1.1; min-width: 105px; }
+        .erp-item-customer { flex: 1.3; min-width: 125px; }
+        .erp-item-actions {
+            flex: 0 0 auto;
+            margin-left: auto;
+        }
+        .erp-filter-label {
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: #1e40af;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.04em;
+            margin-bottom: 0.3rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
-        
-        .filter-panel .form-control,
-        .filter-panel .form-select {
-            border: 1.5px solid #cbd5e1 !important;
-            border-radius: 8px !important;
+        .erp-filter-input {
+            height: 34px !important;
+            border: 1.5px solid #bfdbfe !important;
+            border-radius: 6px !important;
+            font-size: 0.78rem !important;
             font-weight: 500 !important;
-            color: #1e293b !important;
-            transition: all 0.2s ease-in-out;
-            height: 38px !important;
-            font-size: 13px !important;
+            color: #0f172a !important;
+            background-color: #ffffff !important;
+            padding: 0.25rem 0.5rem !important;
+            transition: all 0.15s ease-in-out !important;
+            width: 100% !important;
         }
-        
-        .filter-panel .form-control:focus,
-        .filter-panel .form-select:focus {
-            border-color: #3b82f6 !important;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+        .erp-filter-input:hover {
+            border-color: #60a5fa !important;
+            background-color: #f8fbff !important;
+        }
+        .erp-filter-input:focus {
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+            background-color: #ffffff !important;
+            outline: none !important;
         }
 
-        /* Premium Buttons */
-        .btn-premium-primary {
+        /* Pill Style Action Buttons */
+        .btn-erp-pill-primary {
             background-color: #2563eb !important;
-            border: 1.5px solid #1d4ed8 !important;
+            border: 1px solid #1d4ed8 !important;
             color: #ffffff !important;
             font-weight: 600 !important;
-            border-radius: 8px !important;
-            height: 38px !important;
-            padding: 0 16px !important;
-            transition: all 0.2s;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .btn-premium-primary:hover {
-            background-color: #1d4ed8 !important;
-            transform: translateY(-1px);
-        }
-        
-        .btn-premium-secondary {
-            background-color: #ffffff !important;
-            border: 1.5px solid #cbd5e1 !important;
-            color: #475569 !important;
-            font-weight: 600 !important;
-            border-radius: 8px !important;
-            height: 38px !important;
-            padding: 0 16px !important;
-            transition: all 0.2s;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .btn-premium-secondary:hover {
-            background-color: #f1f5f9 !important;
-            border-color: #94a3b8 !important;
-            color: #1e293b !important;
-        }
-
-        /* Premium Table Styling */
-        .premium-card {
-            border: 1.5px solid #cbd5e1 !important;
-            border-radius: 12px !important;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
-            background-color: #ffffff;
-        }
-
-        .premium-table {
-            border: 2px solid #475569 !important;
-            border-radius: 8px !important;
-            overflow: hidden;
-        }
-        
-        .premium-table thead th {
-            background-color: #f1f5f9 !important;
-            color: #1e293b !important;
-            font-weight: 700 !important;
-            text-transform: uppercase;
-            font-size: 11px;
-            letter-spacing: 0.5px;
-            border-bottom: 3px solid #475569 !important;
-            border-right: 1.5px solid #cbd5e1 !important;
-            padding: 12px 10px !important;
-        }
-        
-        .premium-table tbody td {
-            border: 1.5px solid #e2e8f0 !important;
-            padding: 12px 10px !important;
-            font-size: 13px !important;
-            color: #334155 !important;
-            background-color: #ffffff;
-        }
-        
-        .premium-table tbody tr:hover td {
-            background-color: #f8fafc !important;
-        }
-
-        /* Dropdown Action Button */
-        .btn-premium-action {
-            background-color: #f8fafc !important;
-            border: 1.5px solid #cbd5e1 !important;
-            color: #475569 !important;
-            font-weight: 700 !important;
-            border-radius: 6px !important;
-            height: 32px !important;
-            padding: 0 12px !important;
-            font-size: 11px !important;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            font-size: 0.75rem !important;
+            border-radius: 50px !important;
+            height: 34px !important;
+            padding: 0 14px !important;
             display: inline-flex !important;
             align-items: center !important;
             justify-content: center !important;
-            transition: all 0.2s ease-in-out !important;
+            gap: 5px !important;
+            box-shadow: 0 1px 2px rgba(37, 99, 235, 0.25) !important;
+            transition: all 0.15s ease !important;
+            white-space: nowrap !important;
         }
-        .btn-premium-action:hover, 
-        .btn-premium-action:focus, 
-        .btn-premium-action[aria-expanded="true"] {
-            background-color: #f1f5f9 !important;
-            border-color: #94a3b8 !important;
-            color: #1e293b !important;
+        .btn-erp-pill-primary:hover {
+            background-color: #1d4ed8 !important;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 6px -1px rgba(37, 99, 235, 0.35) !important;
+        }
+
+        .btn-erp-pill-outline {
+            background-color: #ffffff !important;
+            border: 1.5px solid #bfdbfe !important;
+            color: #1e40af !important;
+            font-weight: 600 !important;
+            font-size: 0.75rem !important;
+            border-radius: 50px !important;
+            height: 34px !important;
+            padding: 0 12px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 5px !important;
+            transition: all 0.15s ease !important;
+            white-space: nowrap !important;
+        }
+        .btn-erp-pill-outline:hover {
+            background-color: #eff6ff !important;
+            border-color: #3b82f6 !important;
+            color: #1d4ed8 !important;
+        }
+
+        @media (max-width: 991px) {
+            .erp-filter-single-row {
+                flex-wrap: wrap !important;
+            }
+            .erp-filter-item {
+                flex: 1 1 calc(50% - 8px) !important;
+                min-width: 140px !important;
+            }
+            .erp-item-actions {
+                flex: 1 1 100% !important;
+                justify-content: flex-end;
+                margin-top: 6px;
+            }
+            .erp-item-actions .d-flex {
+                width: 100%;
+            }
+            .erp-item-actions .btn {
+                flex: 1;
+            }
+        }
+
+        /* Nested Submenu & Radio Items */
+        .dropdown-submenu {
+            position: relative;
+        }
+        .dropdown-submenu .dropdown-submenu-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
+        .dropdown-submenu .dropdown-submenu-menu {
+            top: 0;
+            right: 100%; /* Opens to the left to prevent screen overflow */
+            margin-top: -6px;
+            margin-right: -2px; /* Overlap slightly to prevent any cursor gap */
+            display: none;
+            position: absolute;
+            min-width: 180px;
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            padding: 6px 0;
+            z-index: 1060;
+        }
+        /* Invisible hover bridge to eliminate cursor dead-zone between Action menu and Submenu */
+        .dropdown-submenu .dropdown-submenu-menu::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: -20px;
+            bottom: 0;
+            width: 25px;
+            background: transparent;
+        }
+        .dropdown-submenu.show > .dropdown-submenu-menu,
+        .dropdown-submenu.is-hovered > .dropdown-submenu-menu {
+            display: block !important;
+        }
+        .state-radio-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 14px;
+            cursor: pointer;
+            font-size: 12px;
+            color: #334155;
+            transition: background-color 0.15s ease;
+            margin-bottom: 0;
+            user-select: none;
+            width: 100%;
+        }
+        .state-radio-item:hover {
+            background-color: #f1f5f9;
+            color: #0f172a;
+        }
+        .state-radio-item input[type="radio"] {
+            cursor: pointer;
+            margin: 0;
+            accent-color: #2563eb;
+            width: 15px;
+            height: 15px;
+        }
+
+        /* Main Data Card & Table Container */
+        .erp-main-card {
+            background: #ffffff;
+            border: 1.5px solid #dbeafe;
+            border-radius: 12px;
+            box-shadow: 0 1px 4px rgba(37, 99, 235, 0.04);
+            overflow: hidden;
+        }
+        .erp-table-responsive {
+            border-radius: 8px;
+            width: 100%;
+            overflow-x: auto;
+        }
+        .erp-table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            margin-bottom: 0;
+            border: 1.5px solid #bfdbfe !important;
+            border-radius: 8px;
+        }
+        .erp-table thead th {
+            background-color: #eff6ff !important;
+            color: #1e40af !important;
+            font-weight: 700 !important;
+            font-size: 0.70rem !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.04em !important;
+            padding: 0.5rem 0.35rem !important;
+            border: 1px solid #bfdbfe !important;
+            border-bottom: 2px solid #60a5fa !important;
+            white-space: nowrap;
+        }
+        .erp-table tbody td {
+            padding: 0.45rem 0.35rem !important;
+            font-size: 0.78rem !important;
+            color: #334155 !important;
+            border: 1px solid #dbeafe !important;
+            vertical-align: middle !important;
+            background-color: #ffffff;
+            transition: background-color 0.15s ease;
+        }
+        .erp-table tbody tr:hover td {
+            background-color: #f0f7ff !important;
+        }
+
+        /* ERP Status Badges */
+        .erp-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.2rem 0.45rem;
+            border-radius: 5px;
+            font-size: 0.68rem;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            line-height: 1.15;
+            white-space: nowrap;
+            border: 1px solid transparent;
+        }
+
+        /* Sale Status Badges */
+        .erp-badge.badge-posted {
+            background-color: #ecfdf5;
+            color: #047857;
+            border-color: #a7f3d0;
+        }
+        .erp-badge.badge-booked {
+            background-color: #eff6ff;
+            color: #1e40af;
+            border-color: #bfdbfe;
+        }
+        .erp-badge.badge-draft {
+            background-color: #f8fafc;
+            color: #475569;
+            border-color: #cbd5e1;
+        }
+        .erp-badge.badge-returned {
+            background-color: #fef2f2;
+            color: #991b1b;
+            border-color: #fecaca;
+        }
+        .erp-badge.badge-exchange {
+            background-color: #f5f3ff;
+            color: #6d28d9;
+            border-color: #ddd6fe;
+        }
+        .erp-badge.badge-partial-return {
+            background-color: #fff1f2;
+            color: #be123c;
+            border-color: #fecdd3;
+            font-size: 0.68rem;
+            padding: 0.15rem 0.45rem;
+        }
+
+        /* Order State Badges */
+        .erp-badge.state-ready {
+            background-color: #eff6ff;
+            color: #1d4ed8;
+            border-color: #bfdbfe;
+        }
+        .erp-badge.state-delivered {
+            background-color: #ecfdf5;
+            color: #047857;
+            border-color: #a7f3d0;
+        }
+        .erp-badge.state-cancelled {
+            background-color: #fffbeb;
+            color: #b45309;
+            border-color: #fde68a;
+        }
+        .erp-badge.state-pending {
+            background-color: #fef2f2;
+            color: #b91c1c;
+            border-color: #fecaca;
+        }
+
+        /* Avatar & Customer Meta */
+        .erp-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.68rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .erp-avatar-registered {
+            background-color: #eff6ff;
+            color: #2563eb;
+            border: 1px solid #dbeafe;
+        }
+        .erp-avatar-walkin {
+            background-color: #f1f5f9;
+            color: #64748b;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* Bill Tag */
+        .erp-bill-tag {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-weight: 700;
+            font-size: 0.75rem;
+            color: #2563eb;
+            background-color: #eff6ff;
+            border: 1px solid #bfdbfe;
+            padding: 0.15rem 0.35rem;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        /* Table Action Buttons */
+        .btn-erp-table-action {
+            background-color: #ffffff;
+            border: 1px solid #bfdbfe;
+            color: #1d4ed8;
+            font-weight: 600;
+            border-radius: 5px;
+            height: 26px;
+            padding: 0 0.5rem;
+            font-size: 0.70rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+        .btn-erp-table-action:hover,
+        .btn-erp-table-action:focus,
+        .btn-erp-table-action[aria-expanded="true"] {
+            background-color: #eff6ff;
+            border-color: #3b82f6;
+            color: #1e40af;
+        }
+
+        .btn-erp-state-action {
+            background-color: #ffffff;
+            border: 1px solid #bfdbfe;
+            color: #1d4ed8;
+            font-weight: 600;
+            border-radius: 6px;
+            height: 26px;
+            padding: 0 0.5rem;
+            font-size: 0.70rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
+            transition: all 0.15s ease;
+        }
+        .btn-erp-state-action:hover,
+        .btn-erp-state-action:focus,
+        .btn-erp-state-action[aria-expanded="true"] {
+            background-color: #eff6ff;
+            border-color: #3b82f6;
+            color: #1e40af;
         }
 
         /* Responsive Breakpoints (< 768px) */
@@ -174,18 +556,6 @@
                 height: 38px;
                 font-size: 0.8rem;
             }
-            .sales-status-pills {
-                display: flex !important;
-                gap: 6px;
-                overflow-x: auto;
-                padding-bottom: 6px;
-                -webkit-overflow-scrolling: touch;
-            }
-            .sales-status-pills .btn {
-                flex: 0 0 auto;
-                white-space: nowrap;
-            }
-            /* DataTables Mobile Search Controls */
             .dataTables_wrapper .dataTables_length,
             .dataTables_wrapper .dataTables_filter {
                 float: none !important;
@@ -202,10 +572,6 @@
                 display: flex;
                 gap: 8px;
             }
-            .sales-status-pills {
-                display: flex;
-                gap: 8px;
-            }
         }
     </style>
 
@@ -214,114 +580,76 @@
             <div class="container-fluid py-4">
 
                 {{-- Page Header --}}
-                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 erp-page-header">
                     <div>
-                        <h4 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
-                            <i class="fas fa-shopping-cart text-primary"></i> Sales Management
+                        <h4 class="erp-title">
+                            <i class="fas fa-file-invoice-dollar text-primary"></i> Sales Management
                         </h4>
-                        <p class="text-muted mb-0 small">View, search, filter and edit your sales invoices & bookings</p>
+                        <p class="erp-subtitle">Executive sales ledger, bookings overview, dispatch status and invoice records</p>
                     </div>
                     <div class="sales-hdr-actions">
-                        <a class="btn btn-outline-danger px-3 shadow-sm fw-medium d-inline-flex align-items-center justify-content-center gap-1"
-                            href="{{ route('sale.return.index') }}" style="border-radius: 8px;">
-                            <i class="fas fa-undo"></i> Returns
-                        </a>
-                        <a class="btn btn-outline-primary px-3 shadow-sm fw-medium d-inline-flex align-items-center justify-content-center gap-1"
-                            href="{{ url('bookings') }}" style="border-radius: 8px;">
-                            <i class="fas fa-bookmark"></i> Bookings
+                        <a class="btn-erp-outline-danger" href="{{ route('sale.return.index') }}">
+                            <i class="fas fa-undo-alt"></i> Returns
                         </a>
                         @can('sales.create')
-                            <a class="btn btn-primary px-3 shadow-sm fw-medium d-inline-flex align-items-center justify-content-center gap-1"
-                                href="{{ route('sale.add') }}" style="border-radius: 8px;">
-                                <i class="fas fa-plus"></i> Add Sale
+                            <a class="btn-erp-primary" href="{{ route('sale.add') }}">
+                                <i class="fas fa-plus-circle"></i> Order
                             </a>
                         @endcan
                     </div>
                 </div>
 
-                {{-- KPI Stat Cards --}}
+                {{-- KPI Metric Cards --}}
                 <div class="row g-3 mb-4">
                     <div class="col-6 col-md-3">
-                        <div class="sale-stat-card">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div>
-                                    <div class="text-muted small fw-bold text-uppercase" style="font-size: 11px;">Total Invoices</div>
-                                    <h4 class="fw-bold text-dark mb-0 mt-1" id="statTotalCount">{{ number_format($stats['total_count'] ?? 0) }}</h4>
-                                </div>
-                                <div class="sale-stat-icon bg-primary-subtle text-primary" style="background-color: #eff6ff; color: #2563eb;">
-                                    <i class="fas fa-file-invoice"></i>
-                                </div>
+                        <div class="erp-kpi-card">
+                            <div>
+                                <div class="erp-kpi-label">Total Invoices</div>
+                                <div class="erp-kpi-value" id="statTotalCount">{{ number_format($stats['total_count'] ?? 0) }}</div>
+                            </div>
+                            <div class="erp-kpi-icon" style="background-color: #eff6ff; color: #2563eb;">
+                                <i class="fas fa-file-invoice"></i>
                             </div>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
-                        <div class="sale-stat-card">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div>
-                                    <div class="text-muted small fw-bold text-uppercase" style="font-size: 11px;">Total Net Revenue</div>
-                                    <h4 class="fw-bold text-success mb-0 mt-1" id="statTotalNet">Rs. {{ number_format($stats['total_net'] ?? 0, 2) }}</h4>
-                                </div>
-                                <div class="sale-stat-icon bg-success-subtle text-success" style="background-color: #ecfdf5; color: #059669;">
-                                    <i class="fas fa-coins"></i>
-                                </div>
+                        <div class="erp-kpi-card">
+                            <div>
+                                <div class="erp-kpi-label">Total Net Revenue</div>
+                                <div class="erp-kpi-value text-success" id="statTotalNet">Rs. {{ number_format($stats['total_net'] ?? 0, 2) }}</div>
+                            </div>
+                            <div class="erp-kpi-icon" style="background-color: #ecfdf5; color: #059669;">
+                                <i class="fas fa-coins"></i>
                             </div>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
-                        <div class="sale-stat-card">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div>
-                                    <div class="text-muted small fw-bold text-uppercase" style="font-size: 11px;">Discounts Given</div>
-                                    <h4 class="fw-bold text-warning mb-0 mt-1" id="statTotalDiscount" style="color: #d97706 !important;">Rs. {{ number_format($stats['total_discount'] ?? 0, 2) }}</h4>
-                                </div>
-                                <div class="sale-stat-icon bg-warning-subtle text-warning" style="background-color: #fffbeb; color: #d97706;">
-                                    <i class="fas fa-tags"></i>
-                                </div>
+                        <div class="erp-kpi-card">
+                            <div>
+                                <div class="erp-kpi-label">Discounts Given</div>
+                                <div class="erp-kpi-value text-warning" id="statTotalDiscount" style="color: #d97706 !important;">Rs. {{ number_format($stats['total_discount'] ?? 0, 2) }}</div>
+                            </div>
+                            <div class="erp-kpi-icon" style="background-color: #fffbeb; color: #d97706;">
+                                <i class="fas fa-tags"></i>
                             </div>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
-                        <div class="sale-stat-card">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div>
-                                    <div class="text-muted small fw-bold text-uppercase" style="font-size: 11px;">Posted / Booked</div>
-                                    <h4 class="fw-bold text-info mb-0 mt-1" id="statStatusCounts" style="color: #0284c7 !important;">
-                                        {{ $stats['posted_count'] ?? 0 }} <span class="fs-6 fw-normal text-muted">/ {{ $stats['booked_count'] ?? 0 }}</span>
-                                    </h4>
+                        <div class="erp-kpi-card">
+                            <div>
+                                <div class="erp-kpi-label">Booking / Confirmed</div>
+                                <div class="erp-kpi-value" id="statStatusCounts" style="color: #0284c7 !important;">
+                                    {{ $stats['booked_count'] ?? 0 }} <span class="fs-6 fw-normal text-muted">/ {{ $stats['confirmed_booking_count'] ?? 0 }}</span>
                                 </div>
-                                <div class="sale-stat-icon bg-info-subtle text-info" style="background-color: #f0f9ff; color: #0284c7;">
-                                    <i class="fas fa-check-circle"></i>
-                                </div>
+                            </div>
+                            <div class="erp-kpi-icon" style="background-color: #f0f9ff; color: #0284c7;">
+                                <i class="fas fa-bookmark"></i>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {{-- Status Filter Pills --}}
-                <div class="mb-4 sales-status-pills">
-                    <a href="{{ route('sale.index', ['status' => 'all']) }}"
-                        class="btn btn-sm {{ request('status') == 'all' || !request('status') ? 'btn-secondary' : 'btn-outline-secondary' }} rounded-3 shadow-sm px-3 fw-bold">
-                        All <span class="badge bg-white text-dark ms-1">{{ $stats['total_count'] ?? 0 }}</span>
-                    </a>
-                    <a href="{{ route('sale.index', ['status' => 'posted']) }}"
-                        class="btn btn-sm {{ request('status') == 'posted' ? 'btn-success' : 'btn-outline-success' }} rounded-3 shadow-sm px-3 fw-bold">
-                        Posted <span class="badge bg-white text-success ms-1">{{ $stats['posted_count'] ?? 0 }}</span>
-                    </a>
-                    <a href="{{ route('sale.index', ['status' => 'draft']) }}"
-                        class="btn btn-sm {{ request('status') == 'draft' ? 'btn-warning text-dark' : 'btn-outline-warning' }} rounded-3 shadow-sm px-3 fw-bold">
-                        Draft <span class="badge bg-white text-dark ms-1">{{ $stats['draft_count'] ?? 0 }}</span>
-                    </a>
-                    <a href="{{ route('sale.index', ['status' => 'booked']) }}"
-                        class="btn btn-sm {{ request('status') == 'booked' ? 'btn-info text-white' : 'btn-outline-info' }} rounded-3 shadow-sm px-3 fw-bold">
-                        Booked <span class="badge bg-white text-info ms-1">{{ $stats['booked_count'] ?? 0 }}</span>
-                    </a>
-                    <a href="{{ route('sale.index', ['status' => 'returned']) }}"
-                        class="btn btn-sm {{ request('status') == 'returned' ? 'btn-danger' : 'btn-outline-danger' }} rounded-3 shadow-sm px-3 fw-bold">
-                        Returned <span class="badge bg-white text-danger ms-1">{{ $stats['returned_count'] ?? 0 }}</span>
-                    </a>
-                </div>
-
-                <div class="card premium-card">
+                <div class="card erp-main-card">
                     <div class="card-body p-3 p-md-4">
                         @if (session('success'))
                             <div class="alert alert-success d-flex align-items-center gap-2 rounded-3 mb-4">
@@ -344,74 +672,86 @@
                             <i class="fas fa-filter"></i> Search & Filters Toggle
                         </button>
 
-                        {{-- AJAX Filter Panel --}}
-                        <div class="card filter-panel mb-4" id="filterPanelContainer">
-                            <div class="card-body p-0">
-                                <form id="filterForm" class="row g-2 g-md-3 align-items-end" autocomplete="off">
-                                    <div class="col-6 col-md-2">
-                                        <label class="form-label mb-1">Quick Filter</label>
-                                        <select id="quick_filter" class="form-select">
-                                            <option value="custom">Custom Range</option>
-                                            <option value="daily">Daily (Today)</option>
-                                            <option value="weekly">Weekly (This Week)</option>
-                                            <option value="monthly">Monthly (This Month)</option>
-                                            <option value="yearly">Yearly (This Year)</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-6 col-md-2">
-                                        <label class="form-label mb-1">From Date</label>
-                                        <input type="text" class="form-control datepicker-custom bg-white" name="from_date" id="filter_from_date" placeholder="dd/mm/yyyy">
-                                    </div>
-                                    <div class="col-6 col-md-2">
-                                        <label class="form-label mb-1">To Date</label>
-                                        <input type="text" class="form-control datepicker-custom bg-white" name="to_date" id="filter_to_date" placeholder="dd/mm/yyyy">
-                                    </div>
-                                    <div class="col-6 col-md-1">
-                                        <label class="form-label mb-1">Bill#</label>
-                                        <input type="text" class="form-control" name="bill_no" id="filter_bill_no" placeholder="Search bill...">
-                                    </div>
-                                    <div class="col-6 col-md-1">
-                                        <label class="form-label mb-1">M.Bill / Ref</label>
-                                        <input type="text" class="form-control" name="reference" id="filter_reference" placeholder="M.Bill...">
-                                    </div>
-                                    <div class="col-6 col-md-2">
-                                        <label class="form-label mb-1">Customer</label>
-                                        <select class="form-select" name="customer_id" id="filter_customer_id">
-                                            <option value="">All Customers</option>
-                                            @foreach ($customers as $c)
-                                                <option value="{{ $c->id }}">{{ $c->customer_name }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="col-12 col-md-2 d-flex gap-2 mt-3 mt-md-0">
-                                        <button type="button" class="btn btn-premium-secondary w-50" id="btnReset">
-                                            <i class="fas fa-undo me-1"></i>Reset
+                        {{-- Modern ERP Filter Panel (Single-Row Toolbar with Right Pill Buttons) --}}
+                        <div class="erp-filter-card" id="filterPanelContainer">
+                            <form id="filterForm" class="erp-filter-single-row" autocomplete="off">
+                                <div class="erp-filter-item erp-item-quick">
+                                    <label class="erp-filter-label"><i class="far fa-clock text-primary"></i> Period</label>
+                                    <select id="quick_filter" class="form-select erp-filter-input">
+                                        <option value="custom">Custom</option>
+                                        <option value="daily">Today</option>
+                                        <option value="weekly">This Week</option>
+                                        <option value="monthly">This Month</option>
+                                        <option value="yearly">This Year</option>
+                                    </select>
+                                </div>
+
+                                <div class="erp-filter-item erp-item-date">
+                                    <label class="erp-filter-label"><i class="far fa-calendar-alt text-primary"></i> From</label>
+                                    <input type="text" class="form-control erp-filter-input datepicker-custom bg-white" name="from_date" id="filter_from_date" placeholder="dd/mm/yy">
+                                </div>
+
+                                <div class="erp-filter-item erp-item-date">
+                                    <label class="erp-filter-label"><i class="far fa-calendar-check text-primary"></i> To</label>
+                                    <input type="text" class="form-control erp-filter-input datepicker-custom bg-white" name="to_date" id="filter_to_date" placeholder="dd/mm/yy">
+                                </div>
+
+                                <div class="erp-filter-item erp-item-bill">
+                                    <label class="erp-filter-label"><i class="fas fa-hashtag text-primary"></i> Bill#</label>
+                                    <input type="text" class="form-control erp-filter-input" name="bill_no" id="filter_bill_no" placeholder="Bill ID...">
+                                </div>
+
+                                <div class="erp-filter-item erp-item-status">
+                                    <label class="erp-filter-label"><i class="fas fa-tasks text-primary"></i> Status</label>
+                                    <select class="form-select erp-filter-input" name="order_status" id="filter_order_status">
+                                        <option value="all">All Status</option>
+                                        <option value="pending">🔴 Pending</option>
+                                        <option value="ready">🔵 Ready</option>
+                                        <option value="delivered">🟢 Delivered</option>
+                                        <option value="cancelled">🟡 Cancelled</option>
+                                    </select>
+                                </div>
+
+                                <div class="erp-filter-item erp-item-customer">
+                                    <label class="erp-filter-label"><i class="fas fa-user text-primary"></i> Customer</label>
+                                    <select class="form-select erp-filter-input" name="customer_id" id="filter_customer_id">
+                                        <option value="">All Customers</option>
+                                        @foreach ($customers as $c)
+                                            <option value="{{ $c->id }}">{{ $c->customer_name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div class="erp-filter-item erp-item-actions ms-auto">
+                                    <div class="d-flex align-items-center gap-1">
+                                        <button type="button" class="btn btn-erp-pill-outline" id="btnReset" title="Reset Filters">
+                                            <i class="fas fa-undo"></i> <span>Reset</span>
                                         </button>
-                                        <button type="submit" class="btn btn-premium-primary w-50" id="btnSearch">
-                                            <i class="fas fa-search me-1"></i>Search
+                                        <button type="submit" class="btn btn-erp-pill-primary" id="btnSearch" title="Apply Filter">
+                                            <i class="fas fa-filter"></i> <span>Filter</span>
                                         </button>
                                     </div>
-                                </form>
-                            </div>
+                                </div>
+                            </form>
                         </div>
 
                         {{-- Table Container --}}
-                        <div class="table-responsive">
-                            <table id="sales-table" class="table table-hover align-middle datanew premium-table" style="width:100%">
-                                <thead class="bg-light">
+                        <div class="erp-table-responsive table-responsive">
+                            <table id="sales-table" class="table erp-table datanew" style="width:100%">
+                                <thead>
                                     <tr>
-                                        <th class="py-3 ps-3 rounded-start text-secondary fw-semibold text-uppercase small">Bill#</th>
-                                        <th class="py-3 text-secondary fw-semibold text-uppercase small">Customer</th>
-                                        <th class="py-3 text-secondary fw-semibold text-uppercase small">M.Bill</th>
-                                        <th class="py-3 text-secondary fw-semibold text-uppercase small">Products</th>
-                                        <th class="py-3 text-secondary fw-semibold text-uppercase small text-center">Qty</th>
-                                        <th class="py-3 text-secondary fw-semibold text-uppercase small text-end">Gross</th>
-                                        <th class="py-3 text-secondary fw-semibold text-uppercase small text-end">Inline Disc</th>
-                                        <th class="py-3 text-secondary fw-semibold text-uppercase small text-end">Add. Disc</th>
-                                        <th class="py-3 text-secondary fw-semibold text-uppercase small text-end">Net Total</th>
-                                        <th class="py-3 text-secondary fw-semibold text-uppercase small">Date</th>
-                                        <th class="py-3 text-secondary fw-semibold text-uppercase small">Status</th>
-                                        <th class="py-3 pe-3 rounded-end text-secondary fw-semibold text-uppercase small text-center">Action</th>
+                                        <th class="ps-2 text-center" style="width: 50px;">Bill#</th>
+                                        <th style="min-width: 110px;">Customer</th>
+                                        <th style="width: 55px;">M.Bill</th>
+                                        <th style="min-width: 100px;">Products</th>
+                                        <th class="text-center" style="width: 38px;">Qty</th>
+                                        <th class="text-end" style="width: 80px;">Gross</th>
+                                        <th class="text-end" style="width: 80px;">Add. Disc</th>
+                                        <th class="text-end" style="width: 85px;">Net Total</th>
+                                        <th class="text-center" style="width: 70px;">Date</th>
+                                        <th class="text-center" style="width: 72px;">Status</th>
+                                        <th class="text-center" style="width: 72px;">State</th>
+                                        <th class="pe-2 text-center" style="width: 70px;">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="salesTableBody">
@@ -425,12 +765,372 @@
             </div>
         </div>
     </div>
+
+    {{-- Delivery Product Specifications Modal --}}
+    @include('admin_panel.sale.partials.delivery_specs_modal')
 @endsection
 
 @section('js')
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="{{ asset('assets/vendors/sweetalert2/js/sweetalert2.all.min.js') }}"></script>
     <script>
+        // Global function for instant order state change
+        window.changeSaleOrderStatus = function(e, saleId, newStatus, el, saleStatus) {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            if (!saleId || !newStatus) {
+                console.error('Missing saleId or newStatus', saleId, newStatus);
+                return;
+            }
+
+            // Save previous radio value before changing
+            var prevStatus = $('input[name="order_state_' + saleId + '"]:checked').val()
+                          || $('input[name="m_order_state_' + saleId + '"]:checked').val()
+                          || 'pending';
+
+            // If Delivered status is selected, check booking status first
+            if (newStatus === 'delivered') {
+                // Block if sale is still booked or draft - must be confirmed first
+                if (saleStatus === 'booked' || saleStatus === 'draft') {
+                    // Revert radio back to previous state
+                    $('input[name="order_state_' + saleId + '"][value="' + prevStatus + '"], input[name="m_order_state_' + saleId + '"][value="' + prevStatus + '"]').prop('checked', true);
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Confirm Booking First!',
+                        text: 'This sale has not been confirmed yet. Please confirm the booking before marking it as delivered.',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#f59e0b',
+                    });
+                    return;
+                }
+            }
+
+            // Set radio checked state in UI
+            $('input[name="order_state_' + saleId + '"][value="' + newStatus + '"], input[name="m_order_state_' + saleId + '"][value="' + newStatus + '"]').prop('checked', true);
+
+            // Close active dropdowns
+            $('.dropdown-menu.show').removeClass('show');
+            $('.dropdown-submenu.show').removeClass('show');
+            $('.dropdown.show').removeClass('show');
+            $('[data-toggle="dropdown"]').attr('aria-expanded', 'false');
+
+            // If Delivered status is selected, open Product Specifications & Delivery Modal!
+            if (newStatus === 'delivered') {
+                window.openDeliverySpecsModal(saleId);
+                return;
+            }
+
+            let directUrl = '{{ url("sales") }}/' + saleId + '/order-status';
+            let fallbackUrl = '{{ url("sale") }}/' + saleId + '/order-status';
+            let pathLoc = window.location.pathname.replace(/\/(sale|sales|bookings)(\/.*)?$/i, '');
+            let relativeUrl = (pathLoc ? pathLoc : '') + '/sales/' + saleId + '/order-status';
+
+            function sendUpdate(urlToTry, nextFallback) {
+                $.ajax({
+                    url: urlToTry,
+                    type: 'POST',
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        order_status: newStatus
+                    },
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success: function(response) {
+                        if (response && response.success) {
+                            // Update badge HTML in both desktop table and mobile card
+                            $('.sale-state-cell[data-sale-id="' + saleId + '"]').html(response.badge_html);
+
+                            // Update active indicator in dropdowns for this sale
+                            $('[data-id="' + saleId + '"].btn-change-order-status').removeClass('active fw-bold');
+                            $('[data-id="' + saleId + '"][data-status="' + newStatus + '"].btn-change-order-status').addClass('active fw-bold');
+
+                            // Synchronize radio button selection across desktop & mobile
+                            $('input[name="order_state_' + saleId + '"][value="' + newStatus + '"], input[name="m_order_state_' + saleId + '"][value="' + newStatus + '"]').prop('checked', true);
+
+                            if (typeof Swal !== 'undefined') {
+                                const Toast = Swal.mixin({
+                                    toast: true,
+                                    position: 'top-end',
+                                    showConfirmButton: false,
+                                    timer: 2000,
+                                    timerProgressBar: true
+                                });
+                                Toast.fire({
+                                    icon: 'success',
+                                    title: response.message || 'State updated successfully!'
+                                });
+                            }
+                        } else {
+                            if (typeof Swal !== 'undefined') {
+                                Swal.fire('Error', response.message || 'Failed to update state.', 'error');
+                            } else {
+                                alert(response.message || 'Failed to update state.');
+                            }
+                        }
+                    },
+                    error: function(xhr) {
+                        if (nextFallback) {
+                            nextFallback();
+                        } else {
+                            let msg = 'Failed to update state.';
+                            if (xhr.responseJSON && xhr.responseJSON.message) {
+                                msg = xhr.responseJSON.message;
+                            }
+                            if (typeof Swal !== 'undefined') {
+                                Swal.fire('Error', msg, 'error');
+                            } else {
+                                alert(msg);
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Try directUrl -> fallbackUrl -> relativeUrl
+            sendUpdate(directUrl, function() {
+                sendUpdate(fallbackUrl, function() {
+                    sendUpdate(relativeUrl, null);
+                });
+            });
+        };
+
+        // Global function to open Delivery Specs Modal
+        window.openDeliverySpecsModal = function(saleId) {
+            if (!saleId) return;
+
+            // Ensure modal is attached to body so it is always on top without z-index/overflow clipping
+            if ($('#deliverySpecsModal').parent()[0] !== document.body) {
+                $('#deliverySpecsModal').appendTo('body');
+            }
+
+            $('#modalDeliverySaleId').val(saleId);
+            $('#modalDeliveryLoader').removeClass('d-none');
+            $('#modalDeliveryContent').addClass('d-none');
+            $('#modalDeliveryItemsContainer').empty();
+            $('#btnSubmitDeliverySpecs').prop('disabled', true);
+
+            // Open modal using Bootstrap / jQuery
+            try {
+                if (typeof $ !== 'undefined' && $.fn && $.fn.modal) {
+                    $('#deliverySpecsModal').modal({
+                        backdrop: 'static',
+                        keyboard: false,
+                        show: true
+                    });
+                    $('#deliverySpecsModal').modal('show');
+                } else if (window.bootstrap && typeof window.bootstrap.Modal === 'function') {
+                    const modalEl = document.getElementById('deliverySpecsModal');
+                    const modalInst = window.bootstrap.Modal.getInstance(modalEl) || new window.bootstrap.Modal(modalEl);
+                    modalInst.show();
+                } else {
+                    $('#deliverySpecsModal').modal('show');
+                }
+            } catch(e) {
+                console.error('Modal show error', e);
+                $('#deliverySpecsModal').modal('show');
+            }
+
+            let directUrl = '{{ url("sales") }}/' + saleId + '/delivery-details';
+            let fallbackUrl = '{{ url("sale") }}/' + saleId + '/delivery-details';
+            let pathLoc = window.location.pathname.replace(/\/(sale|sales|bookings)(\/.*)?$/i, '');
+            let relativeUrl = (pathLoc ? pathLoc : '') + '/sales/' + saleId + '/delivery-details';
+
+            function fetchSpecs(urlToTry, nextFallback) {
+                $.ajax({
+                    url: urlToTry,
+                    type: 'GET',
+                    dataType: 'json',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    success: function(res) {
+                        if (res && res.success && res.sale) {
+                            $('#modalDeliveryInvoiceNo').text('#' + res.sale.id + ' (' + res.sale.invoice_no + ')');
+                            $('#modalDeliveryCustomer').text(res.sale.customer_name || 'Walk-in Customer');
+                            $('#modalDeliveryDate').val(res.sale.delivery_date || new Date().toISOString().split('T')[0]);
+                            $('#modalDeliveryItemsCount').text(res.sale.items.length);
+
+                            let html = '';
+                            if (res.sale.items.length === 0) {
+                                html = '<div class="alert alert-warning py-2 text-center small">No items found for this order.</div>';
+                            } else {
+                                res.sale.items.forEach(function(item, idx) {
+                                    html += `
+                                    <div class="card border rounded-3 p-3 bg-white shadow-none mb-2" style="border-color: #cbd5e1 !important;">
+                                        <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom">
+                                            <div class="fw-bold text-dark" style="font-size: 0.84rem;">
+                                                <span class="badge bg-primary text-white me-1 font-monospace px-2">${idx + 1}</span>
+                                                ${item.product_name}
+                                                ${item.brand ? '<span class="badge bg-light text-secondary border ms-1 font-monospace" style="font-size: 0.7rem;">' + item.brand + '</span>' : ''}
+                                                ${item.item_code ? '<span class="badge bg-light text-muted border ms-1 font-monospace" style="font-size: 0.7rem;">SKU: ' + item.item_code + '</span>' : ''}
+                                            </div>
+                                            <span class="badge rounded-pill px-2.5 py-1 fw-bold font-monospace" style="background-color: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; font-size: 0.75rem;">
+                                                Quantity: ${parseFloat(item.qty) || item.qty}
+                                            </span>
+                                        </div>
+                                        <div class="row g-2.5">
+                                            <div class="col-md-4">
+                                                <label class="form-label text-secondary fw-bold mb-1" style="font-size: 0.74rem;">Model / Specifications</label>
+                                                <input type="text" class="form-control form-control-sm fw-semibold" name="items[${item.id}][model]" value="${item.model || ''}" placeholder="e.g. LTZ-35KW, 3-Phase 380V">
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label text-secondary fw-bold mb-1" style="font-size: 0.74rem;">Serial Number / Unique Code</label>
+                                                <input type="text" class="form-control form-control-sm font-monospace fw-bold text-primary" name="items[${item.id}][serial_no]" value="${item.serial_no || ''}" placeholder="e.g. SN-2026-00891">
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label text-secondary fw-bold mb-1" style="font-size: 0.74rem;">Configuration / Notes / Specs</label>
+                                                <input type="text" class="form-control form-control-sm" name="items[${item.id}][specs]" value="${item.specs || ''}" placeholder="e.g. 50Hz Water Cooled, Custom Coil">
+                                            </div>
+                                        </div>
+                                    </div>`;
+                                });
+                            }
+
+                            $('#modalDeliveryItemsContainer').html(html);
+                            $('#modalDeliveryLoader').addClass('d-none');
+                            $('#modalDeliveryContent').removeClass('d-none');
+                            $('#btnSubmitDeliverySpecs').prop('disabled', false);
+                        } else {
+                            if (nextFallback) nextFallback();
+                            else $('#modalDeliveryLoader').html('<div class="text-danger py-3"><i class="fas fa-exclamation-triangle me-1"></i> Failed to retrieve item specifications.</div>');
+                        }
+                    },
+                    error: function() {
+                        if (nextFallback) nextFallback();
+                        else $('#modalDeliveryLoader').html('<div class="text-danger py-3"><i class="fas fa-exclamation-triangle me-1"></i> Failed to load item details. Please check network.</div>');
+                    }
+                });
+            }
+
+            fetchSpecs(directUrl, function() {
+                fetchSpecs(fallbackUrl, function() {
+                    fetchSpecs(relativeUrl, null);
+                });
+            });
+        };
+
         $(document).ready(function() {
+            let submenuHoverTimer = null;
+
+            // Hover into submenu or toggle button: show instantly and clear hide timer
+            $(document).on('mouseenter', '.dropdown-submenu', function() {
+                clearTimeout(submenuHoverTimer);
+                let $submenu = $(this);
+                $('.dropdown-submenu').not($submenu).removeClass('show is-hovered');
+                $submenu.addClass('show is-hovered');
+            });
+
+            // Hover out: 1-second (1000ms) grace period delay before closing to prevent accidental collapse
+            $(document).on('mouseleave', '.dropdown-submenu', function() {
+                let $submenu = $(this);
+                submenuHoverTimer = setTimeout(function() {
+                    $submenu.removeClass('show is-hovered');
+                }, 1000);
+            });
+
+            // Click toggle support
+            $(document).on('click', '.dropdown-submenu-toggle', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                clearTimeout(submenuHoverTimer);
+                let $submenu = $(this).closest('.dropdown-submenu');
+                $('.dropdown-submenu').not($submenu).removeClass('show is-hovered');
+                $submenu.toggleClass('show');
+            });
+
+            // Prevent dropdown from closing prematurely when clicking within submenu header/options
+            $(document).on('click', '.dropdown-submenu-menu', function(e) {
+                e.stopPropagation();
+            });
+
+            // Clean up when parent action dropdown is closed
+            $(document).on('hidden.bs.dropdown', '.dropdown', function() {
+                clearTimeout(submenuHoverTimer);
+                $(this).find('.dropdown-submenu').removeClass('show is-hovered');
+            });
+
+            // Submit Delivery Specifications Form (delegated - modal is dynamically appended to body)
+            $(document).on('submit', '#formDeliverySpecs', function(e) {
+                e.preventDefault();
+                const saleId = $('#modalDeliverySaleId').val();
+                if (!saleId) return;
+
+                const $btn = $('#btnSubmitDeliverySpecs');
+                const origHtml = $btn.html();
+                $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Saving Specs...');
+
+                let directUrl = '{{ url("sales") }}/' + saleId + '/delivery-details';
+                let fallbackUrl = '{{ url("sale") }}/' + saleId + '/delivery-details';
+                let pathLoc = window.location.pathname.replace(/\/(sale|sales|bookings)(\/.*)?$/i, '');
+                let relativeUrl = (pathLoc ? pathLoc : '') + '/sales/' + saleId + '/delivery-details';
+
+                function sendDelivery(urlToTry, nextFallback) {
+                    $.ajax({
+                        url: urlToTry,
+                        type: 'POST',
+                        data: $('#formDeliverySpecs').serialize(),
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        success: function(response) {
+                            $btn.prop('disabled', false).html(origHtml);
+                            if (response && response.success) {
+                                // Close modal first - BS4 jQuery approach + cleanup
+                                $('#deliverySpecsModal').modal('hide');
+                                setTimeout(function() {
+                                    $('#deliverySpecsModal').removeClass('show').css('display', 'none');
+                                    $('.modal-backdrop').remove();
+                                    $('body').removeClass('modal-open').css('padding-right', '');
+                                }, 300);
+
+                                // Show SweetAlert then reload page so state shows "Delivered"
+                                if (typeof Swal !== 'undefined') {
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Delivered!',
+                                        text: response.message || 'Specifications saved & Order marked as Delivered!',
+                                        timer: 2500,
+                                        showConfirmButton: false,
+                                        timerProgressBar: true,
+                                    }).then(function() {
+                                        window.location.reload();
+                                    });
+                                } else {
+                                    window.location.reload();
+                                }
+                            } else {
+                                if (nextFallback) {
+                                    nextFallback();
+                                } else {
+                                    if (typeof Swal !== 'undefined') Swal.fire('Error', response.message || 'Failed to save specifications.', 'error');
+                                    else alert(response.message || 'Failed to save specifications.');
+                                }
+                            }
+                        },
+                        error: function(xhr) {
+                            if (nextFallback) {
+                                nextFallback();
+                            } else {
+                                $btn.prop('disabled', false).html(origHtml);
+                                let msg = 'Failed to save specifications.';
+                                if (xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
+                                if (typeof Swal !== 'undefined') Swal.fire('Error', msg, 'error');
+                                else alert(msg);
+                            }
+                        }
+                    });
+                }
+
+                sendDelivery(directUrl, function() {
+                    sendDelivery(fallbackUrl, function() {
+                        sendDelivery(relativeUrl, null);
+                    });
+                });
+            });
+
             // Function to initialize DataTable
             function initDataTable() {
                 if ($.fn.DataTable.isDataTable('.datanew')) {
@@ -439,6 +1139,7 @@
                 $('.datanew').DataTable({
                     "pageLength": 10,
                     "order": [],
+                    "autoWidth": false,
                     "language": {
                         "search": "",
                         "searchPlaceholder": "Search sales..."
@@ -478,8 +1179,8 @@
                     return;
                 }
 
-                let pickerFrom = document.getElementById('filter_from_date')._flatpickr;
-                let pickerTo = document.getElementById('filter_to_date')._flatpickr;
+                let pickerFrom = document.getElementById('filter_from_date') ? document.getElementById('filter_from_date')._flatpickr : null;
+                let pickerTo = document.getElementById('filter_to_date') ? document.getElementById('filter_to_date')._flatpickr : null;
                 if(pickerFrom) pickerFrom.setDate(start);
                 else $("#filter_from_date").val(start.toISOString().split('T')[0]);
                 
@@ -503,7 +1204,7 @@
                 }
 
                 $.ajax({
-                    url: '{{ route("sale.index") }}',
+                    url: window.location.pathname,
                     method: 'GET',
                     data: formData,
                     success: function(response) {
@@ -520,16 +1221,25 @@
                             $('#statTotalCount').text(Number(response.stats.total_count || 0).toLocaleString());
                             $('#statTotalNet').text('Rs. ' + Number(response.stats.total_net || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
                             $('#statTotalDiscount').text('Rs. ' + Number(response.stats.total_discount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
-                            $('#statStatusCounts').html((response.stats.posted_count || 0) + ' <span class="fs-6 fw-normal text-muted">/ ' + (response.stats.booked_count || 0) + '</span>');
+                            $('#statStatusCounts').html((response.stats.booked_count || 0) + ' <span class="fs-6 fw-normal text-muted">/ ' + (response.stats.confirmed_booking_count || 0) + '</span>');
                         }
 
                         initDataTable();
                     },
                     error: function(err) {
                         $btn.prop('disabled', false).html(origHtml);
-                        Swal.fire('Error', 'Failed to retrieve filtered list.', 'error');
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire('Error', 'Failed to retrieve filtered list.', 'error');
+                        }
                     }
                 });
+            });
+
+            $(document).on('click', '.btn-change-order-status', function(e) {
+                const $btn = $(this);
+                const saleId = $btn.attr('data-id') || $btn.data('id');
+                const newStatus = $btn.attr('data-status') || $btn.data('status');
+                window.changeSaleOrderStatus(e, saleId, newStatus, this);
             });
 
             // Reset form
