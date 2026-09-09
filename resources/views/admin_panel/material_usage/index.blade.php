@@ -3,7 +3,7 @@
 @section('content')
 <style>
     /* ==========================================================================
-       Enterprise ERP Design System - Customer Management
+       Enterprise ERP Design System - Raw Material Usage & Issue Management
        ========================================================================== */
     :root {
         --erp-bg-card: #ffffff;
@@ -53,32 +53,11 @@
         display: inline-flex;
         align-items: center;
         gap: 0.4rem;
-        text-decoration: none;
     }
     .btn-erp-primary:hover {
         background-color: #1d4ed8;
         transform: translateY(-1px);
         box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3);
-    }
-
-    .btn-erp-outline {
-        background-color: #ffffff;
-        border: 1px solid #cbd5e1;
-        color: #334155 !important;
-        font-weight: 600;
-        font-size: 0.815rem;
-        border-radius: 8px;
-        padding: 0.5rem 0.9rem;
-        transition: all 0.15s ease;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-        text-decoration: none;
-    }
-    .btn-erp-outline:hover {
-        background-color: #f8fafc;
-        border-color: #94a3b8;
-        color: #0f172a !important;
     }
 
     .btn-erp-outline-danger {
@@ -93,7 +72,6 @@
         display: inline-flex;
         align-items: center;
         gap: 0.4rem;
-        text-decoration: none;
     }
     .btn-erp-outline-danger:hover {
         background-color: #fef2f2;
@@ -101,7 +79,7 @@
         color: #b91c1c !important;
     }
 
-    /* KPI Metric Cards (Exact Sales UI) */
+    /* KPI Metric Cards */
     .erp-kpi-card {
         background: #ffffff;
         border: 1px solid #e2e8f0;
@@ -167,10 +145,11 @@
         flex: 1;
         min-width: 0;
     }
-    .erp-item-id { flex: 0.9; min-width: 85px; }
-    .erp-item-name { flex: 1.5; min-width: 140px; }
+    .erp-item-quick { flex: 1.1; min-width: 105px; }
+    .erp-item-date { flex: 1; min-width: 95px; }
+    .erp-item-bill { flex: 0.9; min-width: 85px; }
     .erp-item-status { flex: 1.1; min-width: 105px; }
-    .erp-item-source { flex: 1.1; min-width: 105px; }
+    .erp-item-customer { flex: 1.4; min-width: 130px; }
     .erp-item-actions {
         flex: 0 0 auto;
         margin-left: auto;
@@ -251,7 +230,6 @@
         gap: 5px !important;
         transition: all 0.15s ease !important;
         white-space: nowrap !important;
-        text-decoration: none;
     }
     .btn-erp-pill-outline:hover {
         background-color: #eff6ff !important;
@@ -286,14 +264,14 @@
         font-size: 0.70rem !important;
         text-transform: uppercase !important;
         letter-spacing: 0.04em !important;
-        padding: 0.5rem 0.4rem !important;
+        padding: 0.5rem 0.35rem !important;
         border: 1px solid #bfdbfe !important;
         border-bottom: 2px solid #60a5fa !important;
         white-space: nowrap;
         vertical-align: middle;
     }
     .erp-table tbody td {
-        padding: 0.45rem 0.4rem !important;
+        padding: 0.45rem 0.35rem !important;
         font-size: 0.78rem !important;
         color: #334155 !important;
         border: 1px solid #dbeafe !important;
@@ -305,7 +283,7 @@
         background-color: #f0f7ff !important;
     }
 
-    /* Bill / Customer Tag */
+    /* Bill Tag (Exact Sales UI) */
     .erp-bill-tag {
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
         font-weight: 700;
@@ -313,20 +291,20 @@
         color: #2563eb;
         background-color: #eff6ff;
         border: 1px solid #bfdbfe;
-        padding: 0.15rem 0.45rem;
+        padding: 0.15rem 0.35rem;
         border-radius: 4px;
         display: inline-block;
     }
 
-    /* Avatar & Customer Meta */
+    /* Avatar & Customer Meta (Exact Sales UI) */
     .erp-avatar {
-        width: 26px;
-        height: 26px;
+        width: 24px;
+        height: 24px;
         border-radius: 6px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 0.70rem;
+        font-size: 0.68rem;
         font-weight: 700;
         flex-shrink: 0;
     }
@@ -361,7 +339,7 @@
         color: #1e40af;
     }
 
-    /* ERP Status Badges */
+    /* ERP Status Badges (Exact Sales UI) */
     .erp-badge {
         display: inline-flex;
         align-items: center;
@@ -379,28 +357,6 @@
         background-color: #ecfdf5;
         color: #047857;
         border-color: #a7f3d0;
-    }
-    .erp-badge.badge-inactive {
-        background-color: #fef2f2;
-        color: #dc2626;
-        border-color: #fecaca;
-    }
-
-    /* Source Badges */
-    .badge-src-website {
-        background-color: #ecfdf5;
-        color: #047857;
-        border: 1px solid #a7f3d0;
-    }
-    .badge-src-both {
-        background-color: #f0fdf4;
-        color: #15803d;
-        border: 1px solid #bbf7d0;
-    }
-    .badge-src-manual {
-        background-color: #f1f5f9;
-        color: #475569;
-        border: 1px solid #cbd5e1;
     }
 
     @media (max-width: 991px) {
@@ -427,79 +383,67 @@
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 erp-page-header">
                 <div>
                     <h4 class="erp-title">
-                        <i class="fas fa-users text-primary"></i> Customer Management
+                        <i class="fas fa-boxes-packing text-primary"></i> Raw Material Usage
                     </h4>
-                    <p class="erp-subtitle">Directory of active clients, credit limits, account statuses, and ledger statements</p>
+                    <p class="erp-subtitle">Executive ledger of raw material consumption, warehouse stock deductions, and production issues</p>
                 </div>
-                <div class="d-flex flex-wrap align-items-center gap-2">
-                    <a class="btn-erp-outline-danger" href="{{ route('customers.inactive') }}">
-                        <i class="fas fa-user-slash"></i> Inactive Clients
-                    </a>
-                    @can('customers.view')
-                        <a class="btn-erp-outline" href="{{ route('customers.ledger') }}">
-                            <i class="fas fa-book"></i> Ledger
-                        </a>
-                        <a class="btn-erp-outline" href="{{ route('customer.payments') }}">
-                            <i class="fas fa-money-bill-wave"></i> Payments
+                <div class="d-flex gap-2">
+                    @can('material.usage.report.view')
+                        <a class="btn-erp-outline-danger" href="{{ route('report.material_usage') }}">
+                            <i class="fas fa-chart-pie"></i> Report
                         </a>
                     @endcan
-                    @can('customers.create')
-                        <a class="btn-erp-primary" href="{{ route('customers.create') }}">
-                            <i class="fas fa-plus-circle"></i> Add Customer
+                    @can('material.usage.create')
+                        <a class="btn-erp-primary" href="{{ route('material_usage.create') }}">
+                            <i class="fas fa-plus-circle"></i> Issue Material
                         </a>
                     @endcan
                 </div>
             </div>
 
-            {{-- KPI Metric Cards (Exact Sales UI) --}}
+            {{-- KPI Metric Cards (Exact 4 Cards layout) --}}
             <div class="row g-3 mb-4">
                 <div class="col-6 col-md-3">
                     <div class="erp-kpi-card">
                         <div>
-                            <div class="erp-kpi-label">Total Clients</div>
-                            <div class="erp-kpi-value">{{ number_format($kpiMetrics['total_customers'] ?? count($customers)) }}</div>
+                            <div class="erp-kpi-label">Total Invoices</div>
+                            <div class="erp-kpi-value">{{ number_format($kpiMetrics['total_usages']) }}</div>
                         </div>
                         <div class="erp-kpi-icon" style="background-color: #eff6ff; color: #2563eb;">
-                            <i class="fas fa-users"></i>
+                            <i class="fas fa-file-invoice"></i>
                         </div>
                     </div>
                 </div>
                 <div class="col-6 col-md-3">
                     <div class="erp-kpi-card">
                         <div>
-                            <div class="erp-kpi-label">Active Accounts</div>
-                            <div class="erp-kpi-value text-success">
-                                {{ number_format($kpiMetrics['active_customers'] ?? $customers->where('status', 'active')->count()) }}
-                            </div>
+                            <div class="erp-kpi-label">Total Net Value</div>
+                            <div class="erp-kpi-value text-success">Rs. {{ number_format($kpiMetrics['total_cost'], 2) }}</div>
                         </div>
                         <div class="erp-kpi-icon" style="background-color: #ecfdf5; color: #059669;">
-                            <i class="fas fa-user-check"></i>
+                            <i class="fas fa-coins"></i>
                         </div>
                     </div>
                 </div>
                 <div class="col-6 col-md-3">
                     <div class="erp-kpi-card">
                         <div>
-                            <div class="erp-kpi-label">Inactive Accounts</div>
-                            <div class="erp-kpi-value text-warning" style="color: #d97706 !important;">
-                                {{ number_format($kpiMetrics['inactive_customers'] ?? $customers->where('status', 'inactive')->count()) }}
-                            </div>
+                            <div class="erp-kpi-label">Total Quantity</div>
+                            <div class="erp-kpi-value text-warning" style="color: #d97706 !important;">{{ number_format($kpiMetrics['total_qty'], 2) }}</div>
                         </div>
                         <div class="erp-kpi-icon" style="background-color: #fffbeb; color: #d97706;">
-                            <i class="fas fa-user-clock"></i>
+                            <i class="fas fa-cubes"></i>
                         </div>
                     </div>
                 </div>
                 <div class="col-6 col-md-3">
                     <div class="erp-kpi-card">
                         <div>
-                            <div class="erp-kpi-label">Total Credit Limit</div>
-                            <div class="erp-kpi-value" style="color: #0284c7 !important;">
-                                Rs. {{ number_format($kpiMetrics['total_credit_limit'] ?? 0, 0) }}
-                            </div>
+                            <div class="erp-kpi-label">Raw Items Issued</div>
+                            <div class="erp-kpi-value" style="color: #0284c7 !important;">{{ number_format($kpiMetrics['total_items']) }}</div>
                         </div>
                         <div class="erp-kpi-icon" style="background-color: #f0f9ff; color: #0284c7;">
-                            <i class="fas fa-credit-card"></i>
+                            <i class="fas fa-layer-group"></i>
                         </div>
                     </div>
                 </div>
@@ -513,7 +457,7 @@
                         <div class="alert alert-success d-flex align-items-center gap-2 rounded-3 mb-4">
                             <i class="fas fa-check-circle"></i>
                             <span>{{ session('success') }}</span>
-                            <button type="button" class="close ml-auto ms-auto" data-dismiss="alert" aria-label="Close">
+                            <button type="button" class="close ml-auto" data-dismiss="alert" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
                         </div>
@@ -523,50 +467,57 @@
                         <div class="alert alert-danger d-flex align-items-center gap-2 rounded-3 mb-4">
                             <i class="fas fa-exclamation-circle"></i>
                             <span>{{ session('error') }}</span>
-                            <button type="button" class="close ml-auto ms-auto" data-dismiss="alert" aria-label="Close">
+                            <button type="button" class="close ml-auto" data-dismiss="alert" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
                         </div>
                     @endif
 
-                    {{-- Single-Row Filter System (Exact Sales UI) --}}
-                    <div class="erp-filter-card">
-                        <form method="GET" action="{{ route('customers.index') }}" class="erp-filter-single-row" autocomplete="off">
-                            <div class="erp-filter-item erp-item-id">
-                                <label class="erp-filter-label"><i class="fas fa-hashtag text-primary"></i> Customer ID</label>
-                                <input type="text" class="form-control erp-filter-input" name="search_id" value="{{ request('search_id') }}" placeholder="CUST-ID...">
-                            </div>
-
-                            <div class="erp-filter-item erp-item-name">
-                                <label class="erp-filter-label"><i class="fas fa-user text-primary"></i> Name / Phone</label>
-                                <input type="text" class="form-control erp-filter-input" name="search_name" value="{{ request('search_name') }}" placeholder="Search name or mobile...">
-                            </div>
-
-                            <div class="erp-filter-item erp-item-status">
-                                <label class="erp-filter-label"><i class="fas fa-toggle-on text-primary"></i> Status</label>
-                                <select name="status" class="form-select erp-filter-input">
-                                    <option value="">All Status</option>
-                                    <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Active</option>
-                                    <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Inactive</option>
+                    {{-- Modern Single-Row Filter System (Exact Sales UI) --}}
+                    <div class="erp-filter-card" id="filterPanelContainer">
+                        <form method="GET" action="{{ route('material_usage.index') }}" class="erp-filter-single-row" autocomplete="off">
+                            <div class="erp-filter-item erp-item-quick">
+                                <label class="erp-filter-label"><i class="far fa-clock text-primary"></i> Period</label>
+                                <select id="quick_filter" name="period" class="form-select erp-filter-input">
+                                    <option value="custom" {{ request('period') == 'custom' ? 'selected' : '' }}>Custom</option>
+                                    <option value="daily" {{ request('period') == 'daily' ? 'selected' : '' }}>Today</option>
+                                    <option value="weekly" {{ request('period') == 'weekly' ? 'selected' : '' }}>This Week</option>
+                                    <option value="monthly" {{ request('period') == 'monthly' ? 'selected' : '' }}>This Month</option>
+                                    <option value="yearly" {{ request('period') == 'yearly' ? 'selected' : '' }}>This Year</option>
                                 </select>
                             </div>
 
-                            <div class="erp-filter-item erp-item-source">
-                                <label class="erp-filter-label"><i class="fas fa-globe text-primary"></i> Source</label>
-                                <select name="source" class="form-select erp-filter-input">
-                                    <option value="">All Sources</option>
-                                    <option value="Manual" {{ request('source') == 'Manual' ? 'selected' : '' }}>Manual</option>
-                                    <option value="Website" {{ request('source') == 'Website' ? 'selected' : '' }}>Website</option>
-                                    <option value="Both" {{ request('source') == 'Both' ? 'selected' : '' }}>Both</option>
+                            <div class="erp-filter-item erp-item-date">
+                                <label class="erp-filter-label"><i class="far fa-calendar-alt text-primary"></i> From</label>
+                                <input type="text" class="form-control erp-filter-input datepicker-custom bg-white" name="start_date" id="filter_from_date" value="{{ request('start_date') }}" placeholder="dd/mm/yy">
+                            </div>
+
+                            <div class="erp-filter-item erp-item-date">
+                                <label class="erp-filter-label"><i class="far fa-calendar-check text-primary"></i> To</label>
+                                <input type="text" class="form-control erp-filter-input datepicker-custom bg-white" name="end_date" id="filter_to_date" value="{{ request('end_date') }}" placeholder="dd/mm/yy">
+                            </div>
+
+                            <div class="erp-filter-item erp-item-bill">
+                                <label class="erp-filter-label"><i class="fas fa-hashtag text-primary"></i> Bill#</label>
+                                <input type="text" class="form-control erp-filter-input" name="search_voucher" id="filter_bill_no" value="{{ request('search_voucher') }}" placeholder="Bill ID...">
+                            </div>
+
+                            <div class="erp-filter-item erp-item-customer">
+                                <label class="erp-filter-label"><i class="fas fa-cubes text-primary"></i> Material</label>
+                                <select class="form-select erp-filter-input" name="product_id" id="filter_product_id">
+                                    <option value="">All Materials</option>
+                                    @foreach($rawMaterialsList ?? [] as $rmItem)
+                                        <option value="{{ $rmItem->id }}" {{ request('product_id') == $rmItem->id ? 'selected' : '' }}>{{ $rmItem->item_name }}</option>
+                                    @endforeach
                                 </select>
                             </div>
 
                             <div class="erp-filter-item erp-item-actions ms-auto">
                                 <div class="d-flex align-items-center gap-1">
-                                    <a href="{{ route('customers.index') }}" class="btn btn-erp-pill-outline" title="Reset Filters">
+                                    <a href="{{ route('material_usage.index') }}" class="btn btn-erp-pill-outline" id="btnReset" title="Reset Filters">
                                         <i class="fas fa-undo"></i> <span>Reset</span>
                                     </a>
-                                    <button type="submit" class="btn btn-erp-pill-primary" title="Apply Filter">
+                                    <button type="submit" class="btn btn-erp-pill-primary" id="btnSearch" title="Apply Filter">
                                         <i class="fas fa-filter"></i> <span>Filter</span>
                                     </button>
                                 </div>
@@ -574,137 +525,116 @@
                         </form>
                     </div>
 
-                    {{-- Data Table Container (Exact Sales UI) --}}
+                    {{-- Table Container (Exact Sales UI) --}}
                     <div class="erp-table-responsive table-responsive">
-                        <table class="table erp-table datanew" style="width: 100%;">
+                        <table class="table erp-table datanew" style="width:100%">
                             <thead>
                                 <tr>
-                                    <th class="ps-2 text-center" style="width: 95px;">CUSTOMER ID</th>
-                                    <th style="min-width: 170px;">CLIENT NAME</th>
-                                    <th style="width: 130px;">MOBILE / CONTACT</th>
-                                    <th class="text-end" style="width: 130px;">CREDIT LIMIT</th>
-                                    <th class="text-center" style="width: 80px;">SOURCE</th>
-                                    <th class="text-center" style="width: 85px;">STATUS</th>
-                                    <th class="pe-2 text-center" style="width: 85px;">ACTION</th>
+                                    <th class="ps-2 text-center" style="width: 65px;">BILL#</th>
+                                    <th style="min-width: 140px;">ISSUED BY</th>
+                                    <th style="width: 130px;">M.BILL / REF</th>
+                                    <th style="min-width: 180px;">PRODUCTS</th>
+                                    <th class="text-center" style="width: 50px;">QTY</th>
+                                    <th class="text-end" style="width: 90px;">AVG RATE</th>
+                                    <th class="text-end" style="width: 100px;">NET TOTAL</th>
+                                    <th class="text-center" style="width: 80px;">DATE</th>
+                                    <th class="text-center" style="width: 80px;">STATUS</th>
+                                    <th class="pe-2 text-center" style="width: 80px;">ACTION</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                @forelse ($customers as $customer)
+                            <tbody id="materialUsageTableBody">
+                                @forelse($usages as $u)
                                     @php
-                                        $name = $customer->customer_name ?? 'Customer';
-                                        $initial = strtoupper(substr($name, 0, 1));
-                                        $source = $customer->source ?? 'Manual';
+                                        $materialNames = $u->items->map(function($it) {
+                                            return ($it->product->item_name ?? 'Item') . ' (' . number_format($it->qty_used, 1) . ' ' . $it->unit_name . ')';
+                                        })->implode(', ');
+
+                                        $issuedBy = $u->user->name ?? 'Admin';
+                                        $initial = strtoupper(substr($issuedBy, 0, 1));
+                                        $avgRate = $u->total_qty > 0 ? ($u->total_cost / $u->total_qty) : 0;
                                     @endphp
-                                    <tr>
-                                        {{-- Customer ID Badge --}}
-                                        <td class="ps-2 text-center">
-                                            <span class="erp-bill-tag">#{{ $customer->customer_id }}</span>
+                                    <tr class="border-bottom-0">
+                                        {{-- Bill Tag --}}
+                                        <td class="ps-2 text-center" data-sort="{{ $u->id }}">
+                                            <span class="erp-bill-tag">#{{ $u->usage_no }}</span>
                                         </td>
 
-                                        {{-- Client Name & Avatar --}}
+                                        {{-- User / Issued By with Avatar --}}
                                         <td>
-                                            <div class="d-flex align-items-center gap-2">
+                                            <div class="d-flex align-items-center gap-1.5" style="max-width: 140px;">
                                                 <div class="erp-avatar erp-avatar-registered">
                                                     {{ $initial }}
                                                 </div>
                                                 <div class="d-flex flex-column text-truncate">
-                                                    <span class="fw-bold text-dark text-truncate" style="font-size: 0.80rem;" title="{{ $name }}">
-                                                        {{ $name }}
-                                                    </span>
-                                                    <span class="text-muted text-truncate" style="font-size: 0.68rem; font-weight: 500;">
-                                                        {{ $customer->customer_type ?: ($customer->zone ?: 'Standard') }}
-                                                    </span>
+                                                    <span class="fw-bold text-dark text-truncate" style="font-size: 0.78rem;" title="{{ $issuedBy }}">{{ $issuedBy }}</span>
+                                                    <span class="text-muted text-truncate" style="font-size: 0.65rem; font-weight: 500;">Warehouse</span>
                                                 </div>
                                             </div>
                                         </td>
 
-                                        {{-- Mobile Phone --}}
+                                        {{-- Purpose / Ref --}}
                                         <td>
-                                            <span class="font-monospace fw-semibold text-dark" style="font-size: 0.78rem;">
-                                                <i class="fas fa-phone-alt text-muted small me-1"></i>{{ $customer->mobile ?: '-' }}
+                                            <span class="font-monospace text-muted" style="font-size: 0.75rem;">
+                                                {{ $u->purpose ?: ($u->remarks ?: '-') }}
                                             </span>
                                         </td>
 
-                                        {{-- Credit Limit --}}
-                                        <td class="text-end font-monospace">
-                                            @if($customer->balance_range == 0)
-                                                <span class="badge bg-light text-primary border" style="font-size: 0.72rem;">Unlimited</span>
-                                            @else
-                                                <span class="fw-bold text-dark" style="font-size: 0.78rem;">
-                                                    Rs. {{ number_format($customer->balance_range, 0) }}
-                                                </span>
-                                            @endif
+                                        {{-- Product Names --}}
+                                        <td title="{{ $materialNames }}" class="text-muted small" style="max-width: 180px;">
+                                            <div class="text-truncate fw-semibold text-dark" style="max-width: 180px; font-size: 0.78rem;">
+                                                {{ $materialNames }}
+                                            </div>
                                         </td>
 
-                                        {{-- Source Badge --}}
-                                        <td class="text-center">
-                                            @if($source === 'Website')
-                                                <span class="erp-badge badge-src-website">
-                                                    <i class="fas fa-globe small me-1"></i>Website
-                                                </span>
-                                            @elseif($source === 'Both')
-                                                <span class="erp-badge badge-src-both">
-                                                    <i class="fas fa-sync-alt small me-1"></i>Both
-                                                </span>
-                                            @else
-                                                <span class="erp-badge badge-src-manual">
-                                                    <i class="fas fa-keyboard small me-1"></i>Manual
-                                                </span>
-                                            @endif
+                                        {{-- Qty --}}
+                                        <td class="text-center font-monospace fw-semibold text-dark" style="font-size: 0.78rem;">
+                                            {{ number_format($u->total_qty, 2) }}
+                                        </td>
+
+                                        {{-- Avg Rate / Gross --}}
+                                        <td class="text-end fw-bold text-dark font-monospace" style="font-size: 0.78rem;">
+                                            Rs. {{ number_format($avgRate, 2) }}
+                                        </td>
+
+                                        {{-- Net Total --}}
+                                        <td class="text-end fw-bold font-monospace" style="color: #047857; font-size: 0.80rem;">
+                                            Rs. {{ number_format($u->total_cost, 2) }}
+                                        </td>
+
+                                        {{-- Date --}}
+                                        <td class="text-nowrap small text-muted font-monospace text-center" style="font-size: 0.75rem;">
+                                            {{ \Carbon\Carbon::parse($u->date)->format('d/m/Y') }}
                                         </td>
 
                                         {{-- Status Badge --}}
-                                        <td class="text-center">
-                                            @if($customer->status === 'active')
-                                                <span class="erp-badge badge-posted">
-                                                    <i class="fas fa-check-circle me-1"></i>Active
-                                                </span>
-                                            @else
-                                                <span class="erp-badge badge-inactive">
-                                                    <i class="fas fa-times-circle me-1"></i>Inactive
-                                                </span>
-                                            @endif
+                                        <td class="text-nowrap text-center">
+                                            <span class="erp-badge badge-posted">
+                                                <i class="fas fa-check-circle me-1"></i>Issued
+                                            </span>
                                         </td>
 
-                                        {{-- Action Dropdown (Exact Sales UI) --}}
+                                        {{-- Actions Dropdown (Exact Sales UI) --}}
                                         <td class="pe-2 text-center text-nowrap">
                                             <div class="dropdown d-inline-block">
                                                 <button class="btn btn-erp-table-action dropdown-toggle shadow-none" type="button" data-toggle="dropdown" aria-expanded="false">
                                                     <i class="fas fa-ellipsis-v small me-1"></i> Actions
                                                 </button>
                                                 <ul class="dropdown-menu dropdown-menu-right border-0 shadow-lg rounded-3 py-2" style="min-width: 175px;">
-                                                    @can('customers.edit')
-                                                        <li>
-                                                            <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('customers.edit', $customer->id) }}">
-                                                                <i class="fas fa-edit text-primary fa-fw"></i> Edit Profile
-                                                            </a>
-                                                        </li>
-                                                    @endcan
-                                                    @can('customers.view')
-                                                        <li>
-                                                            <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('customers.ledger', ['customer_id' => $customer->id]) }}">
-                                                                <i class="fas fa-file-invoice text-info fa-fw"></i> View Ledger
-                                                            </a>
-                                                        </li>
-                                                        <li>
-                                                            <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('customer.payments') }}?customer_id={{ $customer->id }}">
-                                                                <i class="fas fa-money-check-alt text-success fa-fw"></i> Payments
-                                                            </a>
-                                                        </li>
-                                                    @endcan
-                                                    @can('customers.edit')
-                                                        <li>
-                                                            <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('customers.toggleStatus', $customer->id) }}">
-                                                                <i class="fas fa-toggle-on {{ $customer->status === 'active' ? 'text-warning' : 'text-success' }} fa-fw"></i>
-                                                                {{ $customer->status === 'active' ? 'Deactivate' : 'Activate' }}
-                                                            </a>
-                                                        </li>
-                                                    @endcan
-                                                    @can('customers.delete')
+                                                    <li>
+                                                        <a class="dropdown-item d-flex align-items-center gap-2 py-2 btn-view-modal" href="javascript:void(0)" data-id="{{ $u->id }}">
+                                                            <i class="fas fa-eye text-primary fa-fw"></i> Quick View
+                                                        </a>
+                                                    </li>
+                                                    <li>
+                                                        <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('material_usage.show', $u->id) }}" target="_blank">
+                                                            <i class="fas fa-file-invoice text-info fa-fw"></i> View Slip
+                                                        </a>
+                                                    </li>
+                                                    @can('material.usage.delete')
                                                         <li class="border-top my-1"></li>
                                                         <li>
-                                                            <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-danger btn-delete-customer" href="javascript:void(0)" data-url="{{ route('customers.destroy', $customer->id) }}" data-name="{{ $name }}">
-                                                                <i class="fas fa-trash-alt text-danger fa-fw"></i> Delete Client
+                                                            <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-danger btn-delete-voucher" href="javascript:void(0)" data-url="{{ route('material_usage.destroy', $u->id) }}" data-no="{{ $u->usage_no }}">
+                                                                <i class="fas fa-trash-alt text-danger fa-fw"></i> Cancel &amp; Revert
                                                             </a>
                                                         </li>
                                                     @endcan
@@ -714,15 +644,13 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="7" class="text-center py-5 text-muted">
-                                            <i class="fas fa-users-slash fa-3x mb-3 text-light"></i>
-                                            <h6 class="fw-bold">No customers found</h6>
-                                            <p class="small text-muted mb-3">Add your first customer to begin recording sales and balances.</p>
-                                            @can('customers.create')
-                                                <a href="{{ route('customers.create') }}" class="btn btn-erp-primary">
-                                                    <i class="fas fa-plus-circle mr-1"></i> Add New Customer
-                                                </a>
-                                            @endcan
+                                        <td colspan="10" class="text-center py-5 text-muted">
+                                            <i class="fas fa-box-open fa-3x mb-3 text-light"></i>
+                                            <h6 class="fw-bold">No material issue vouchers found</h6>
+                                            <p class="small text-muted mb-3">Click below to record your first raw material usage.</p>
+                                            <a href="{{ route('material_usage.create') }}" class="btn btn-erp-primary">
+                                                <i class="fas fa-plus-circle mr-1"></i> Issue Material Now
+                                            </a>
                                         </td>
                                     </tr>
                                 @endforelse
@@ -730,9 +658,32 @@
                         </table>
                     </div>
 
+                    @if($usages->hasPages())
+                        <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+                            <span class="small text-muted">
+                                Showing {{ $usages->firstItem() }} to {{ $usages->lastItem() }} of {{ $usages->total() }} vouchers
+                            </span>
+                            <div>
+                                {{ $usages->links('pagination::bootstrap-4') }}
+                            </div>
+                        </div>
+                    @endif
+
                 </div>
             </div>
 
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Quick Inspection -->
+<div class="modal fade" id="usageDetailModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content border-0 shadow-lg" id="modalContentContainer" style="border-radius: 12px; overflow: hidden;">
+            <div class="p-5 text-center text-muted">
+                <i class="fas fa-spinner fa-spin fa-2x text-primary mb-2"></i>
+                <p>Loading voucher details...</p>
+            </div>
         </div>
     </div>
 </div>
@@ -742,34 +693,81 @@
 <script src="{{ asset('assets/vendors/sweetalert2/js/sweetalert2.all.min.js') }}"></script>
 <script>
     $(document).ready(function() {
-        // SweetAlert2 Confirmation for Customer Deletion
-        $(document).on('click', '.btn-delete-customer', function(e) {
+        // Quick Period Filter Auto-Change
+        $('#quick_filter').on('change', function() {
+            var val = $(this).val();
+            if (val !== 'custom') {
+                $('#filter_from_date').val('');
+                $('#filter_to_date').val('');
+                $(this).closest('form').submit();
+            }
+        });
+
+        // Quick View Modal
+        $(document).on('click', '.btn-view-modal', function(e) {
+            e.preventDefault();
+            var usageId = $(this).data('id');
+            $('#modalContentContainer').html('<div class="p-5 text-center text-muted"><i class="fas fa-spinner fa-spin fa-2x text-primary mb-2"></i><p>Loading voucher details...</p></div>');
+            $('#usageDetailModal').modal('show');
+
+            $.ajax({
+                url: "{{ url('/material-usage') }}/" + usageId,
+                type: 'GET',
+                dataType: 'json',
+                success: function(res) {
+                    if (res.success) {
+                        $('#modalContentContainer').html(res.html);
+                    } else {
+                        $('#modalContentContainer').html('<div class="p-4 text-center text-danger">Failed to load voucher details.</div>');
+                    }
+                },
+                error: function() {
+                    $('#modalContentContainer').html('<div class="p-4 text-center text-danger">An error occurred while loading the voucher.</div>');
+                }
+            });
+        });
+
+        // SweetAlert2 Confirmation for Voucher Cancellation & Stock Restoration
+        $(document).on('click', '.btn-delete-voucher', function(e) {
             e.preventDefault();
             var url = $(this).data('url');
-            var customerName = $(this).data('name');
+            var voucherNo = $(this).data('no');
 
             if (typeof Swal !== 'undefined') {
                 Swal.fire({
-                    title: 'Delete Customer?',
-                    text: 'Are you sure you want to delete "' + customerName + '"? This action cannot be undone.',
+                    title: 'Cancel Voucher #' + voucherNo + '?',
+                    text: 'This will delete the voucher and restore deducted raw material stock back to the warehouse!',
                     icon: 'warning',
                     showCancelButton: true,
                     confirmButtonColor: '#dc2626',
                     cancelButtonColor: '#64748b',
-                    confirmButtonText: 'Yes, Delete',
-                    cancelButtonText: 'Cancel'
+                    confirmButtonText: 'Yes, Cancel & Restore Stock',
+                    cancelButtonText: 'Dismiss'
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        window.location.href = url;
+                        var form = $('<form>', {
+                            'method': 'POST',
+                            'action': url
+                        });
+                        form.append($('<input>', { 'type': 'hidden', 'name': '_token', 'value': '{{ csrf_token() }}' }));
+                        form.append($('<input>', { 'type': 'hidden', 'name': '_method', 'value': 'DELETE' }));
+                        $('body').append(form);
+                        form.submit();
                     }
                 });
             } else {
-                if (confirm('Are you sure you want to delete "' + customerName + '"?')) {
-                    window.location.href = url;
+                if (confirm('Are you sure you want to cancel voucher #' + voucherNo + '? Deducted stock will be restored.')) {
+                    var form = $('<form>', {
+                        'method': 'POST',
+                        'action': url
+                    });
+                    form.append($('<input>', { 'type': 'hidden', 'name': '_token', 'value': '{{ csrf_token() }}' }));
+                    form.append($('<input>', { 'type': 'hidden', 'name': '_method', 'value': 'DELETE' }));
+                    $('body').append(form);
+                    form.submit();
                 }
             }
         });
     });
 </script>
 @endsection
-

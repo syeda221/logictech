@@ -10,6 +10,7 @@
             </div>
             <form id="quickAddProductForm">
                 @csrf
+                <input type="hidden" name="item_type" value="raw_material">
                 <div class="modal-body pt-2">
                     <div class="row g-3">
                         <div class="col-12">

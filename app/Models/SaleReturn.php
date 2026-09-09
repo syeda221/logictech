@@ -21,6 +21,8 @@ class SaleReturn extends Model
         'item_discount',
         'extra_discount',
         'net_amount',
+        'due_adjusted',
+        'refundable_amount',
         'paid',
         'balance',
         'remarks',
@@ -33,6 +35,8 @@ class SaleReturn extends Model
         'item_discount' => 'decimal:2',
         'extra_discount' => 'decimal:2',
         'net_amount' => 'decimal:2',
+        'due_adjusted' => 'decimal:2',
+        'refundable_amount' => 'decimal:2',
         'paid' => 'decimal:2',
         'balance' => 'decimal:2',
     ];

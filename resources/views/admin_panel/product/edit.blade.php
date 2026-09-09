@@ -362,13 +362,13 @@
                                                         <th class="text-uppercase text-muted p-1" style="width: 85px; font-size: 10px;">Rating / Spec</th>
                                                         <th class="text-uppercase text-muted p-1" style="width: 85px; font-size: 10px;">Model / Type</th>
                                                         <th class="text-uppercase text-muted p-1" style="width: 75px; font-size: 10px;">Unit</th>
-                                                        <th class="text-uppercase text-muted p-1 text-center" style="width: 90px; font-size: 10px;">Initial Stock</th>
+                                                        <th class="text-uppercase text-muted p-1 text-center stock-col" style="width: 90px; font-size: 10px;">Initial Stock</th>
                                                         <th class="text-uppercase text-muted p-1 text-center conv-col" id="convFactorHeader" style="width: 95px; font-size: 10px;">Pcs / Carton</th>
                                                         <th class="text-uppercase text-muted p-1 text-center piece-wt-only-col" style="width: 90px; font-size: 10px;">Piece Wt (g)</th>
                                                         <th class="text-uppercase text-muted p-1" style="width: 90px; font-size: 10px;">Sale Price</th>
                                                         <th class="text-uppercase text-muted p-1" style="width: 90px; font-size: 10px;">Wholesale</th>
-                                                        <th class="text-uppercase text-muted p-1" style="width: 90px; font-size: 10px;">Purch Price</th>
-                                                        <th class="text-uppercase text-muted p-1" style="width: 55px; font-size: 10px;">Alert</th>
+                                                        <th class="text-uppercase text-muted p-1 purch-col" style="width: 90px; font-size: 10px;">Purch Price</th>
+                                                        <th class="text-uppercase text-muted p-1 alert-col" style="width: 55px; font-size: 10px;">Alert</th>
                                                         <th class="text-uppercase text-muted p-1" style="width: 100px; font-size: 10px;">Barcode</th>
                                                         <th class="text-uppercase text-muted p-1 text-center" style="width: 50px; font-size: 10px;">Action</th>
                                                     </tr>
@@ -468,11 +468,11 @@
                                              <label class="form-label-pro text-success">Sale Price <span class="unit-label text-muted fw-normal">(pc)</span></label>
                                              <input type="number" class="form-control-pro fw-bold text-success" name="sale_price_per_box" id="sale_price_per_box" step="0.01" value="{{ $product->sale_price_per_piece }}" placeholder="0.00">
                                          </div>
-                                         <div class="col-md-2">
+                                        <div class="col-md-2">
                                              <label class="form-label-pro text-info">Wholesale Price <span class="unit-label text-muted fw-normal">(pc)</span></label>
                                              <input type="number" class="form-control-pro fw-bold text-info" name="wholesale_price" id="wholesale_price" step="0.01" value="{{ $product->wholesale_price ?? 0 }}" placeholder="0.00">
                                          </div>
-                                         <div class="col-md-2">
+                                         <div class="col-md-2 purch-field-col">
                                              <label class="form-label-pro text-secondary">Purchase Price <span class="unit-label text-muted fw-normal">(pc)</span></label>
                                              <input type="number" class="form-control-pro text-muted" name="purchase_price_per_piece" id="purchase_price_per_piece" step="0.01" value="{{ $product->purchase_price_per_piece }}" placeholder="0.00">
                                          </div>
@@ -1016,8 +1016,8 @@
                             <option value="Dozen">Dzn</option>
                         </select>
                     </td>
-                    <td class="p-1">
-                        <input type="number" class="form-control-pro form-control-sm text-center fw-bold text-primary" name="variant_stock[]" step="any" value="${stockVal}" placeholder="0" title="${isCartonMode ? 'Initial Stock (Cartons)' : 'Initial Stock'}">
+                    <td class="p-1 stock-col">
+                        <input type="number" class="form-control-pro form-control-sm text-center fw-bold text-primary stock-input" name="variant_stock[]" step="any" value="${stockVal}" placeholder="0" title="${isCartonMode ? 'Initial Stock (Cartons)' : 'Initial Stock'}">
                     </td>
                     <td class="p-0 conv-col">
                         <input type="number" class="form-control-pro form-control-sm conv-factor-input text-center fw-bold ${isCartonMode ? 'text-primary' : ''}" name="variant_conv_factor[]" step="any" value="${convVal}" ${isCartonMode ? '' : 'readonly'} placeholder="0" title="${isCartonMode ? 'Pieces per Carton' : 'Base Conv Factor = 1'}" style="border-radius:0; border:1px solid #dee2e6; height:30px; ${isCartonMode ? 'background:#fff;' : 'background:#f8f8f8;'}">
@@ -1030,8 +1030,8 @@
                     </td>
                     <td class="p-1"><input type="number" class="form-control-pro form-control-sm base-sale-input" name="variant_sale_price[]" step="any" value="${saleVal}" placeholder="0.00" required></td>
                     <td class="p-1"><input type="number" class="form-control-pro form-control-sm" name="variant_wholesale_price[]" step="any" value="${wholesaleVal}" placeholder="0.00"></td>
-                    <td class="p-1"><input type="number" class="form-control-pro form-control-sm base-purch-input" name="variant_purchase_price[]" step="any" value="${purchVal}" placeholder="0.00" required></td>
-                    <td class="p-1"><input type="number" class="form-control-pro form-control-sm" name="variant_alert_qty[]" value="${alertVal}" placeholder="0"></td>
+                    <td class="p-1 purch-col"><input type="number" class="form-control-pro form-control-sm base-purch-input" name="variant_purchase_price[]" step="any" value="${purchVal}" placeholder="0.00"></td>
+                    <td class="p-1 alert-col"><input type="number" class="form-control-pro form-control-sm" name="variant_alert_qty[]" value="${alertVal}" placeholder="0"></td>
                     <td class="p-1"><input type="text" class="form-control-pro form-control-sm" name="variant_barcode[]" value="${barcodeVal}"></td>
                     <td class="p-1 text-center">
                         <span class="badge bg-primary px-2 py-1">Base</span>
@@ -1189,7 +1189,7 @@
                             <option value="Dozen" ${unitVal==='Dozen'?'selected':''}>Dzn</option>
                         </select>
                     </td>
-                    <td class="p-1">
+                    <td class="p-1 stock-col">
                         <input type="number" class="form-control-pro form-control-sm text-center fw-bold text-primary stock-input" name="variant_stock[]" step="any" value="${stockVal}" placeholder="0" title="${isCartonMode ? 'Initial Stock (Cartons)' : 'Initial Stock'}" ${variantMode === 'weight' ? 'readonly style="background:#f8f9ff;color:#0d6efd;font-weight:bold;"' : ''}>
                     </td>
                     <td class="p-0 conv-col">
@@ -1203,8 +1203,8 @@
                     </td>
                     <td class="p-1"><input type="number" class="form-control-pro form-control-sm sale-price-input" name="variant_sale_price[]" step="any" value="${suggSale}" placeholder="0.00" required></td>
                     <td class="p-1"><input type="number" class="form-control-pro form-control-sm" name="variant_wholesale_price[]" step="any" value="${suggWholesale}" placeholder="0.00"></td>
-                    <td class="p-1"><input type="number" class="form-control-pro form-control-sm purch-price-input" name="variant_purchase_price[]" step="any" value="${suggPurch}" placeholder="0.00" required></td>
-                    <td class="p-1"><input type="number" class="form-control-pro form-control-sm" name="variant_alert_qty[]" value="${alertVal}" placeholder="0"></td>
+                    <td class="p-1 purch-col"><input type="number" class="form-control-pro form-control-sm purch-price-input" name="variant_purchase_price[]" step="any" value="${suggPurch}" placeholder="0.00"></td>
+                    <td class="p-1 alert-col"><input type="number" class="form-control-pro form-control-sm" name="variant_alert_qty[]" value="${alertVal}" placeholder="0"></td>
                     <td class="p-1"><input type="text" class="form-control-pro form-control-sm" name="variant_barcode[]" value="${barcodeVal}"></td>
                     <td class="p-1 text-center">
                         <button type="button" class="btn btn-sm btn-outline-danger remove-var-btn p-1 px-2" title="Remove"><i class="fas fa-trash"></i></button>
@@ -1303,7 +1303,26 @@
                     convCols.forEach(c => c.classList.add('d-none'));
                     pieceWtOnlyCols.forEach(c => c.classList.add('d-none'));
                 }
-            }    
+            function updateItemTypeVisibility() {
+                const isFinishGoods = document.getElementById('type_finish_goods')?.checked;
+                if (isFinishGoods) {
+                    $('.stock-col').hide();
+                    $('.alert-col').hide();
+                    $('.purch-col').hide();
+                    $('.purch-field-col').hide();
+                    $('input[name="variant_stock[]"]').val(0);
+                    $('input[name="variant_alert_qty[]"]').val(0);
+                    $('#purchase_price_per_piece').val(0);
+                    $('input[name="variant_purchase_price[]"]').val(0).prop('required', false);
+                } else {
+                    $('.stock-col').show();
+                    $('.alert-col').show();
+                    $('.purch-col').show();
+                    $('.purch-field-col').show();
+                }
+            }
+            $('input[name="item_type"]').on('change', updateItemTypeVisibility);
+            updateItemTypeVisibility();
 
             enableVariantsBtn.addEventListener('click', function() {
                 if (variantsBody.children.length === 0) {
@@ -1311,6 +1330,7 @@
                 } else {
                     addVariantRow();
                 }
+                updateItemTypeVisibility();
                 if (typeof isMobile === 'function' && isMobile()) {
                     if (typeof rebuildMobileCards === 'function') rebuildMobileCards();
                     const cards = document.querySelectorAll('.mob-variant-card');
@@ -1530,9 +1550,9 @@
                             <input type="number" class="mob-input mob-sync" data-field="variant_wholesale_price[]" value="${wsaleVal}" placeholder="0.00" step="any">
                         </div>
                     </div>
-                    <div class="mob-field-group">
-                        <div class="mob-label">Purchase Price <span class="req">*</span></div>
-                        <input type="number" class="mob-input mob-sync" data-field="variant_purchase_price[]" value="${purchVal}" placeholder="0.00" step="any" required>
+                    <div class="mob-field-group purch-col">
+                        <div class="mob-label">Purchase Price</div>
+                        <input type="number" class="mob-input mob-sync" data-field="variant_purchase_price[]" value="${purchVal}" placeholder="0.00" step="any">
                     </div>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                         <div class="mob-field-group">

@@ -132,8 +132,33 @@ class SaleReturnController extends Controller
         if (!$hasReturnableItems) {
             return redirect()->route('sale.index')->with('error', 'All items in sale invoice #' . $sale->invoice_no . ' have already been fully returned.');
         }
+
+        // Financial tracking of the Sale Invoice
+        $saleTotalNet = (float) $sale->total_net;
+        $customerPaid = (float) ($sale->cash + ($sale->card ?? 0));
         
-        return view('admin_panel.sale.sale_return.create', compact('sale', 'accounts', 'returnedQtyMap'));
+        $pastReturnedTotal = (float) $pastReturns->sum('net_amount');
+        $pastRefundPaid = (float) $pastReturns->sum('paid');
+        $pastDueAdjusted = (float) $pastReturns->sum('due_adjusted');
+
+        $originalInvoiceDue = max(0, $saleTotalNet - $customerPaid);
+        if ($pastDueAdjusted == 0 && $pastReturns->count() > 0) {
+            $pastDueAdjusted = min($pastReturnedTotal, $originalInvoiceDue);
+        }
+        $remainingInvoiceDue = max(0, $originalInvoiceDue - $pastDueAdjusted);
+        $remainingPaidRefundable = max(0, $customerPaid - $pastRefundPaid);
+        $saleExtraDiscount = (float) ($sale->total_extradiscount ?? 0);
+        
+        return view('admin_panel.sale.sale_return.create', compact(
+            'sale', 
+            'accounts', 
+            'returnedQtyMap',
+            'saleTotalNet',
+            'customerPaid',
+            'remainingInvoiceDue',
+            'remainingPaidRefundable',
+            'saleExtraDiscount'
+        ));
     }
 
     /**
@@ -277,12 +302,13 @@ class SaleReturnController extends Controller
 
                 // Calculate Line Total Logic based on size mode
                 if ($sizeMode === 'by_size') {
-                    $lineTotal = round($ppm2 * $qty * $price, 2);
+                    $grossLine = round($ppm2 * $qty * $price, 2);
                 } elseif ($sizeMode === 'by_cartons' || $sizeMode === 'by_carton') {
-                    $lineTotal = round($qty * $price, 2);
+                    $grossLine = round($qty * $price, 2);
                 } else {
-                    $lineTotal = round($qty * $price, 2);
+                    $grossLine = round($qty * $price, 2);
                 }
+                $lineTotal = max(0, round($grossLine - $itemDisc, 2));
 
                 // Calculate boxes and loose pieces
                 $boxes = floor($qty / $ppb);
@@ -372,6 +398,36 @@ class SaleReturnController extends Controller
             $extraDiscount = (float)($request->extra_discount ?? 0);
             $netAmount = max(0, $subtotal - $extraDiscount);
 
+            // Compute debt offset and refundable amount if linked to a sale
+            $dueAdjusted = 0;
+            $refundableAmount = $netAmount;
+
+            if ($sale) {
+                $saleTotalNet = (float)$sale->total_net;
+                $customerPaid = (float)($sale->cash + ($sale->card ?? 0));
+                $originalInvoiceDue = max(0, $saleTotalNet - $customerPaid);
+
+                // Any past returns on this sale
+                $pastReturns = SaleReturn::where('sale_id', $sale->id)
+                    ->where('id', '!=', $return->id)
+                    ->get();
+                $pastReturnedTotal = (float) $pastReturns->sum('net_amount');
+                $pastRefundPaid = (float) $pastReturns->sum('paid');
+                $pastDueAdjusted = (float) $pastReturns->sum('due_adjusted');
+
+                if ($pastDueAdjusted == 0 && $pastReturns->count() > 0) {
+                    $pastDueAdjusted = min($pastReturnedTotal, $originalInvoiceDue);
+                }
+
+                $remainingInvoiceDue = max(0, $originalInvoiceDue - $pastDueAdjusted);
+                $remainingPaidRefundable = max(0, $customerPaid - $pastRefundPaid);
+
+                // Debt offset wipes out the customer's unpaid invoice balance first
+                $dueAdjusted = min($netAmount, $remainingInvoiceDue);
+                // Eligible Cash/Bank Refund cannot exceed the customer's actual paid advance
+                $refundableAmount = min(max(0, $netAmount - $dueAdjusted), $remainingPaidRefundable);
+            }
+
             // Handle Refund Payment (Payment Voucher)
             $totalPaid = 0;
             $submittedPaid = 0;
@@ -381,13 +437,13 @@ class SaleReturnController extends Controller
                 }
             }
 
-            if ($submittedPaid > ($netAmount + 0.05)) {
-                throw new \Exception("Refund amount cannot exceed the Net Return Amount of " . number_format($netAmount, 2));
+            if ($submittedPaid > ($refundableAmount + 0.05)) {
+                throw new \Exception("Cash refund of Rs. " . number_format($submittedPaid, 2) . " exceeds the eligible cash refund amount of Rs. " . number_format($refundableAmount, 2) . ". The remaining Rs. " . number_format($dueAdjusted, 2) . " settles the customer's unpaid invoice balance.");
             }
 
-            // Walking customer MUST receive full 100% refund immediately
-            if ($isWalking && $netAmount > 0 && $submittedPaid < ($netAmount - 0.05)) {
-                throw new \Exception("Walking Customer requires immediate full refund of " . number_format($netAmount, 2) . ". Please select a refund payment account.");
+            // Walking customer MUST receive full eligible cash refund immediately
+            if ($isWalking && $refundableAmount > 0 && $submittedPaid < ($refundableAmount - 0.05)) {
+                throw new \Exception("Walking Customer requires immediate cash refund of Rs. " . number_format($refundableAmount, 2) . ". Please select a refund payment account.");
             }
 
             if (!empty($request->payment_account_id)) {
@@ -429,14 +485,20 @@ class SaleReturnController extends Controller
                 }
             }
 
+            // Calculate remaining balance of the refund
+            // If refund is paid in full, balance is 0. If customer leaves refund on account/store credit, balance is refundableAmount - totalPaid.
+            $remainingRefundBalance = max(0, $refundableAmount - $totalPaid);
+
             // Update Return Totals
             $return->update([
-                'bill_amount' => $subtotal,
+                'bill_amount' => $subtotal + $totalItemDiscount,
                 'item_discount' => $totalItemDiscount,
                 'extra_discount' => $extraDiscount,
                 'net_amount' => $netAmount,
+                'due_adjusted' => $dueAdjusted,
+                'refundable_amount' => $refundableAmount,
                 'paid' => $totalPaid,
-                'balance' => $netAmount - $totalPaid,
+                'balance' => $remainingRefundBalance,
             ]);
 
             // Update Sale Status (if fully returned)
@@ -510,23 +572,42 @@ class SaleReturnController extends Controller
      */
     public function saleReturnIndex()
     {
-        $returns = SaleReturn::with(['customer', 'sale'])->latest()->get();
+        $returns = SaleReturn::with(['customer', 'sale', 'warehouse'])->orderBy('id', 'desc')->get();
         
         // Calculate updated financial details
         $returns->each(function ($return) {
             if ($return->sale) {
                 $sale = $return->sale;
-                
-                $return->original_net_amount = $sale->total_net;
-                
-                $totalReturned = SaleReturn::where('sale_id', $sale->id)
-                    ->sum('net_amount');
-                
-                $return->new_net_amount = max(0, $sale->total_net - $totalReturned);
-                $return->total_returned = $totalReturned;
+                $saleNet = (float) $sale->total_net;
+                $customerPaid = (float) ($sale->cash + ($sale->card ?? 0));
+                $origDue = max(0, $saleNet - $customerPaid);
 
-                $originalDue = max(0, (float)$sale->total_net - ((float)$sale->cash + (float)$sale->card));
-                $return->new_due_amount = max(0, $originalDue - $totalReturned);
+                // Ensure due_adjusted and refundable_amount are properly set for legacy returns
+                if ((float)$return->due_adjusted == 0 && (float)$return->paid == 0 && (float)$return->net_amount > 0) {
+                    $return->due_adjusted = min((float)$return->net_amount, $origDue);
+                    $return->refundable_amount = min(max(0, (float)$return->net_amount - (float)$return->due_adjusted), $customerPaid);
+                }
+
+                $return->original_net_amount = $saleNet;
+                $return->customer_advance = $customerPaid;
+                $return->original_due = $origDue;
+
+                $totalReturned = (float) SaleReturn::where('sale_id', $sale->id)->sum('net_amount');
+                $totalDueAdjusted = (float) SaleReturn::where('sale_id', $sale->id)->sum('due_adjusted');
+                if ($totalDueAdjusted == 0) {
+                    $totalDueAdjusted = min($totalReturned, $origDue);
+                }
+
+                $return->new_net_amount = max(0, $saleNet - $totalReturned);
+                $return->total_returned = $totalReturned;
+                $return->new_due_amount = max(0, $origDue - $totalDueAdjusted);
+            } else {
+                $return->original_net_amount = (float) $return->net_amount;
+                $return->customer_advance = 0;
+                $return->original_due = 0;
+                $return->new_net_amount = 0;
+                $return->new_due_amount = 0;
+                $return->total_returned = (float) $return->net_amount;
             }
         });
 
@@ -538,7 +619,18 @@ class SaleReturnController extends Controller
      */
     public function viewReturn($id)
     {
-        $return = SaleReturn::with(['customer', 'sale', 'items.product'])->findOrFail($id);
+        $return = SaleReturn::with(['customer', 'sale', 'items.product', 'warehouse'])->findOrFail($id);
+
+        // Ensure accurate financial breakdown even for legacy records
+        if ((float)$return->due_adjusted == 0 && $return->sale) {
+            $saleNet = (float) $return->sale->total_net;
+            $customerPaid = (float) ($return->sale->cash + ($return->sale->card ?? 0));
+            $origDue = max(0, $saleNet - $customerPaid);
+            $return->due_adjusted = min((float)$return->net_amount, $origDue);
+            $return->refundable_amount = max(0, (float)$return->net_amount - (float)$return->due_adjusted);
+            $return->balance = max(0, (float)$return->refundable_amount - (float)$return->paid);
+        }
+
         return view('admin_panel.sale.sale_return.show', compact('return'));
     }
 }

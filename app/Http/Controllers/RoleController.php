@@ -17,7 +17,7 @@ class RoleController extends Controller
         
         // Ensure purchase_pos.create & stock.adjust permissions exist automatically (so no live migration is needed)
         Permission::firstOrCreate(['name' => 'purchase_pos.create']);
-        foreach (['stock.adjust.view', 'stock.adjust.create', 'stock.adjust.edit', 'stock.adjust.delete'] as $permName) {
+        foreach (['stock.adjust.view', 'stock.adjust.create', 'stock.adjust.edit', 'stock.adjust.delete', 'material.usage.view', 'material.usage.create', 'material.usage.delete', 'material.usage.report.view'] as $permName) {
             Permission::firstOrCreate(['name' => $permName]);
         }
         foreach ([

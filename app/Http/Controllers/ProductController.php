@@ -404,8 +404,8 @@ class ProductController extends Controller
                 'width' => $p->width ?? null,
                 'pieces_per_box' => $ppb,
                 'size_mode' => $p->size_mode,
-                'stock' => $stockDisplay,
-                'trade_price' => $p->purchase_price_per_piece ?? 0,
+                'stock' => $p->item_type === 'finish_goods' ? 'Made to Order' : $stockDisplay,
+                'trade_price' => $p->item_type === 'finish_goods' ? 0 : ($p->purchase_price_per_piece ?? 0),
                 'total_m2' => number_format($p->total_m2 ?? 0, 2),
                 'price_per_m2' => number_format($p->price_per_m2 ?? 0, 2),
                 'total_price' => number_format($p->total_price ?? 0, 2),
@@ -472,20 +472,20 @@ class ProductController extends Controller
         }
 
         // Calculate derived fields
-        $totalPieces = $product->warehouseStocks->sum('total_pieces');
+        $totalPieces = $product->item_type === 'finish_goods' ? 0 : $product->warehouseStocks->sum('total_pieces');
         $ppb = $product->pieces_per_box > 0 ? $product->pieces_per_box : 1;
 
         $boxes = 0;
         $loose = 0;
 
-        if ($product->size_mode === 'by_cartons' || $product->size_mode === 'by_size') {
-            $boxes = floor($totalPieces / $ppb);
-            $loose = $totalPieces % $ppb;
-        } else {
-            // For by_pieces, boxes is essentially the piece count if we treat it largely
-            // But strict interpretation:
-            $boxes = $totalPieces;
-            $loose = 0;
+        if ($product->item_type !== 'finish_goods') {
+            if ($product->size_mode === 'by_cartons' || $product->size_mode === 'by_size') {
+                $boxes = floor($totalPieces / $ppb);
+                $loose = $totalPieces % $ppb;
+            } else {
+                $boxes = $totalPieces;
+                $loose = 0;
+            }
         }
 
         // Append these purely for the view (not saved in DB)
@@ -911,17 +911,23 @@ class ProductController extends Controller
                 'updated_at' => now(),
             ]);
 
+            $isFinishGoods = $request->input('item_type') === 'finish_goods';
+            if ($isFinishGoods) {
+                $totalStockQty = 0;
+                $boxesQuantity = 0;
+            }
+
             // Create Warehouse Stock
             WarehouseStock::create([
                 'warehouse_id' => $request->warehouse_id ?? (\App\Models\Warehouse::first()->id ?? 1), // Default to first warehouse if not selected
                 'product_id' => $product->id,
                 'quantity' => $boxesQuantity ?? 0,
                 'total_pieces' => $totalStockQty,
-                'remarks' => 'Initial Stock',
+                'remarks' => $isFinishGoods ? 'Finished Goods (Make-to-Order)' : 'Initial Stock',
             ]);
 
-            // Log Stock Movement (Initial)
-            if ($totalStockQty > 0) {
+            // Log Stock Movement (Initial) - only for raw materials
+            if (!$isFinishGoods && $totalStockQty > 0) {
                 StockMovement::create([
                     'product_id' => $product->id,
                     'type' => 'adjustment',
@@ -1289,43 +1295,62 @@ class ProductController extends Controller
 
             // ✅ Update WarehouseStock box quantity based on new pieces_per_box (preserve total_pieces)
             $warehouseStock = \App\Models\WarehouseStock::where('product_id', $id)->first();
-            
+            $isFinishGoods = $request->input('item_type') === 'finish_goods';
             $ppb = $piecesPerBox > 0 ? $piecesPerBox : 1;
 
-            if ($warehouseStock) {
-                // If total_pieces was 0 but quantity was set, recover total_pieces
-                if ((float)$warehouseStock->total_pieces <= 0 && (float)$warehouseStock->quantity > 0) {
-                    $warehouseStock->total_pieces = round($warehouseStock->quantity * $ppb, 2);
+            if ($isFinishGoods) {
+                if ($warehouseStock) {
+                    $warehouseStock->total_pieces = 0;
+                    $warehouseStock->quantity = 0;
+                    $warehouseStock->remarks = 'Finished Goods (Make-to-Order)';
+                    $warehouseStock->save();
+                } else {
+                    $defaultWhId = \App\Models\Warehouse::first()->id ?? 1;
+                    WarehouseStock::create([
+                        'warehouse_id' => $defaultWhId,
+                        'product_id' => $id,
+                        'total_pieces' => 0,
+                        'quantity' => 0,
+                        'price' => 0,
+                        'remarks' => 'Finished Goods (Make-to-Order)',
+                    ]);
                 }
-                // Keep the actual pieces we have, just update the box display approximation
-                $warehouseStock->quantity = round($warehouseStock->total_pieces / $ppb, 2);
-                $warehouseStock->save();
             } else {
-                $defaultWhId = \App\Models\Warehouse::first()->id ?? 1;
-                $initialPieces = count($variants) > 0 ? array_sum(array_column($variants, 'stock')) : 0;
-                $warehouseStock = \App\Models\WarehouseStock::create([
-                    'warehouse_id' => $defaultWhId,
-                    'product_id' => $id,
-                    'total_pieces' => $initialPieces,
-                    'quantity' => $ppb > 0 ? round($initialPieces / $ppb, 2) : $initialPieces,
-                    'price' => 0,
-                    'remarks' => 'Auto-created on product update',
-                ]);
-            }
+                if ($warehouseStock) {
+                    // If total_pieces was 0 but quantity was set, recover total_pieces
+                    if ((float)$warehouseStock->total_pieces <= 0 && (float)$warehouseStock->quantity > 0) {
+                        $warehouseStock->total_pieces = round($warehouseStock->quantity * $ppb, 2);
+                    }
+                    // Keep the actual pieces we have, just update the box display approximation
+                    $warehouseStock->quantity = round($warehouseStock->total_pieces / $ppb, 2);
+                    $warehouseStock->save();
+                } else {
+                    $defaultWhId = \App\Models\Warehouse::first()->id ?? 1;
+                    $initialPieces = count($variants) > 0 ? array_sum(array_column($variants, 'stock')) : 0;
+                    $warehouseStock = \App\Models\WarehouseStock::create([
+                        'warehouse_id' => $defaultWhId,
+                        'product_id' => $id,
+                        'total_pieces' => $initialPieces,
+                        'quantity' => $ppb > 0 ? round($initialPieces / $ppb, 2) : $initialPieces,
+                        'price' => 0,
+                        'remarks' => 'Auto-created on product update',
+                    ]);
+                }
 
-            // Manual stock adjustment (extra on top)
-            if ($request->filled('stock_adjust') && (float) $request->stock_adjust != 0) {
-                $adjQty = (float) $request->stock_adjust;
+                // Manual stock adjustment (extra on top - only for raw materials)
+                if ($request->filled('stock_adjust') && (float) $request->stock_adjust != 0) {
+                    $adjQty = (float) $request->stock_adjust;
 
-                StockMovement::create([
-                    'product_id' => $id,
-                    'type'       => 'adjustment',
-                    'qty'        => $adjQty,
-                    'ref_type'   => 'ADJ',
-                    'note'       => 'Manual stock adjustment',
-                ]);
+                    StockMovement::create([
+                        'product_id' => $id,
+                        'type'       => 'adjustment',
+                        'qty'        => $adjQty,
+                        'ref_type'   => 'ADJ',
+                        'note'       => 'Manual stock adjustment',
+                    ]);
 
-                $this->upsertStocks($id, $adjQty, 1, 1);
+                    $this->upsertStocks($id, $adjQty, 1, 1);
+                }
             }
         });
 

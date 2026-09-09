@@ -388,6 +388,13 @@
                 <input type="hidden" name="customer_id" value="{{ $sale->customer_id }}">
                 <input type="hidden" id="isWalkingCustomer" value="{{ $isWalking ? '1' : '0' }}">
                 <input type="hidden" name="total_amount_Words" id="amountInWords" value="">
+                <input type="hidden" id="hasLinkedSale" value="{{ $sale ? '1' : '0' }}">
+                <input type="hidden" id="saleTotalNet" value="{{ $saleTotalNet ?? 0 }}">
+                <input type="hidden" id="customerPaid" value="{{ $customerPaid ?? 0 }}">
+                <input type="hidden" id="invRemainingDue" name="remaining_invoice_due" value="{{ $remainingInvoiceDue ?? 0 }}">
+                <input type="hidden" id="remainingInvoiceDue" value="{{ $remainingInvoiceDue ?? 0 }}">
+                <input type="hidden" id="invPaidRefundable" name="remaining_paid_refundable" value="{{ $remainingPaidRefundable ?? 0 }}">
+                <input type="hidden" id="remainingPaidRefundable" value="{{ $remainingPaidRefundable ?? 0 }}">
 
                 {{-- TOP HEADER BAR --}}
                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 erp-page-header">
@@ -411,6 +418,31 @@
                         </span>
                     </div>
                 </div>
+
+                {{-- INVOICE FINANCIAL STATUS STRIP --}}
+                @if($sale)
+                <div class="card-panel mb-2 py-2 px-3" style="background: #f8fafc; border-left: 4px solid #2563eb; border-radius: 8px;">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-muted small fw-semibold">Sale Invoice Total:</span>
+                            <strong class="font-monospace text-dark">Rs {{ number_format($saleTotalNet ?? 0, 2) }}</strong>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-muted small fw-semibold">Customer Advance/Paid:</span>
+                            <strong class="font-monospace text-success">Rs {{ number_format($customerPaid ?? 0, 2) }}</strong>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-muted small fw-semibold">Unpaid Invoice Debt:</span>
+                            <strong class="font-monospace text-danger">Rs {{ number_format($remainingInvoiceDue ?? 0, 2) }}</strong>
+                        </div>
+                        <div>
+                            <span class="badge rounded-pill bg-light text-primary border" style="font-size: 0.72rem;">
+                                <i class="fas fa-shield-alt me-1"></i> Return value first settles unpaid debt; cash refund is capped to advance paid.
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                @endif
 
                 {{-- TOP INFORMATION PANEL (PILL TOOLBAR LAYOUT) --}}
                 <div class="card-panel mb-2">
@@ -481,7 +513,8 @@
                                             <th style="width: 80px;" class="text-end">Sold Price</th>
                                             <th style="width: 95px;" class="text-center">Purchased / Rem.</th>
                                             <th style="width: 110px;" class="text-center">Return Qty (Box.Pc)</th>
-                                            <th style="width: 75px;" class="text-center">Return Pcs</th>
+                                            <th style="width: 70px;" class="text-center">Return Pcs</th>
+                                            <th style="width: 85px;" class="text-end text-danger">Line Disc.</th>
                                             <th style="width: 90px;" class="text-end">Amount</th>
                                             <th style="width: 30px;" class="text-center">×</th>
                                         </tr>
@@ -502,11 +535,12 @@
                                                 } else {
                                                     $remDisplay = $netRemaining;
                                                 }
+                                                $unitDisc = ($original > 0) ? ((float)($item['discount'] ?? 0) / $original) : 0;
                                             @endphp
                                             <tr>
                                                 <input type="hidden" name="product_id[]" value="{{ $item['product_id'] }}">
                                                 <input type="hidden" name="color[]" value="{{ $item['color'] ?? '' }}">
-                                                <input type="hidden" name="item_disc[]" class="item_disc" value="{{ $item['discount'] ?? 0 }}">
+                                                <input type="hidden" name="item_disc[]" class="item_disc" value="0" data-unit-disc="{{ $unitDisc }}">
                                                 <input type="hidden" name="unit[]" value="{{ $item['unit'] ?? 'pc' }}">
                                                 <input type="hidden" name="size_mode[]" class="size-mode" value="{{ $item['size_mode'] ?? 'by_pieces' }}">
                                                 <input type="hidden" name="pieces_per_m2[]" class="pieces-per-m2" value="{{ $item['pieces_per_m2'] ?? 0 }}">
@@ -577,6 +611,11 @@
                                                     <input type="number" name="qty[]" class="form-control text-center fw-bold quantity border-0 bg-transparent p-0" value="0" readonly min="0" max="{{ $netRemaining }}" data-max="{{ $netRemaining }}" data-original="{{ $original }}" data-returned="{{ $returned }}" style="color: #2563eb; font-size: 0.85rem;">
                                                 </td>
 
+                                                {{-- Line Discount --}}
+                                                <td class="text-end font-monospace">
+                                                    <span class="text-danger fw-bold line-disc-display" style="font-size: 0.82rem;">0.00</span>
+                                                </td>
+
                                                 {{-- Total Amount --}}
                                                 <td class="text-end font-monospace">
                                                     <input type="text" name="total[]" class="form-control text-end fw-bold row-total border-0 bg-transparent p-0 text-dark" value="0.00" readonly style="font-size: 0.85rem;">
@@ -634,20 +673,43 @@
                                 </div>
                                 
                                 <div class="summary-row">
-                                    <span class="text-muted fw-semibold">Subtotal</span>
+                                    <span class="text-muted fw-semibold">Gross Goods Total</span>
+                                    <span class="fw-bold text-dark font-monospace" id="displayGrossBill">0.00</span>
+                                </div>
+                                <div class="summary-row" id="rowLineDiscount">
+                                    <span class="text-danger fw-semibold">Less: Line Discounts</span>
+                                    <span class="fw-bold text-danger font-monospace" id="displayTotalItemDiscount">-0.00</span>
+                                </div>
+                                <div class="summary-row border-top pt-1 mt-1">
+                                    <span class="text-muted fw-semibold">Net Goods Subtotal</span>
                                     <span class="fw-bold text-dark font-monospace" id="displayBillAmount">0.00</span>
                                 </div>
                                 <div class="summary-row">
-                                    <span class="text-muted fw-semibold">Less: Extra Deductions</span>
+                                    <span class="text-danger fw-semibold">Less: Extra Deductions</span>
                                     <div class="input-group input-group-sm" style="width: 110px;">
-                                        <input type="number" name="extra_discount" id="extraDiscount" class="form-control text-end fw-bold text-danger font-monospace" value="0" min="0" step="0.01">
+                                        <input type="number" name="extra_discount" id="extraDiscount" class="form-control text-end fw-bold text-danger font-monospace" value="{{ number_format($saleExtraDiscount ?? 0, 2, '.', '') }}" min="0" step="0.01">
                                         <span class="input-group-text bg-light text-muted px-1" style="font-size:0.7rem;">Rs</span>
                                     </div>
                                 </div>
                                 <div class="summary-row pt-2 mt-1 border-top">
-                                    <span class="fw-bold text-dark">Net Refund Amount</span>
-                                    <span class="summary-val-net font-monospace" id="displayNetAmount">0.00</span>
+                                    <span class="fw-bold text-dark">Total Net Return</span>
+                                    <span class="summary-val-net font-monospace text-primary fw-bold" id="displayNetAmount">0.00</span>
                                 </div>
+
+                                {{-- Accounting Allocation --}}
+                                <div class="mt-2 pt-2 border-top">
+                                    <div class="summary-row mb-1">
+                                        <span class="text-muted small"><i class="fas fa-file-invoice text-secondary me-1"></i>Adjust Unpaid Bill:</span>
+                                        <span class="fw-bold text-danger font-monospace small" id="displayDueAdjusted">0.00</span>
+                                    </div>
+                                    <div class="summary-row">
+                                        <span class="text-dark fw-bold small"><i class="fas fa-hand-holding-usd text-success me-1"></i>Max Cash Refund:</span>
+                                        <span class="fw-bold text-success font-monospace" style="font-size:0.92rem;" id="displayMaxCashRefund">0.00</span>
+                                    </div>
+                                </div>
+
+                                <input type="hidden" name="total_gross" id="grossAmount" value="0.00">
+                                <input type="hidden" name="total_item_disc" id="totalItemDisc" value="0.00">
                                 <input type="hidden" name="total_subtotal" id="billAmount" value="0.00">
                                 <input type="hidden" name="net_amount" id="netAmount" value="0.00">
                             </div>
@@ -655,10 +717,17 @@
                             {{-- Refund Payment Card --}}
                             <div class="card-panel p-3 bg-white flex-grow-1 d-flex flex-column" style="border-radius:10px;">
                                 <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom" style="border-color: #dbeafe !important;">
-                                    <span class="fw-bold text-dark" style="font-size:0.82rem;"><i class="fas fa-wallet text-success me-1"></i>Refund Payment</span>
+                                    <div class="d-flex align-items-center gap-1">
+                                        <span class="fw-bold text-dark" style="font-size:0.82rem;"><i class="fas fa-wallet text-success me-1"></i>Refund Payment</span>
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle font-monospace" id="maxRefundBadge" style="font-size:0.68rem;">Max: Rs 0.00</span>
+                                    </div>
                                     <button type="button" class="btn btn-erp-pill-outline py-0 px-2 fw-bold" id="btnAddRefundAccount" style="height: 26px; font-size:0.7rem;">
                                         <i class="fas fa-plus me-1"></i>Add Account
                                     </button>
+                                </div>
+
+                                <div id="noCashRefundNotice" class="alert alert-info border small p-2 mb-2" style="font-size:0.72rem; display:none;">
+                                    <i class="fas fa-info-circle me-1"></i> <strong>Zero Cash Refund:</strong> Unpaid invoice balance will be adjusted directly. No cash payout is required.
                                 </div>
 
                                 @if($isWalking)
@@ -666,8 +735,8 @@
                                         <i class="fas fa-exclamation-triangle text-warning me-1"></i> <strong>Walk-in Customer:</strong> 100% full cash/bank refund required.
                                     </div>
                                 @else
-                                    <div class="alert alert-light border small p-2 mb-2 text-muted" style="font-size:0.72rem;">
-                                        <i class="fas fa-info-circle text-primary me-1"></i> Optional payout. Amount not refunded in cash/bank will be credited to customer's ledger.
+                                    <div class="alert alert-light border small p-2 mb-2 text-muted" id="registeredCustomerNotice" style="font-size:0.72rem;">
+                                        <i class="fas fa-info-circle text-primary me-1"></i> Optional payout up to Max Cash Refund. Unrefunded balance remains in customer's store credit.
                                     </div>
                                 @endif
 
@@ -704,33 +773,48 @@
 
                 {{-- BOTTOM SUMMARY STRIP --}}
                 <div class="bottom-summary-strip">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="text-muted fw-semibold" style="font-size:0.8rem;">Subtotal:</span>
-                        <span class="fs-6 fw-bold text-dark font-monospace" id="bottomSubtotal">0.00</span>
+                    <div class="d-flex align-items-center gap-1">
+                        <span class="text-muted fw-semibold" style="font-size:0.75rem;">Gross:</span>
+                        <span class="fw-bold text-dark font-monospace" style="font-size:0.85rem;" id="bottomGross">0.00</span>
                     </div>
 
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="text-muted fw-semibold" style="font-size:0.8rem;">Deductions:</span>
-                        <span class="fs-6 fw-bold text-danger font-monospace" id="bottomDeductions">0.00</span>
+                    <div class="d-flex align-items-center gap-1">
+                        <span class="text-danger fw-semibold" style="font-size:0.75rem;">Line Disc:</span>
+                        <span class="fw-bold text-danger font-monospace" style="font-size:0.85rem;" id="bottomLineDisc">-0.00</span>
                     </div>
 
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="text-muted fw-semibold" style="font-size:0.8rem;">Net Refund:</span>
-                        <span class="fs-5 fw-bold text-primary font-monospace" id="bottomNetRefund">0.00</span>
+                    <div class="d-flex align-items-center gap-1">
+                        <span class="text-muted fw-semibold" style="font-size:0.75rem;">Subtotal:</span>
+                        <span class="fw-bold text-dark font-monospace" style="font-size:0.85rem;" id="bottomSubtotal">0.00</span>
                     </div>
 
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="text-muted fw-semibold" style="font-size:0.8rem;">Cash/Bank Paid:</span>
-                        <span class="fs-6 fw-bold font-monospace" style="color: #059669;" id="bottomRefundPaid">0.00</span>
+                    <div class="d-flex align-items-center gap-1">
+                        <span class="text-danger fw-semibold" style="font-size:0.75rem;">Extra Disc:</span>
+                        <span class="fw-bold text-danger font-monospace" style="font-size:0.85rem;" id="bottomDeductions">0.00</span>
                     </div>
 
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="text-muted fw-semibold" style="font-size:0.8rem;">Ledger Credit:</span>
-                        <span class="fs-6 fw-bold text-primary font-monospace" id="bottomLedgerCredit">0.00</span>
+                    <div class="d-flex align-items-center gap-1">
+                        <span class="text-muted fw-semibold" style="font-size:0.75rem;">Net Return:</span>
+                        <span class="fw-bold text-primary font-monospace" style="font-size:0.95rem;" id="bottomNetRefund">0.00</span>
                     </div>
 
-                    <button type="submit" class="btn btn-save-complete" id="btnSubmitReturnBottom">
-                        <i class="fas fa-check-circle me-2"></i> Process Sale Return
+                    <div class="d-flex align-items-center gap-1">
+                        <span class="text-muted fw-semibold" style="font-size:0.75rem;">Due Settled:</span>
+                        <span class="fw-bold text-danger font-monospace" style="font-size:0.85rem;" id="bottomDueAdjusted">0.00</span>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-1">
+                        <span class="text-muted fw-semibold" style="font-size:0.75rem;">Cash Refund:</span>
+                        <span class="fw-bold font-monospace" style="font-size:0.85rem; color: #059669;" id="bottomRefundPaid">0.00</span>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-1">
+                        <span class="text-muted fw-semibold" style="font-size:0.75rem;">Store Credit:</span>
+                        <span class="fw-bold text-primary font-monospace" style="font-size:0.85rem;" id="bottomLedgerCredit">0.00</span>
+                    </div>
+
+                    <button type="submit" class="btn btn-save-complete ms-auto" id="btnSubmitReturnBottom">
+                        <i class="fas fa-check-circle me-1"></i> Process Return
                     </button>
                 </div>
             </form>
@@ -783,25 +867,46 @@
                 const price = num($row.find('.price').val()); // Price
                 const sizeMode = $row.find('.size-mode').val();
                 const ppm2 = num($row.find('.pieces-per-m2').val());
+                const unitDisc = num($row.find('.item_disc').attr('data-unit-disc'));
 
-                let total = 0;
+                let gross = 0;
                 if (sizeMode === 'by_size') {
-                    total = qty * ppm2 * price;
+                    gross = qty * ppm2 * price;
                 } else {
-                    total = qty * price;
+                    gross = qty * price;
                 }
 
-                $row.find('.row-total').val(total.toFixed(2));
+                const itemDisc = unitDisc * qty;
+                $row.find('.item_disc').val(itemDisc.toFixed(2));
+
+                const rowTotal = Math.max(0, gross - itemDisc);
+                $row.find('.row-total').val(rowTotal.toFixed(2));
+                $row.attr('data-gross', gross.toFixed(2));
+                $row.attr('data-disc', itemDisc.toFixed(2));
+
+                if (itemDisc > 0.005) {
+                    $row.find('.line-disc-display').text('-' + formatMoney(itemDisc));
+                    $row.find('.row-disc-text').removeClass('d-none').find('.disc-val').text(formatMoney(itemDisc));
+                } else {
+                    $row.find('.line-disc-display').text('0.00');
+                    $row.find('.row-disc-text').addClass('d-none');
+                }
             }
 
             function recalcSummary() {
+                let grossAmount = 0;
+                let totalLineDisc = 0;
                 let billAmount = 0;
                 let totalQty = 0;
 
                 $('#returnItems tr').each(function() {
                     const qty = num($(this).find('.quantity').val());
+                    const gross = num($(this).attr('data-gross'));
+                    const disc = num($(this).find('.item_disc').val());
                     const rowTotal = num($(this).find('.row-total').val());
 
+                    grossAmount += (gross > 0 ? gross : (rowTotal + disc));
+                    totalLineDisc += disc;
                     billAmount += rowTotal;
                     totalQty += qty;
                 });
@@ -809,18 +914,43 @@
                 const extraDiscount = num($('#extraDiscount').val()); // Deduction
                 const net = Math.max(0, billAmount - extraDiscount);
 
+                // Financial calculations from invoice status
+                const remainingInvoiceDue = num($('#invRemainingDue').val());
+                const remainingPaidRefundable = num($('#invPaidRefundable').val());
+
+                const dueAdjusted = Math.min(net, remainingInvoiceDue);
+                const maxCashRefund = Math.min(Math.max(0, net - dueAdjusted), remainingPaidRefundable);
+
                 // Hidden Inputs
+                $('#grossAmount').val(grossAmount.toFixed(2));
+                $('#totalItemDisc').val(totalLineDisc.toFixed(2));
                 $('#billAmount').val(billAmount.toFixed(2));
                 $('#netAmount').val(net.toFixed(2));
 
                 // Right Panel Display
+                $('#displayGrossBill').text(formatMoney(grossAmount));
+                $('#displayTotalItemDiscount').text(totalLineDisc > 0 ? ('-' + formatMoney(totalLineDisc)) : '0.00');
                 $('#displayBillAmount').text(formatMoney(billAmount));
                 $('#displayNetAmount').text(formatMoney(net));
+                $('#displayDueAdjusted').text(formatMoney(dueAdjusted));
+                $('#displayMaxCashRefund').text(formatMoney(maxCashRefund));
+                $('#maxRefundBadge').text('Max: Rs ' + formatMoney(maxCashRefund));
+
+                if (maxCashRefund <= 0 && net > 0) {
+                    $('#noCashRefundNotice').show();
+                    $('#registeredCustomerNotice').hide();
+                } else {
+                    $('#noCashRefundNotice').hide();
+                    $('#registeredCustomerNotice').show();
+                }
 
                 // Bottom Strip Display
+                $('#bottomGross').text(formatMoney(grossAmount));
+                $('#bottomLineDisc').text(totalLineDisc > 0 ? ('-' + formatMoney(totalLineDisc)) : '0.00');
                 $('#bottomSubtotal').text(formatMoney(billAmount));
                 $('#bottomDeductions').text(formatMoney(extraDiscount));
                 $('#bottomNetRefund').text(formatMoney(net));
+                $('#bottomDueAdjusted').text(formatMoney(dueAdjusted));
 
                 // Amount in Words
                 const words = net > 0 ? numberToWords(net) : 'Zero Rupees';
@@ -831,13 +961,18 @@
                 $('#totalPieces').text(totalQty);
                 $('#itemsRowCount').text($('#returnItems tr').length);
 
-                // Walk-in auto-fill if single payment row
+                // Payment input auto-fill if single payment row
                 const isWalking = $('#isWalkingCustomer').val() === '1';
-                if (isWalking && $('.refund-row').length === 1) {
-                    $('.payment-amount').first().val(net > 0 ? net.toFixed(2) : '0.00');
+                if ($('.refund-row').length === 1) {
+                    const $pInput = $('.payment-amount').first();
+                    if (isWalking || maxCashRefund > 0) {
+                        $pInput.val(maxCashRefund > 0 ? maxCashRefund.toFixed(2) : '0.00');
+                    } else {
+                        $pInput.val('0.00');
+                    }
                 }
 
-                // Sum Paid & Ledger Credit
+                // Sum Paid & Store Credit
                 let totalPaid = 0;
                 $('.payment-amount').each(function() {
                     totalPaid += num($(this).val());
@@ -845,8 +980,8 @@
 
                 $('#bottomRefundPaid').text(formatMoney(totalPaid));
 
-                let ledgerCredit = isWalking ? 0 : Math.max(0, net - totalPaid);
-                $('#bottomLedgerCredit').text(formatMoney(ledgerCredit));
+                let storeCredit = isWalking ? 0 : Math.max(0, maxCashRefund - totalPaid);
+                $('#bottomLedgerCredit').text(formatMoney(storeCredit));
 
                 // Update visual indicators
                 updatePartialReturnIndicator();
@@ -856,7 +991,8 @@
             $(document).on('input', '.quantity-box', function() {
                 const $row = $(this).closest('tr');
                 const val = $(this).val();
-                const ppb = num($row.find('.pieces-per-box').val());
+                const ppb = num($row.find('.pieces-per-box').val()) || 1;
+                const maxReturnable = num($row.find('.quantity').attr('data-max'));
 
                 let boxes = 0;
                 let pieces = 0;
@@ -877,6 +1013,12 @@
                     totalPieces = (boxes * ppb) + pieces;
                 } else {
                     totalPieces = boxes;
+                }
+
+                if (maxReturnable > 0 && totalPieces > maxReturnable) {
+                    totalPieces = maxReturnable;
+                    let boxDisp = (ppb > 1 && maxReturnable % ppb > 0) ? (Math.floor(maxReturnable / ppb) + '.' + (maxReturnable % ppb)) : (maxReturnable / (ppb > 0 ? ppb : 1));
+                    $(this).val(boxDisp);
                 }
 
                 $row.find('.quantity').val(totalPieces);
@@ -1050,12 +1192,29 @@
                 });
 
                 const net = num($('#netAmount').val());
+                const remainingInvoiceDue = num($('#invRemainingDue').val());
+                const remainingPaidRefundable = num($('#invPaidRefundable').val());
+                const dueAdjusted = Math.min(net, remainingInvoiceDue);
+                const maxCashRefund = Math.min(Math.max(0, net - dueAdjusted), remainingPaidRefundable);
                 const isWalking = $('#isWalkingCustomer').val() === '1';
 
-                $('#bottomRefundPaid').text(formatMoney(totalPaid));
+                if (totalPaid > (maxCashRefund + 0.05)) {
+                    $(this).val(maxCashRefund.toFixed(2));
+                    totalPaid = maxCashRefund;
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Refund Limit Exceeded',
+                            text: 'Maximum eligible cash refund is Rs ' + formatMoney(maxCashRefund) + ' (advance/amount received from customer). The remaining Rs ' + formatMoney(dueAdjusted) + ' settles unpaid bill balance.',
+                            timer: 4000,
+                            showConfirmButton: false
+                        });
+                    }
+                }
 
-                let ledgerCredit = isWalking ? 0 : Math.max(0, net - totalPaid);
-                $('#bottomLedgerCredit').text(formatMoney(ledgerCredit));
+                $('#bottomRefundPaid').text(formatMoney(totalPaid));
+                let storeCredit = isWalking ? 0 : Math.max(0, maxCashRefund - totalPaid);
+                $('#bottomLedgerCredit').text(formatMoney(storeCredit));
             });
 
             // Remove Row
@@ -1087,30 +1246,48 @@
                 }
 
                 const net = num($('#netAmount').val());
+                const remainingInvoiceDue = num($('#invRemainingDue').val());
+                const remainingPaidRefundable = num($('#invPaidRefundable').val());
+                const dueAdjusted = Math.min(net, remainingInvoiceDue);
+                const maxCashRefund = Math.min(Math.max(0, net - dueAdjusted), remainingPaidRefundable);
                 const isWalking = $('#isWalkingCustomer').val() === '1';
 
-                if (isWalking && net > 0) {
-                    let totalPaid = 0;
-                    let hasSelectedAccount = false;
+                let totalPaid = 0;
+                let hasSelectedAccount = false;
+                $('.refund-row').each(function() {
+                    const accId = $(this).find('.payment-account').val();
+                    const amt = num($(this).find('.payment-amount').val());
+                    if (accId && amt > 0) hasSelectedAccount = true;
+                    totalPaid += amt;
+                });
 
-                    $('.refund-row').each(function() {
-                        const accId = $(this).find('.payment-account').val();
-                        const amt = num($(this).find('.payment-amount').val());
-                        if (accId) hasSelectedAccount = true;
-                        totalPaid += amt;
-                    });
+                if (totalPaid > (maxCashRefund + 0.05)) {
+                    e.preventDefault();
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Refund Limit Exceeded',
+                            text: 'Cash refund cannot exceed Rs ' + formatMoney(maxCashRefund) + '. The remaining Rs ' + formatMoney(dueAdjusted) + ' adjusts the customer\'s unpaid bill.',
+                            confirmButtonColor: '#2563eb'
+                        });
+                    } else {
+                        alert('Cash refund cannot exceed Rs ' + formatMoney(maxCashRefund));
+                    }
+                    return false;
+                }
 
-                    if (!hasSelectedAccount || totalPaid < (net - 0.05)) {
+                if (isWalking && maxCashRefund > 0) {
+                    if (!hasSelectedAccount || totalPaid < (maxCashRefund - 0.05)) {
                         e.preventDefault();
                         if (typeof Swal !== 'undefined') {
                             Swal.fire({
                                 icon: 'error',
                                 title: 'Full Refund Required',
-                                text: 'Walk-in customer requires 100% refund payment. Please select a Cash/Bank account and enter the full refund amount (Rs ' + formatMoney(net) + ').',
+                                text: 'Walk-in customer requires 100% refund payout of Rs ' + formatMoney(maxCashRefund) + '. Please select a Cash/Bank account.',
                                 confirmButtonColor: '#2563eb'
                             });
                         } else {
-                            alert('Walk-in customer requires 100% refund payment. Please select a Cash/Bank account and enter the full refund amount.');
+                            alert('Walk-in customer requires 100% refund payment of Rs ' + formatMoney(maxCashRefund));
                         }
                         return false;
                     }
@@ -1156,11 +1333,8 @@
                 }
             }
 
-            // Initial Calculations
-            $('#returnItems tr').each(function() {
-                recalcRow($(this));
-            });
-            recalcSummary();
+            // Initial Calculations: Auto-populate all return items so full return and financial breakdown is live immediately
+            $('#btnReturnAll').trigger('click');
 
             // Initialize Account Balance Badges on page load
             $('.payment-account').each(function() {

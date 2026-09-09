@@ -516,6 +516,25 @@
         </div>
 
 
+        {{-- ── Quick Segment Tabs (Raw Materials vs Finished Goods vs All) ── --}}
+        <div class="d-flex align-items-center gap-2 px-4 py-2 flex-wrap" style="background:#f8fafc; border-bottom:1px solid var(--erp-border);">
+            <a href="{{ route('product', array_merge(request()->except('item_type', 'page'), ['item_type' => 'raw_material'])) }}" 
+               class="btn btn-sm d-inline-flex align-items-center gap-2 {{ request('item_type') === 'raw_material' ? 'text-white fw-bold shadow-sm' : 'btn-white border text-secondary' }}" 
+               style="border-radius:20px; font-size:.8rem; padding:6px 15px; {{ request('item_type') === 'raw_material' ? 'background: linear-gradient(135deg, #f59e0b, #d97706); border:none;' : 'background:#fff;' }}">
+                <i class="fas fa-boxes-stacked"></i> 📦 Raw Materials (Purchased Parts)
+            </a>
+            <a href="{{ route('product', array_merge(request()->except('item_type', 'page'), ['item_type' => 'finish_goods'])) }}" 
+               class="btn btn-sm d-inline-flex align-items-center gap-2 {{ request('item_type') === 'finish_goods' ? 'text-white fw-bold shadow-sm' : 'btn-white border text-secondary' }}" 
+               style="border-radius:20px; font-size:.8rem; padding:6px 15px; {{ request('item_type') === 'finish_goods' ? 'background: linear-gradient(135deg, #10b981, #059669); border:none;' : 'background:#fff;' }}">
+                <i class="fas fa-microchip"></i> ⚙️ Finished Goods (Made to Order)
+            </a>
+            <a href="{{ route('product', request()->except('item_type', 'page')) }}" 
+               class="btn btn-sm d-inline-flex align-items-center gap-2 {{ !request('item_type') ? 'bg-secondary text-white fw-bold shadow-sm' : 'btn-white border text-secondary' }}" 
+               style="border-radius:20px; font-size:.8rem; padding:6px 15px; {{ !request('item_type') ? 'border:none;' : 'background:#fff;' }}">
+                <i class="fas fa-layer-group"></i> All Items
+            </a>
+        </div>
+
         {{-- ── Filter Panel ── --}}
         <div class="filter-panel">
             <div class="filter-heading"><i class="fas fa-sliders-h"></i> Filters &amp; Search</div>
@@ -638,8 +657,10 @@
                             <th style="width:40px;">#</th>
                             <th style="width:52px;">Image</th>
                             <th>Item Details</th>
-                            <th>Stock</th>
-                            <th>Purchase Price</th>
+                            @if(request('item_type') !== 'finish_goods')
+                                <th>Stock</th>
+                                <th>Purchase Price</th>
+                            @endif
                             <th>Sale Price</th>
                             <th style="width:90px;">Status</th>
                             <th class="text-center" style="width:180px;">Actions</th>
@@ -694,14 +715,26 @@
                                         @endif
                                     </div>
                                 </td>
+                                @if(request('item_type') !== 'finish_goods')
                                 <td>
-                                    <span class="stock-badge {{ $stockClass }}">
-                                        <i class="fas fa-cubes" style="font-size:.65rem;"></i>
-                                        {{ $stockDisplay }}
-                                        <span class="stock-unit">{{ $stockUnit }}</span>
-                                    </span>
+                                    @if($product->item_type === 'raw_material')
+                                        <span class="stock-badge {{ $stockClass }}">
+                                            <i class="fas fa-cubes" style="font-size:.65rem;"></i>
+                                            {{ $stockDisplay }}
+                                            <span class="stock-unit">{{ $stockUnit }}</span>
+                                        </span>
+                                    @else
+                                        <span class="badge" style="background:#f8fafc; color:#64748b; border:1px solid #e2e8f0; font-size:.7rem;">Make-to-Order</span>
+                                    @endif
                                 </td>
-                                <td class="price-purchase">Rs. {{ number_format($tradePrice, 2) }}</td>
+                                <td class="price-purchase">
+                                    @if($product->item_type === 'raw_material')
+                                        Rs. {{ number_format($tradePrice, 2) }}
+                                    @else
+                                        <span class="text-muted">-</span>
+                                    @endif
+                                </td>
+                                @endif
                                 <td class="price-sale">Rs. {{ number_format($retailPrice, 2) }}</td>
                                 <td>
                                     @if($product->is_active)
@@ -807,14 +840,18 @@
                         <div>
                             <div style="font-size:.68rem; font-weight:700; color:var(--erp-muted); text-transform:uppercase;">Sale Price</div>
                             <div class="prod-mcard-price">Rs. {{ number_format($retailPrice, 2) }}</div>
-                            <div style="font-size:.7rem; color:var(--erp-muted);">Cost: Rs. {{ number_format($tradePrice, 2) }}</div>
+                            @if($product->item_type !== 'finish_goods')
+                                <div style="font-size:.7rem; color:var(--erp-muted);">Cost: Rs. {{ number_format($tradePrice, 2) }}</div>
+                            @endif
                         </div>
+                        @if($product->item_type === 'raw_material')
                         <div class="text-end">
                             <div style="font-size:.68rem; font-weight:700; color:var(--erp-muted); text-transform:uppercase; margin-bottom:2px;">Stock</div>
                             <span class="stock-badge {{ $stockClass }}">
                                 <i class="fas fa-cubes"></i> {{ $stockDisplay }} <span class="stock-unit">{{ $stockUnit }}</span>
                             </span>
                         </div>
+                        @endif
                     </div>
                     <div class="prod-mcard-actions">
                         <button type="button" class="btn-act btn-act-view viewProductBtn" data-id="{{ $product->id }}">
@@ -957,7 +994,7 @@
                                 <th style="font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#475569;">Color</th>
                                 <th style="font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#475569;">Stock</th>
                                 <th style="font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#475569;">Sale Price</th>
-                                <th style="font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#475569;">Purch Price</th>
+                                <th class="pvm-purch-col" style="font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#475569;">Purch Price</th>
                                 <th style="font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#475569;">Alert</th>
                                 <th class="text-end pe-4" style="font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#475569;">Barcode</th>
                             </tr>
@@ -1006,6 +1043,7 @@ $(document).ready(function () {
     });
 
     // ── DataTable init ── (responsive:false – we use CSS horizontal scroll instead)
+    let lastColIdx = $('#productTable thead th').length - 1;
     let table = $('#productTable').DataTable({
         responsive: false,
         paging:     false,
@@ -1014,12 +1052,7 @@ $(document).ready(function () {
         order:      [[3, 'asc']],
         dom:        'rt',
         scrollX:    false,
-        columnDefs: [{ targets: [0, 8], orderable: false, searchable: false }]
-    });   // DataTable closes here
-
-    // ── Select All ──
-    $('#selectAll').click(function() {
-        $('.selectProduct').prop('checked', this.checked);
+        columnDefs: [{ targets: [0, lastColIdx], orderable: false, searchable: false }]
     });
 
     // ── View Product Modal ──
@@ -1079,7 +1112,17 @@ $(document).ready(function () {
                 let purchPrice= product.size_mode === 'by_size' ? product.purchase_price_per_m2 : (product.purchase_price_per_piece || 0);
                 let priceLabel= product.size_mode === 'by_size' ? '/m²' : '/pc';
 
+                let isFinishGoods = product.item_type === 'finish_goods';
+                if (isFinishGoods) {
+                    $('.pvm-purch-col').hide();
+                } else {
+                    $('.pvm-purch-col').show();
+                }
+
                 function stockBadgeHtml(qty, alert) {
+                    if (isFinishGoods) {
+                        return '<span class="badge" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:4px;padding:3px 6px;font-size:.72rem;font-weight:700;"><i class="fas fa-hammer me-1 text-primary"></i>Made to Order</span>';
+                    }
                     let isLow = qty > 0 && alert != null && qty <= alert;
                     let cls   = qty == 0 ? 'background:#fef3c7;color:#b45309;border:1px solid #fde68a;' : (isLow ? 'background:#fef2f2;color:#dc2626;border:1px solid #fecaca;' : 'background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;');
                     return `<span style="${cls} border-radius:6px; padding:3px 8px; font-size:.78rem; font-weight:600;">${qty}</span>`;
@@ -1102,6 +1145,8 @@ $(document).ready(function () {
                         
                         if (product.size_mode === 'by_kg' && v.conv_factor != 1 && !v.unit) vUnit = 'Pcs';
                         let vPriceLabel = product.size_mode === 'by_size' ? '/m²' : '/' + vUnit;
+                        let purchTd = isFinishGoods ? '' : `<td class="pvm-purch-col text-muted">Rs. ${parseFloat(vPurch||0).toFixed(2)} <small>${vPriceLabel}</small></td>`;
+                        let alertTd = isFinishGoods ? '<td class="text-muted">—</td>' : `<td><span style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:4px;padding:2px 6px;font-size:.72rem;">${alertQty}</span></td>`;
 
                         tbody.append(`<tr>
                             <td class="text-start ps-4 fw-semibold">${vName}</td>
@@ -1109,8 +1154,8 @@ $(document).ready(function () {
                             <td>${colorBadge}</td>
                             <td>${stockBadgeHtml(vStock, vAlert)}</td>
                             <td class="fw-bold" style="color:#059669;">Rs. ${parseFloat(vSale||0).toFixed(2)} <small class="fw-normal text-muted">${vPriceLabel}</small></td>
-                            <td class="text-muted">Rs. ${parseFloat(vPurch||0).toFixed(2)} <small>${vPriceLabel}</small></td>
-                            <td><span style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:4px;padding:2px 6px;font-size:.72rem;">${alertQty}</span></td>
+                            ${purchTd}
+                            ${alertTd}
                             <td class="text-end pe-4"><code style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:2px 6px;font-size:.75rem;">${vBarcode}</code></td>
                         </tr>`);
                     });
@@ -1118,14 +1163,16 @@ $(document).ready(function () {
                     colorList.forEach((color, index) => {
                         let barcode   = (product.barcode_path ?? product.item_code ?? '') + (index > 0 ? '-' + String(index+1).padStart(2,'0') : '');
                         let colorBadge = (color && color !== '-') ? `<span style="background:#e2e8f0;border-radius:4px;padding:2px 6px;font-size:.72rem;">${color}</span>` : '<span style="color:#94a3b8;">—</span>';
+                        let purchTd = isFinishGoods ? '' : `<td class="pvm-purch-col text-muted">Rs. ${parseFloat(purchPrice||0).toFixed(2)} <small>${priceLabel}</small></td>`;
+                        let alertTd = isFinishGoods ? '<td class="text-muted">—</td>' : `<td><span style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:4px;padding:2px 6px;font-size:.72rem;">${alertDef}</span></td>`;
                         tbody.append(`<tr>
                             <td class="text-start ps-4 fw-semibold">${product.item_name}</td>
                             <td>${sizeStr}</td>
                             <td>${colorBadge}</td>
                             <td>${stockBadgeHtml(stock, product.alert_carton_quantity)}</td>
                             <td class="fw-bold" style="color:#059669;">Rs. ${parseFloat(salePrice||0).toFixed(2)} <small class="fw-normal text-muted">${priceLabel}</small></td>
-                            <td class="text-muted">Rs. ${parseFloat(purchPrice||0).toFixed(2)} <small>${priceLabel}</small></td>
-                            <td><span style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:4px;padding:2px 6px;font-size:.72rem;">${alertDef}</span></td>
+                            ${purchTd}
+                            ${alertTd}
                             <td class="text-end pe-4"><code style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:2px 6px;font-size:.75rem;">${barcode}</code></td>
                         </tr>`);
                     });

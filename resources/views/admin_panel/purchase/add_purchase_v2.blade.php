@@ -506,23 +506,9 @@
                         </div>
                     </div>
 
-                    {{-- Warehouse & Branch --}}
-                    <div class="row g-2 mt-2">
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold mb-1 text-muted small">Warehouse <span class="text-danger">*</span></label>
-                            <select class="form-select select2" name="warehouse_id" id="warehouseSelect" required>
-                                <option value="" disabled>Select Warehouse</option>
-                                @foreach ($Warehouse as $wh)
-                                    <option value="{{ $wh->id }}" {{ $loop->first ? 'selected' : '' }}>{{ $wh->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold mb-1 text-muted small">Branch</label>
-                            <input type="hidden" name="branch_id" value="1">
-                            <input type="text" class="form-control input-readonly" value="{{ auth()->user()->branch->name ?? 'Main Branch' }}" readonly>
-                        </div>
-                    </div>
+                    {{-- Default Warehouse & Hidden Branch --}}
+                    <input type="hidden" name="warehouse_id" id="warehouseSelect" value="{{ optional($Warehouse->first())->id ?? 1 }}">
+                    <input type="hidden" name="branch_id" value="{{ auth()->user()->branch_id ?? 1 }}">
                 </div>
 
                 {{-- PURCHASE ITEMS (FULL WIDTH) --}}
@@ -1049,7 +1035,8 @@
                         data: function(params) {
                             return {
                                 term: params.term,
-                                page: params.page || 1
+                                page: params.page || 1,
+                                item_type: 'raw_material'
                             };
                         },
                         processResults: function(data, params) {

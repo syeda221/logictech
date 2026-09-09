@@ -50,15 +50,41 @@ class CustomerController extends Controller
 
     // //////////
 
-    public function index()
+    public function index(Request $request)
     {
-        $customers = Customer::latest()->get(); // no status filter
+        $query = Customer::query();
 
-        // echo "<pre>";
-        // print_r($customers);
-        // echo "</pre>";
-        // dd();
-        return view('admin_panel.customers.index', compact('customers'));
+        if ($request->filled('search_id')) {
+            $query->where('customer_id', 'like', '%' . $request->search_id . '%');
+        }
+
+        if ($request->filled('search_name')) {
+            $term = $request->search_name;
+            $query->where(function ($q) use ($term) {
+                $q->where('customer_name', 'like', "%{$term}%")
+                  ->orWhere('mobile', 'like', "%{$term}%")
+                  ->orWhere('email_address', 'like', "%{$term}%");
+            });
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('source')) {
+            $query->where('source', $request->source);
+        }
+
+        $customers = $query->latest()->get();
+
+        $kpiMetrics = [
+            'total_customers'    => Customer::count(),
+            'active_customers'   => Customer::where('status', 'active')->count(),
+            'inactive_customers' => Customer::where('status', 'inactive')->count(),
+            'total_credit_limit' => (float) Customer::sum('balance_range'),
+        ];
+
+        return view('admin_panel.customers.index', compact('customers', 'kpiMetrics'));
     }
 
     public function toggleStatus($id)

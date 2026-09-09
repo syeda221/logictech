@@ -37,6 +37,7 @@ class BranchRolePermissionsSeeder extends Seeder
             // Inventory & Warehouse
             'stocks.*', 'stock.adjust.*', 'stock.transfer.*', 'inventory.onhand.*',
             'item.stock.report.*', 'warehouse.*', 'warehouse.stock.*',
+            'material.usage.*', 'material.usage.report.*',
 
             // Purchase & Supply Chain
             'purchases.*', 'purchase.returns.*', 'purchase.report.*',

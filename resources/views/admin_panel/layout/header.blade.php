@@ -43,8 +43,18 @@
             <div class="top_nav flex-grow-1">
                 <div class="container d-flex flex-row h-100 align-items-center">
                     <div class="text-center rt_nav_wrapper d-flex align-items-center">
-                        {{-- <a class="nav_logo rt_logo" href="index.html"><img src="{{asset('assets/images/WIJDAN-removebg-preview.png')}}" alt="logo" /></a> --}}
-                        {{-- <a class="nav_logo nav_logo_mob" href="index.html"><img src="{{asset('assets/images/WIJDAN-removebg-preview.png')}}" alt="logo"/></a> --}}
+                        @php
+                            $navLogo = \App\Models\Setting::getLogoUrl();
+                        @endphp
+                        @if($navLogo)
+                            <a class="nav_logo rt_logo" href="{{ route('home') }}">
+                                <img src="{{ $navLogo }}" alt="Company Logo" style="max-height: 45px; max-width: 180px; object-fit: contain;" />
+                            </a>
+                        @else
+                            <a class="nav_logo rt_logo text-white font-weight-bold" href="{{ route('home') }}" style="font-size: 18px; text-decoration: none;">
+                                {{ \App\Models\Setting::get('company_name') ?: config('app.name') }}
+                            </a>
+                        @endif
                     </div>
                     <div class="nav_wrapper_main d-flex align-items-center justify-content-between flex-grow-1">
                         <ul class="navbar-nav navbar-nav-right mr-0 ml-auto">
@@ -322,6 +332,12 @@
                                                     href="{{ route('Purchase.home') }}"><i
                                                         class="menu_icon icon-basket"></i><span>Purchase</span></a>
                                             </li>
+                                            @can('material.usage.view')
+                                                <li class="nav-item"><a class="nav-link"
+                                                        href="{{ route('material_usage.index') }}"><i
+                                                            class="menu_icon fa-solid fa-boxes-packing text-primary"></i><span>Material Usage</span></a>
+                                                </li>
+                                            @endcan
                                         </ul>
                                     </div>
                                 </div>
@@ -359,6 +375,9 @@
                             <div class="submenu">
                                 <ul class="submenu-item">
                                     <li class="nav-item"><a class="nav-link" href="{{ route('report.item_stock') }}"><i class="fa-solid fa-boxes-stacked mr-2"></i><span>Item Stock</span></a></li>
+                                    @can('material.usage.report.view')
+                                        <li class="nav-item"><a class="nav-link" href="{{ route('report.material_usage') }}"><i class="fa-solid fa-clipboard-check mr-2 text-primary"></i><span>Material Usage Report</span></a></li>
+                                    @endcan
                                     <li class="nav-item"><a class="nav-link" href="{{ route('report.purchase') }}"><i class="fa-solid fa-cart-shopping mr-2"></i><span>Purchase Report</span></a></li>
                                     <li class="nav-item"><a class="nav-link" href="{{ route('report.sale') }}"><i class="fa-solid fa-file-invoice-dollar mr-2"></i><span>Sale Report</span></a></li>
                                     <li class="nav-item"><a class="nav-link" href="{{ route('report.product_sale_customer_wise') }}"><i class="fa-solid fa-users-between-lines mr-2"></i><span>Product Sale (Customer Wise)</span></a></li>

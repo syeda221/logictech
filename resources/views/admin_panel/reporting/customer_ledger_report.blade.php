@@ -88,12 +88,13 @@
         position: sticky;
         top: 0;
         z-index: 10;
-        background-color: #1e293b !important;
-        color: #ffffff !important;
+        background-color: #eff6ff !important;
+        color: #1e40af !important;
         font-size: .75rem;
         font-weight: 700;
         padding: 9px 10px;
-        border-bottom: 2px solid #334155;
+        border-bottom: 2px solid #60a5fa !important;
+        border-right: 1px solid #bfdbfe;
         white-space: nowrap;
     }
 

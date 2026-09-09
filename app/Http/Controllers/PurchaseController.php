@@ -230,6 +230,7 @@ class PurchaseController extends Controller
 
         $products = Product::with(['category_relation', 'sub_category_relation'])
             ->where('is_active', true)
+            ->whereIn('item_type', ['raw_material', 'both'])
             ->where(function ($q) use ($term) {
                 $q->where('item_name', 'like', "%{$term}%")
                   ->orWhere('item_code', 'like', "%{$term}%")

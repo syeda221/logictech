@@ -1170,15 +1170,13 @@
                   .done(function(warehouses) {
                       console.log('Warehouses fetched:', warehouses);
 
-                      var validWarehouses = (Array.isArray(warehouses) ? warehouses : []).filter(function(w) {
-                          return w.stock > 0;
-                      });
+                      var validWarehouses = Array.isArray(warehouses) ? warehouses : [];
 
                       if (validWarehouses.length > 0) {
                           var options = '<option value="">Select Warehouse</option>';
                           validWarehouses.forEach(function(w) {
                               options +=
-                                  `<option value="${w.warehouse_id}" data-stock="${w.stock}">${w.warehouse_name} (Stock: ${w.stock})</option>`;
+                                  `<option value="${w.warehouse_id}" data-stock="${w.stock}">${w.warehouse_name}</option>`;
                           });
                           $whSelect.html(options);
 
@@ -1187,7 +1185,7 @@
                               $whSelect.val(validWarehouses[0].warehouse_id).trigger('change');
                           }
                       } else {
-                          $whSelect.html('<option value="">Out of Stock in All Warehouses</option>');
+                          $whSelect.html('<option value="">No Warehouse Available</option>');
                       }
                   })
                   .fail(function(xhr) {

@@ -301,12 +301,12 @@
                                             <th style="width: 85px;">Rating / Spec</th>
                                             <th style="width: 85px;">Model / Type</th>
                                             <th style="width: 75px;">Unit</th>
-                                            <th style="width: 90px;" class="text-center">Initial Stock</th>
+                                            <th style="width: 90px;" class="text-center cpm-stock-col">Initial Stock</th>
                                             <th style="width: 95px;" class="text-center cpm-conv-col">Pcs / Carton</th>
                                             <th style="width: 90px;" class="cpm-price-col">Sale Price</th>
                                             <th style="width: 90px;" class="cpm-wholesale-col">Wholesale</th>
                                             <th style="width: 90px;" class="cpm-purch-col">Purch Price</th>
-                                            <th style="width: 60px;">Alert</th>
+                                            <th style="width: 60px;" class="cpm-alert-col">Alert</th>
                                             <th style="width: 105px;">Barcode</th>
                                             <th style="width: 45px;" class="text-center">Action</th>
                                         </tr>
@@ -451,12 +451,15 @@ window.cpmSetItemType = function(type) {
             'background': 'linear-gradient(135deg, #f59e0b, #d97706)',
             'box-shadow': '0 4px 12px rgba(245, 158, 11, 0.35)'
         });
+        $('.cpm-stock-col').show();
+        $('.cpm-alert-col').show();
+        $('.cpm-purch-col').show();
     } else {
         $('#cpmHeaderIcon').attr('class', 'fas fa-microchip').css('color', '#10b981');
         $('#cpmHeaderTitle').text('Create Finished Goods');
         $('#cpmTypeBadge').html('<i class="fas fa-microchip me-1"></i>Finished Goods')
             .css({'background': '#ecfdf5', 'color': '#059669', 'border-color': '#a7f3d0'});
-        $('#cpmHeaderSub').text('LogicTech Industrial ERP — Add heating devices, chillers, power electronics & finished products');
+        $('#cpmHeaderSub').text('LogicTech Industrial ERP — Add heating devices, chillers, power electronics & finished products (Make to Order)');
         $('#cpmCardIdentityTitle').text('Finished Goods Identity & Details');
         $('#cpmNameLabel').html('Finished Goods / Product Name <span class="text-danger">*</span>');
         $('#cpm_product_name').attr('placeholder', 'e.g. High Frequency Induction Heater 25kW, Industrial Air Chiller 5TR, Power Supply Unit');
@@ -465,6 +468,12 @@ window.cpmSetItemType = function(type) {
             'background': 'linear-gradient(135deg, #10b981, #059669)',
             'box-shadow': '0 4px 12px rgba(16, 185, 129, 0.35)'
         });
+        $('.cpm-stock-col').hide();
+        $('.cpm-alert-col').hide();
+        $('.cpm-purch-col').hide();
+        $('input[name="variant_stock[]"]').val(0);
+        $('input[name="variant_alert_qty[]"]').val(0);
+        $('input[name="variant_purchase_price[]"]').val(0);
     }
 };
 
@@ -514,6 +523,9 @@ $(document).ready(function() {
         const isCarton = cpmUnitDropdown && cpmUnitDropdown.value === 'by_cartons';
         const vid      = 'base_' + Date.now();
 
+        const isFinishGoods = $('#cpm_item_type').val() === 'finish_goods';
+        const colDisplay = isFinishGoods ? 'display:none;' : '';
+
         const tr = document.createElement('tr');
         tr.dataset.vid = vid;
         tr.innerHTML = `
@@ -535,7 +547,7 @@ $(document).ready(function() {
                     <option value="Dozen">Dzn</option>
                 </select>
             </td>
-            <td class="p-1">
+            <td class="p-1 cpm-stock-col" style="${colDisplay}">
                 <input type="number" class="cpm-tbl-input text-center fw-bold text-primary" name="variant_stock[]" step="any" value="0" placeholder="0">
             </td>
             <td class="p-1 text-center cpm-conv-col">
@@ -543,8 +555,8 @@ $(document).ready(function() {
             </td>
             <td class="p-1"><input type="number" class="cpm-tbl-input cpm-base-sale" name="variant_sale_price[]" step="any" placeholder="0.00" value="0" required></td>
             <td class="p-1"><input type="number" class="cpm-tbl-input" name="variant_wholesale_price[]" step="any" placeholder="0.00" value="0"></td>
-            <td class="p-1"><input type="number" class="cpm-tbl-input cpm-base-purch" name="variant_purchase_price[]" step="any" placeholder="0.00" value="0" required></td>
-            <td class="p-1"><input type="number" class="cpm-tbl-input" name="variant_alert_qty[]" value="0" placeholder="0"></td>
+            <td class="p-1 cpm-purch-col" style="${colDisplay}"><input type="number" class="cpm-tbl-input cpm-base-purch" name="variant_purchase_price[]" step="any" placeholder="0.00" value="0" required></td>
+            <td class="p-1 cpm-alert-col" style="${colDisplay}"><input type="number" class="cpm-tbl-input" name="variant_alert_qty[]" value="0" placeholder="0"></td>
             <td class="p-1"><input type="text" class="cpm-tbl-input" name="variant_barcode[]" value="${cpmGenerateBarcode()}"></td>
             <td class="p-1 text-center">
                 <span class="badge bg-primary px-2 py-1 text-white" style="font-size:10px;">Base</span>
@@ -560,6 +572,8 @@ $(document).ready(function() {
         const unitVal  = cpmUnitDropdown ? cpmUnitDropdown.options[cpmUnitDropdown.selectedIndex].text : 'Pcs';
         const isCarton = cpmUnitDropdown && cpmUnitDropdown.value === 'by_cartons';
         const vid      = 'var_' + Date.now();
+        const isFinishGoods = $('#cpm_item_type').val() === 'finish_goods';
+        const colDisplay = isFinishGoods ? 'display:none;' : '';
 
         const tr = document.createElement('tr');
         tr.dataset.vid = vid;
@@ -582,7 +596,7 @@ $(document).ready(function() {
                     <option value="Dozen">Dzn</option>
                 </select>
             </td>
-            <td class="p-1">
+            <td class="p-1 cpm-stock-col" style="${colDisplay}">
                 <input type="number" class="cpm-tbl-input text-center fw-bold text-primary" name="variant_stock[]" step="any" value="0" placeholder="0">
             </td>
             <td class="p-1 text-center cpm-conv-col">
@@ -590,8 +604,8 @@ $(document).ready(function() {
             </td>
             <td class="p-1"><input type="number" class="cpm-tbl-input" name="variant_sale_price[]" step="any" placeholder="0.00" value="0" required></td>
             <td class="p-1"><input type="number" class="cpm-tbl-input" name="variant_wholesale_price[]" step="any" placeholder="0.00" value="0"></td>
-            <td class="p-1"><input type="number" class="cpm-tbl-input" name="variant_purchase_price[]" step="any" placeholder="0.00" value="0" required></td>
-            <td class="p-1"><input type="number" class="cpm-tbl-input" name="variant_alert_qty[]" value="0" placeholder="0"></td>
+            <td class="p-1 cpm-purch-col" style="${colDisplay}"><input type="number" class="cpm-tbl-input" name="variant_purchase_price[]" step="any" placeholder="0.00" value="0" required></td>
+            <td class="p-1 cpm-alert-col" style="${colDisplay}"><input type="number" class="cpm-tbl-input" name="variant_alert_qty[]" value="0" placeholder="0"></td>
             <td class="p-1"><input type="text" class="cpm-tbl-input" name="variant_barcode[]" value="${cpmGenerateBarcode()}"></td>
             <td class="p-1 text-center">
                 <button type="button" class="btn btn-sm btn-outline-danger p-0 d-inline-flex align-items-center justify-content-center" style="width:24px;height:24px;border-radius:6px;" onclick="$(this).closest('tr').remove()" title="Remove Variant">

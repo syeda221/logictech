@@ -243,10 +243,6 @@ class WebOrderController extends Controller
                         ]);
                     }
 
-                    if ($warehouseStock->total_pieces < $item->quantity) {
-                        throw new \Exception("Insufficient stock for product '{$item->product_name}'. Available: {$warehouseStock->total_pieces}, Required: {$item->quantity}");
-                    }
-
                     // Deduct stock
                     $warehouseStock->total_pieces -= $item->quantity;
                     
@@ -375,10 +371,6 @@ class WebOrderController extends Controller
                                 'quantity' => 0,
                                 'total_pieces' => 0
                             ]);
-                        }
-
-                        if ($warehouseStock->total_pieces < $item->quantity) {
-                            throw new \Exception("Insufficient stock for product '{$item->product_name}'. Available: {$warehouseStock->total_pieces}, Required: {$item->quantity}");
                         }
 
                         $warehouseStock->total_pieces -= $item->quantity;

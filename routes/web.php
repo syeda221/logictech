@@ -24,6 +24,7 @@ use App\Http\Controllers\SalesOfficerController;
 use App\Http\Controllers\StocksController;
 use App\Http\Controllers\StockTransferController;
 use App\Http\Controllers\StockAdjustmentController;
+use App\Http\Controllers\MaterialUsageController;
 use App\Http\Controllers\SubcategoryController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserController;
@@ -98,6 +99,7 @@ Route::get('/test-log', function () {
 
 Route::get('/dashboard', function () {
     $lowStockProducts = \App\Models\Product::withSum('warehouseStocks', 'total_pieces')
+        ->where('item_type', '!=', 'finish_goods')
         ->whereNotNull('alert_carton_quantity')
         ->get()
         ->filter(function ($product) {
@@ -404,6 +406,15 @@ Route::middleware('auth')->group(function () {
     Route::post('/stock-adjustments', [StockAdjustmentController::class, 'store'])->name('stock_adjustments.store');
     Route::post('/stock-adjustments/store-batch', [StockAdjustmentController::class, 'storeBatch'])->name('stock_adjustments.store_batch');
     Route::get('/stock-adjustments/product-variants/{productId}', [StockAdjustmentController::class, 'getProductVariants'])->name('stock_adjustments.product_variants');
+    
+    // Material Usage / Production Issue
+    Route::get('/material-usage', [MaterialUsageController::class, 'index'])->middleware(['permission:material.usage.view'])->name('material_usage.index');
+    Route::get('/material-usage/create', [MaterialUsageController::class, 'create'])->middleware(['permission:material.usage.create'])->name('material_usage.create');
+    Route::post('/material-usage/store', [MaterialUsageController::class, 'store'])->middleware(['permission:material.usage.create'])->name('material_usage.store');
+    Route::get('/material-usage/get-stock', [MaterialUsageController::class, 'getRawMaterialStock'])->middleware(['permission:material.usage.create'])->name('material_usage.get_stock');
+    Route::get('/material-usage/{id}', [MaterialUsageController::class, 'show'])->middleware(['permission:material.usage.view'])->name('material_usage.show');
+    Route::delete('/material-usage/{id}', [MaterialUsageController::class, 'destroy'])->middleware(['permission:material.usage.delete'])->name('material_usage.destroy');
+    Route::get('/reports/material-usage', [MaterialUsageController::class, 'report'])->middleware(['permission:material.usage.report.view'])->name('report.material_usage');
     // //////////
     Route::get('/get-stock/{product}', [StocksController::class, 'getStock'])
         ->name('get.stock');

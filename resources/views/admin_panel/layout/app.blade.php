@@ -129,6 +129,10 @@
                 left: auto !important;
                 right: 0 !important;
             }
+
+            .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item.hover-active > .submenu {
+                display: block !important;
+            }
         }
 
         /* Mobile / Tablet Responsive Navigation */
@@ -267,11 +271,13 @@
             content: none !important;
         }
         .rt_nav_header.horizontal-layout .top_nav {
-            background: #090e1a !important;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.4) !important;
-            height: 66px;
-            padding: 0 12px;
+            background: #ffffff !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05) !important;
+            height: 68px;
+            padding: 0 16px;
+            position: relative;
+            z-index: 1025;
         }
         .header-pw-badge {
             width: 38px;
@@ -387,7 +393,45 @@
             left: auto !important;
             right: auto !important;
             z-index: 1020 !important;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+            background: #fafbfe !important;
+            border-top: 1px solid #e2e8f0 !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04) !important;
+        }
+
+        /* Prevent menu items from ever wrapping onto a second line on desktop */
+        @media (min-width: 992px) {
+            .rt_nav_header.horizontal-layout .nav-bottom .page-navigation {
+                flex-wrap: nowrap !important;
+            }
+        }
+
+        /* Clean menu links: no bulky margins or extra padding that causes overflow */
+        .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item > .nav-link {
+            color: #334155 !important;
+            padding: 18px 10px !important;
+            font-weight: 600 !important;
+            font-size: 13.5px !important;
+            white-space: nowrap !important;
+            margin: 0 !important;
+            transition: color 0.15s ease-in-out;
+        }
+
+        .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item > .nav-link:hover,
+        .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item.active > .nav-link {
+            color: #2563eb !important;
+            background: transparent !important;
+            box-shadow: none !important;
+        }
+
+        .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item > .nav-link .menu_icon {
+            color: #64748b !important;
+            margin-right: 5px;
+        }
+
+        .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item > .nav-link:hover .menu_icon,
+        .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item.active > .nav-link .menu_icon {
+            color: #2563eb !important;
         }
 
         /* Universal App Page Body - Generous Top Clearance */
@@ -468,51 +512,54 @@
               Navigation
     *===========================-->
         <nav class="rt_nav_header horizontal-layout col-lg-12 col-12 p-0">
-            <div class="top_nav flex-grow-1" style="background: #090e1a !important;">
+            <div class="top_nav flex-grow-1" style="background: #ffffff !important; border-bottom: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06); position: relative; z-index: 1025;">
                 <div class="container-fluid px-3 px-md-4 d-flex flex-row h-100 align-items-center justify-content-between">
                     
                     <!-- Left: Dynamic Brand Logo + Company Name Pill -->
                     <div class="d-flex align-items-center">
                         @php
                             $dynCompName = \App\Models\Setting::get('company_name', 'LogicTech');
+                            $dynLogo     = \App\Models\Setting::getLogoUrl();
                             $init1 = strtoupper(substr($dynCompName, 0, 1));
                             $init2 = strlen($dynCompName) > 1 ? strtoupper(substr($dynCompName, 1, 1)) : '';
                         @endphp
                         <a class="nav_logo d-flex align-items-center text-decoration-none" href="{{ url('/home') }}">
-                            <div class="header-pw-badge" style="background: linear-gradient(135deg, #2563eb, #1e40af); border: 1.5px solid rgba(255,255,255,0.2);">
-                                <span style="color: #ffffff;">{{ $init1 }}</span><span style="color: #60a5fa;">{{ $init2 }}</span>
-                            </div>
-                            <div class="d-flex flex-column text-start justify-content-center">
-                                <span style="font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 800; color: #ffffff; line-height: 1.15; letter-spacing: -0.2px;">{{ $dynCompName }}</span>
-                                <span style="font-size: 10px; font-weight: 700; color: #38bdf8; letter-spacing: 0.8px; line-height: 1; text-transform: uppercase;">Heating & Cooling ERP</span>
-                            </div>
+                            @if($dynLogo)
+                                {{-- Setting sa upload kiya hua logo --}}
+                                <img src="{{ $dynLogo }}" alt="{{ $dynCompName }}" style="max-height: 42px; max-width: 160px; object-fit: contain; border-radius: 6px;" />
+                            @else
+                                {{-- Koi logo nahi — initials badge + company name --}}
+                                <div class="header-pw-badge" style="background: linear-gradient(135deg, #2563eb, #1e40af); border: 1.5px solid rgba(255,255,255,0.2);">
+                                    <span style="color: #ffffff;">{{ $init1 }}</span><span style="color: #60a5fa;">{{ $init2 }}</span>
+                                </div>
+                                <div class="d-flex flex-column text-start justify-content-center">
+                                    <span style="font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 800; color: #ffffff; line-height: 1.15; letter-spacing: -0.2px;">{{ $dynCompName }}</span>
+                                    <span style="font-size: 10px; font-weight: 700; color: #38bdf8; letter-spacing: 0.8px; line-height: 1; text-transform: uppercase;">Heating & Cooling ERP</span>
+                                </div>
+                            @endif
                         </a>
 
-                        <!-- Company / Branch Pill -->
-                        <div class="header-company-pill d-none d-lg-flex" style="background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(56, 189, 248, 0.3);">
-                            <i class="fas fa-industry" style="color: #38bdf8; font-size: 13px;"></i>
-                            <span style="color: #f1f5f9; font-weight: 600; font-size: 12.5px;">{{ $dynCompName }} Industrial</span>
-                        </div>
+
                     </div>
 
                     <!-- Right: Phone + Support + Online + Sun + Notification + Profile -->
                     <div class="d-flex align-items-center" style="gap: 10px;">
                         
                         <!-- Phone Number -->
-                        <a href="tel:+923173836223" class="d-none d-md-flex align-items-center text-decoration-none" style="gap: 8px; color: #ffffff; font-size: 13.5px; font-weight: 600;">
+                        <a href="tel:+923173836223" class="d-none d-md-flex align-items-center text-decoration-none" style="gap: 8px; color: #1e293b; font-size: 13.5px; font-weight: 600;">
                             <div style="width: 26px; height: 26px; border-radius: 50%; background: #2563eb; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; flex-shrink: 0;">
                                 <i class="fas fa-phone-alt"></i>
                             </div>
-                            <span class="text-white">+92 317 3836223</span>
+                            <span style="color: #1e293b;">+92 317 3836223</span>
                         </a>
 
                         <!-- Vertical Divider -->
-                        <div class="d-none d-md-block" style="height: 20px; width: 1px; background: rgba(255,255,255,0.18);"></div>
+                        <div class="d-none d-md-block" style="height: 20px; width: 1px; background: rgba(0,0,0,0.15);"></div>
 
                         <!-- Support Button -->
                         <a href="https://wa.me/923173836223" target="_blank" class="header-support-btn d-none d-md-flex" title="Contact ProWave Support">
-                            <i class="fas fa-headset" style="color: #38bdf8; font-size: 13.5px;"></i>
-                            <span>Support</span>
+                            <i class="fas fa-headset" style="color: #2563eb; font-size: 13.5px;"></i>
+                            <span style="color: #1e293b;">Support</span>
                         </a>
 
                         <!-- Online Status Pill -->
@@ -522,23 +569,23 @@
                         </div>
 
                         <!-- Sun / Theme Toggle -->
-                        <div class="d-none d-sm-flex align-items-center justify-content-center text-white-50" style="width: 28px; height: 28px; cursor: pointer; font-size: 15px;">
+                        <div class="d-none d-sm-flex align-items-center justify-content-center" style="width: 28px; height: 28px; cursor: pointer; font-size: 15px; color: #64748b;">
                             <i class="fas fa-sun"></i>
                         </div>
 
                         <!-- Settings Link -->
                         @canany(['settings.view', 'settings.read'])
-                            <a href="{{ route('settings.index') }}" class="d-none d-sm-flex align-items-center justify-content-center text-white-50 text-decoration-none" style="width: 28px; height: 28px; font-size: 15px;" title="Settings">
-                                <i class="fas fa-cog" style="color: #94a3b8;"></i>
+                            <a href="{{ route('settings.index') }}" class="d-none d-sm-flex align-items-center justify-content-center text-decoration-none" style="width: 28px; height: 28px; font-size: 15px;" title="Settings">
+                                <i class="fas fa-cog" style="color: #64748b;"></i>
                             </a>
                         @endcanany
 
                         <!-- Notification Bell -->
                         <div class="dropdown position-relative" id="notificationLi">
-                            <a class="d-flex align-items-center justify-content-center text-white-50 p-0 text-decoration-none"
+                            <a class="d-flex align-items-center justify-content-center p-0 text-decoration-none"
                                 id="notificationDropdown" href="#" data-toggle="dropdown" data-display="static"
                                 aria-expanded="false" style="width: 32px; height: 32px; border-radius: 8px; cursor: pointer;">
-                                <i class="fas fa-bell" style="font-size: 16px; color: #94a3b8;"></i>
+                                <i class="fas fa-bell" style="font-size: 16px; color: #64748b;"></i>
                                 <span class="badge badge-danger notification-badge"
                                     style="display: none; position: absolute; top: -2px; right: -2px; font-size: 9px; padding: 2px 4px; border-radius: 50%;">0</span>
                             </a>
@@ -568,7 +615,7 @@
                             <a class="d-flex align-items-center justify-content-center p-0 text-decoration-none" 
                                href="#" data-toggle="dropdown" data-display="static" id="profileDropdown" style="cursor: pointer;">
                                 <div class="rounded-circle d-flex align-items-center justify-content-center" 
-                                     style="width: 32px; height: 32px; border: 1.5px solid rgba(255,255,255,0.45); color: #ffffff; font-size: 14px; transition: all 0.2s;">
+                                     style="width: 32px; height: 32px; border: 1.5px solid rgba(37,99,235,0.4); color: #2563eb; font-size: 14px; transition: all 0.2s;">
                                     <i class="far fa-user"></i>
                                 </div>
                             </a>
@@ -593,7 +640,7 @@
                         </div>
 
                         <!-- Mobile Hamburger Button -->
-                        <button class="navbar-toggler align-self-center border-0 p-0 text-white ms-1 d-lg-none" type="button" data-toggle="minimize" style="font-size: 18px; outline: none; background: transparent; cursor: pointer;">
+                        <button class="navbar-toggler align-self-center border-0 p-0 ms-1 d-lg-none" type="button" data-toggle="minimize" style="font-size: 18px; outline: none; background: transparent; cursor: pointer; color: #64748b;">
                             <i class="fas fa-bars"></i>
                         </button>
                     </div>
@@ -840,6 +887,10 @@
                                                         <li><a href="{{ route('stock_adjustments.index') }}"><i
                                                                     class="fas fa-sliders-h"></i> Stock Adjustment</a></li>
                                                     @endcanany
+                                                    @can('material.usage.view')
+                                                        <li><a href="{{ route('material_usage.index') }}"><i
+                                                                    class="fas fa-boxes-packing text-primary"></i> Material Usage (Issue)</a></li>
+                                                    @endcan
                                                 </ul>
                                             </div>
                                         @endcanany
@@ -942,6 +993,10 @@
                                         @can('item.stock.report.view')
                                             <li><a href="{{ route('report.item_stock') }}"><i class="fa-solid fa-users"></i>
                                                     Item Stock Report</a></li>
+                                        @endcan
+                                        @can('material.usage.report.view')
+                                            <li><a href="{{ route('report.material_usage') }}"><i class="fa-solid fa-clipboard-check text-success"></i>
+                                                    Material Usage Report</a></li>
                                         @endcan
                                         @can('purchase.report.view')
                                             <li><a href="{{ route('report.purchase') }}"><i class="fa-solid fa-users"></i>
@@ -1361,6 +1416,31 @@
                 });
             });
             
+            // Hover Grace Period for Navbar Submenus to prevent premature hiding when cursor moves towards links
+            document.querySelectorAll('.rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item').forEach(function(item) {
+                let closeTimer;
+                const submenu = item.querySelector('.submenu');
+                if (!submenu) return;
+
+                const openMenu = function() {
+                    clearTimeout(closeTimer);
+                    item.classList.add('hover-active');
+                };
+
+                const scheduleClose = function() {
+                    closeTimer = setTimeout(function() {
+                        if (!item.matches(':hover') && !submenu.matches(':hover')) {
+                            item.classList.remove('hover-active');
+                        }
+                    }, 200); // 200ms delay before hiding
+                };
+
+                item.addEventListener('mouseenter', openMenu);
+                item.addEventListener('mouseleave', scheduleClose);
+                submenu.addEventListener('mouseenter', openMenu);
+                submenu.addEventListener('mouseleave', scheduleClose);
+            });
+
             // Failsafe: Remove any rogue overlay class on body immediately
             document.body.classList.remove('modal-open', 'sidebar_collapsed');
         })();

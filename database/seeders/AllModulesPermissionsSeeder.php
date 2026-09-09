@@ -32,6 +32,8 @@ class AllModulesPermissionsSeeder extends Seeder
             'stock.transfer',
             'stock.adjust',
             'stocks',
+            'material.usage',
+            'material.usage.report',
             'purchases',
             'purchase.returns',
             'vendors',
