@@ -151,8 +151,9 @@
        ========================================= */
 
     function updateRowIndexes() {
-        $('#salesTableBody tr').each(function(index) {
+        $('#salesTableBody tr:not(.specs-subrow)').each(function(index) {
             $(this).find('.row-index').text(index + 1);
+            $(this).next('.specs-subrow').find('.specs-row-num').text(index + 1);
         });
     }
 
@@ -178,6 +179,15 @@
       <input type="hidden" class="size-h">
       <input type="hidden" class="size-w">
       <input type="hidden" class="size-mode-text">
+      <div class="mt-1 d-flex align-items-center gap-1">
+        <button type="button" class="btn btn-sm btn-outline-primary py-0 px-1.5 btn-toggle-specs" style="font-size: 0.68rem; height: 20px; border-radius: 4px;" title="Enter Specifications & Details Manually">
+          <i class="fas fa-sliders-h me-1"></i>+ Specs / Details <i class="fas fa-chevron-down ms-0.5 arrow-icon"></i>
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-success py-0 px-1.5 btn-toggle-row-gst" style="font-size: 0.68rem; height: 20px; border-radius: 4px;" title="Toggle GST Tax on this product">
+          <i class="fas fa-percent me-0.5"></i><span class="row-gst-btn-text">+ GST %</span>
+        </button>
+        <span class="badge bg-light text-muted border specs-filled-badge d-none" style="font-size: 0.65rem;">Specs Added</span>
+      </div>
     </td>
 
     <!-- MODEL -->
@@ -190,8 +200,8 @@
       <input type="text" class="form-control serial-no-input text-center font-monospace" name="serial_no[]" placeholder="e.g. 10001">
     </td>
 
-    <!-- STOCK -->
-    <td class="col-stock">
+    <!-- STOCK (HIDDEN) -->
+    <td class="col-stock d-none">
       <input type="text" class="form-control stock text-center input-readonly" readonly tabindex="-1">
       <input type="hidden" class="warehouse" name="warehouse_id[]" value="{{ auth()->user()->warehouse_id ?? 1 }}">
       <input type="hidden" class="variant-stock-value">
@@ -255,6 +265,26 @@
       <input type="hidden" class="discount-amount" value="0">
     </td>
 
+    <!-- GST % -->
+    <td class="col-tax">
+      <div class="d-flex align-items-center gap-1">
+        <input type="number"
+               step="any"
+               min="0"
+               max="100"
+               class="form-control item-tax-percent text-end font-monospace fw-bold"
+               name="item_tax_percent[]"
+               placeholder="0"
+               value="0"
+               style="flex: 1; min-width: 0; height: 26px; font-size: 0.82rem; padding: 1px 4px;">
+        <button type="button"
+               class="btn btn-sm btn-outline-success btn-row-gst px-1 py-0 fw-bold"
+               title="Toggle 18% GST on this item"
+               style="font-size: 0.65rem; height: 26px; min-width: 24px; border-radius: 4px; flex-shrink: 0;">%</button>
+      </div>
+      <input type="hidden" class="item-tax-amount" name="item_tax_amount[]" value="0">
+    </td>
+
     <!-- AMOUNT -->
     <td class="col-amount">
       <input type="text" class="form-control sales-amount text-end input-readonly fw-bold text-dark" name="total[]" value="0" readonly tabindex="-1">
@@ -265,11 +295,38 @@
     <td class="col-action text-center">
       <button type="button" class="btn btn-sm btn-outline-danger del-row" tabindex="-1">&times;</button>
     </td>
+  </tr>
+  <!-- EXPANDABLE SPECIFICATIONS SUB-ROW -->
+  <tr class="specs-subrow bg-light d-none" style="border-top: 1px dashed #cbd5e1;">
+    <td colspan="12" class="p-2 bg-light">
+      <div class="p-2 bg-white rounded border border-primary-subtle shadow-sm">
+        <div class="d-flex align-items-center justify-content-between mb-1">
+          <span class="fw-bold text-primary" style="font-size: 0.75rem;">
+            <i class="fas fa-microchip me-1"></i>Manual Specifications &amp; Technical Details (Item #<span class="specs-row-num">1</span>)
+          </span>
+          <span class="text-muted small" style="font-size: 0.68rem;">Will appear in Company Technical Document &amp; Specifications</span>
+        </div>
+        <div class="row g-2">
+          <div class="col-md-4">
+            <label class="form-label mb-0 fw-semibold text-secondary" style="font-size: 0.68rem;">Equipment / Technical Title</label>
+            <input type="text" class="form-control form-control-sm item-tech-name" name="technical_name[]" placeholder="e.g. Induction Heater 60 KW Forging Machine" style="font-size: 0.75rem;">
+          </div>
+          <div class="col-md-5">
+            <label class="form-label mb-0 fw-semibold text-secondary" style="font-size: 0.68rem;">Technical Specifications &amp; Parameters</label>
+            <input type="text" class="form-control form-control-sm item-tech-specs" name="technical_specs[]" placeholder="e.g. Power: 60KW, Frequency: 10-30kHz, Coil Size: 150mm..." style="font-size: 0.75rem;">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label mb-0 fw-semibold text-secondary" style="font-size: 0.68rem;">QC / Engineering Remarks</label>
+            <input type="text" class="form-control form-control-sm item-tech-remarks" name="technical_remarks[]" placeholder="e.g. Approved with Chiller" style="font-size: 0.75rem;">
+          </div>
+        </div>
+      </div>
+    </td>
   </tr>`;
 
         const $row = $(rowHtml);
         $('#salesTableBody').append($row);
-        initProductSelect2($row.find('.product'));
+        initProductSelect2($row.first().find('.product'));
         updateRowIndexes();
     }
 
@@ -501,7 +558,30 @@
 
         const netRow = Math.max(0, gross - dam);
         $row.find('.gross-amount').val(gross.toFixed(2));
-        $row.find('.sales-amount').val(netRow.toFixed(2));
+
+        // Line Tax / GST Calculation
+        const itemTaxPct = Math.max(0, toNum($row.find('.item-tax-percent').val()));
+        let itemTaxAmt = 0;
+        if (itemTaxPct > 0) {
+            itemTaxAmt = Math.round(((netRow * itemTaxPct) / 100) * 100) / 100;
+        }
+        $row.find('.item-tax-amount').val(itemTaxAmt.toFixed(2));
+
+        // Update row GST toggle buttons
+        const $rowGstBtn = $row.find('.btn-toggle-row-gst');
+        const $cellGstBtn = $row.find('.btn-row-gst');
+        if (itemTaxPct > 0) {
+            $rowGstBtn.addClass('btn-success text-white').removeClass('btn-outline-success');
+            $rowGstBtn.find('.row-gst-btn-text').text('GST ' + itemTaxPct + '%');
+            $cellGstBtn.addClass('btn-success text-white').removeClass('btn-outline-success');
+        } else {
+            $rowGstBtn.removeClass('btn-success text-white').addClass('btn-outline-success');
+            $rowGstBtn.find('.row-gst-btn-text').text('+ GST %');
+            $cellGstBtn.removeClass('btn-success text-white').addClass('btn-outline-success');
+        }
+
+        const lineTotalWithTax = netRow + itemTaxAmt;
+        $row.find('.sales-amount').val(lineTotalWithTax.toFixed(2));
 
         if (typeof updateGrandTotals === 'function') {
             updateGrandTotals();
@@ -512,13 +592,15 @@
         let tQty = 0;
         let tGross = 0;
         let tLineDisc = 0;
+        let tLineTax = 0;
         let tNet = 0;
 
-        $('#salesTableBody tr').each(function() {
+        $('#salesTableBody tr:not(.specs-subrow)').each(function() {
             const $r = $(this);
             let gross = toNum($r.find('.gross-amount').val());
-            const net = toNum($r.find('.sales-amount').val());
             const dam = toNum($r.find('.discount-amount').val());
+            const taxAmt = toNum($r.find('.item-tax-amount').val());
+            const net = Math.max(0, gross - dam);
             
             if (gross <= 0 && net > 0) gross = net + dam;
 
@@ -528,6 +610,7 @@
             tQty += pieces;
             tGross += gross;
             tLineDisc += dam;
+            tLineTax += taxAmt;
             tNet += net;
         });
 
@@ -543,7 +626,39 @@
         }
 
         const totalDiscount = tLineDisc + orderDisc;
-        const currentInvoiceTotal = Math.max(0, tGross - totalDiscount);
+        const currentInvoiceSubtotal = Math.max(0, tGross - totalDiscount);
+
+        // GST / Sales Tax Calculation
+        const isGstActive = $('#gstFooterRow').length > 0 && !$('#gstFooterRow').hasClass('d-none');
+        let gstPercent = isGstActive ? toNum($('#gstPercentInput').val()) : 0;
+        let gstAmount = tLineTax;
+
+        // If line items have no tax, but footer row is active with percent, calculate from subtotal
+        if (gstAmount <= 0 && isGstActive && gstPercent > 0) {
+            gstAmount = Math.round(((currentInvoiceSubtotal * gstPercent) / 100) * 100) / 100;
+        }
+
+        if (gstAmount > 0) {
+            const displayRate = currentInvoiceSubtotal > 0 ? (Math.round((gstAmount / currentInvoiceSubtotal) * 100 * 10) / 10) : gstPercent;
+            $('#gstAmountDisplay').text(gstAmount.toFixed(2));
+            $('#taxAmountInput').val(gstAmount.toFixed(2));
+            $('#summaryGstRate').text(displayRate);
+            $('#summaryGstAmount').text(gstAmount.toFixed(2));
+            $('#summaryGstRow').removeClass('d-none');
+            $('#bottomGstVal').text(gstAmount.toFixed(2));
+            $('#bottomGstStrip').removeClass('d-none');
+            $('#btnToggleGst').addClass('btn-success text-white').removeClass('btn-erp-pill-outline');
+            $('#gstBtnLabel').text('GST (' + displayRate + '%)');
+        } else {
+            $('#gstAmountDisplay').text('0.00');
+            $('#taxAmountInput').val('0');
+            $('#summaryGstRow').addClass('d-none');
+            $('#bottomGstStrip').addClass('d-none');
+            $('#btnToggleGst').removeClass('btn-success text-white').addClass('btn-erp-pill-outline');
+            $('#gstBtnLabel').text('+ GST %');
+        }
+
+        const currentInvoiceTotal = currentInvoiceSubtotal + gstAmount;
         const prev = toNum($('#previousBalance').val());
         
         let receipts = 0;
@@ -567,7 +682,7 @@
         $('#bottomPaymentsTotal').text(receipts.toFixed(2));
         $('#receiptsTotalBadge').text(receipts.toFixed(2));
         $('#receiptsTotal').text(receipts.toFixed(2));
-        $('#itemsRowCount').text($('#salesTableBody tr').length);
+        $('#itemsRowCount').text($('#salesTableBody tr:not(.specs-subrow)').length);
 
         // Display current bill total after all discounts
         $('#tCurrentBill').text(currentInvoiceTotal.toFixed(2));
@@ -1336,12 +1451,113 @@
 
         // Delete Row
         $(document).on('click', '.del-row', function() {
-            if ($('#salesTableBody tr').length > 1) {
-                $(this).closest('tr').remove();
+            if ($('#salesTableBody tr:not(.specs-subrow)').length > 1) {
+                const $tr = $(this).closest('tr');
+                $tr.next('.specs-subrow').remove();
+                $tr.remove();
                 updateRowIndexes();
                 updateGrandTotals();
                 refreshPostedState();
             }
+        });
+
+        // Specs & Technical Details Sub-Row Toggle
+        $(document).on('click', '.btn-toggle-specs', function(e) {
+            e.preventDefault();
+            const $tr = $(this).closest('tr');
+            const $subrow = $tr.next('.specs-subrow');
+            $subrow.toggleClass('d-none');
+            const isOpen = !$subrow.hasClass('d-none');
+            $(this).find('.arrow-icon').toggleClass('fa-chevron-down', !isOpen).toggleClass('fa-chevron-up', isOpen);
+            if (isOpen) {
+                $subrow.find('input, textarea').first().focus();
+            }
+        });
+
+        // Toggle badge when specs fields have content
+        $(document).on('input', '.item-tech-name, .item-tech-specs, .item-tech-remarks', function() {
+            const $subrow = $(this).closest('.specs-subrow');
+            const $tr = $subrow.prev('tr');
+            const hasVal = ($subrow.find('.item-tech-name').val() || '').trim() !== '' ||
+                           ($subrow.find('.item-tech-specs').val() || '').trim() !== '' ||
+                           ($subrow.find('.item-tech-remarks').val() || '').trim() !== '';
+            $tr.find('.specs-filled-badge').toggleClass('d-none', !hasVal);
+        });
+
+        // Per-item GST % Input & Button Handlers
+        $(document).on('input change', '.item-tax-percent', function() {
+            let val = toNum($(this).val());
+            if (val < 0) { $(this).val(0); }
+            else if (val > 100) { $(this).val(100); }
+            calculateLine($(this).closest('tr'));
+        });
+
+        // Toggle 18% GST button inside col-tax cell
+        $(document).on('click', '.btn-row-gst', function(e) {
+            e.preventDefault();
+            const $row = $(this).closest('tr');
+            const $input = $row.find('.item-tax-percent');
+            const cur = toNum($input.val());
+            $input.val(cur > 0 ? 0 : 18);
+            calculateLine($row);
+        });
+
+        // Toggle 18% GST button inside col-product cell (+ GST %)
+        $(document).on('click', '.btn-toggle-row-gst', function(e) {
+            e.preventDefault();
+            const $row = $(this).closest('tr');
+            const $input = $row.find('.item-tax-percent');
+            const cur = toNum($input.val());
+            $input.val(cur > 0 ? 0 : 18);
+            calculateLine($row);
+            if (cur === 0) {
+                $input.focus().select();
+            }
+        });
+
+        // Header / Toolbar GST button: Toggles 18% GST across ALL rows or footer
+        $(document).on('click', '#btnToggleGst', function(e) {
+            e.preventDefault();
+            const $rows = $('#salesTableBody tr:not(.specs-subrow)');
+            let anyZero = false;
+            $rows.each(function() {
+                if (toNum($(this).find('.item-tax-percent').val()) <= 0) {
+                    anyZero = true;
+                    return false;
+                }
+            });
+
+            const newRate = anyZero ? 18 : 0;
+            $rows.each(function() {
+                $(this).find('.item-tax-percent').val(newRate);
+                calculateLine($(this));
+            });
+
+            // Also sync footer row if shown
+            const $gstRow = $('#gstFooterRow');
+            if (newRate > 0) {
+                $gstRow.removeClass('d-none');
+                $('#gstPercentInput').val(newRate);
+            } else {
+                $gstRow.addClass('d-none');
+                $('#gstPercentInput').val(0);
+            }
+            updateGrandTotals();
+        });
+
+        $(document).on('input change', '#gstPercentInput', function() {
+            updateGrandTotals();
+        });
+
+        $(document).on('click', '#btnRemoveGst', function(e) {
+            e.preventDefault();
+            $('#salesTableBody tr:not(.specs-subrow)').each(function() {
+                $(this).find('.item-tax-percent').val(0);
+                calculateLine($(this));
+            });
+            $('#gstFooterRow').addClass('d-none');
+            $('#gstPercentInput').val(0);
+            updateGrandTotals();
         });
 
         // Add Row Button

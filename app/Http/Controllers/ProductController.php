@@ -367,18 +367,29 @@ class ProductController extends Controller
     {
         $term = $request->get('q', '');
 
-        $products = Product::with('category_relation', 'sub_category_relation', 'brand')
+        $productsQuery = Product::with('category_relation', 'sub_category_relation', 'brand')
             ->withSum('warehouseStocks', 'total_pieces')
-            ->where('is_active', true) /* Only active products */
-            ->when($term, function ($query) use ($term) {
-                $query->where('item_name', 'like', "%{$term}%")
+            ->where('is_active', true);
+
+        if ($request->filled('item_type')) {
+            if ($request->item_type === 'raw_material') {
+                $productsQuery->whereIn('item_type', ['raw_material', 'both']);
+            } else {
+                $productsQuery->where('item_type', $request->item_type);
+            }
+        }
+
+        $products = $productsQuery->when($term, function ($query) use ($term) {
+            $query->where(function ($q) use ($term) {
+                $q->where('item_name', 'like', "%{$term}%")
                     ->orWhere('item_code', 'like', "%{$term}%")
-                    ->orWhereHas('category_relation', fn ($q) => $q->where('name', 'like', "%{$term}%"))
-                    ->orWhereHas('sub_category_relation', fn ($q) => $q->where('name', 'like', "%{$term}%"))
-                    ->orWhereHas('brand', fn ($q) => $q->where('name', 'like', "%{$term}%"));
-            })
-            ->limit(500) // limit for performance
-            ->get();
+                    ->orWhereHas('category_relation', fn ($sub) => $sub->where('name', 'like', "%{$term}%"))
+                    ->orWhereHas('sub_category_relation', fn ($sub) => $sub->where('name', 'like', "%{$term}%"))
+                    ->orWhereHas('brand', fn ($sub) => $sub->where('name', 'like', "%{$term}%"));
+            });
+        })
+        ->limit(500)
+        ->get();
 
         return response()->json($products->map(function ($p, $key) {
             $stockPieces = (float) ($p->warehouse_stocks_sum_total_pieces ?? 0);

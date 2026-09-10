@@ -705,12 +705,21 @@ body{
                 if(!empty($item['serial_no'])) $specs[]=['Serial No',$item['serial_no']];
                 if(!empty($item['brand']))     $specs[]=['Brand',$item['brand']];
                 if(!empty($item['item_code'])) $specs[]=['Item Code',$item['item_code']];
+                if(!empty($item['technical_name']))    $specs[]=['Tech Name',$item['technical_name']];
+                if(!empty($item['technical_specs']))   $specs[]=['Specifications',$item['technical_specs']];
+                if(!empty($item['technical_remarks'])) $specs[]=['QC Remarks',$item['technical_remarks']];
                 if(!empty($item['color_val'])&&$item['color_val']!=='-') $specs[]=['Specification',$item['color_val']];
                 if(!empty($item['size_val']) &&$item['size_val']!=='-')  $specs[]=['Size',$item['size_val']];
                 $h2=(float)($item['height']??0);$w2=(float)($item['width']??0);
                 if($sm=='by_size'&&$h2>0&&$w2>0) $specs[]=['Dimensions',number_format($w2,0).'×'.number_format($h2,0).' mm'];
                 if($wg>0) $specs[]=['Weight',($wg==(int)$wg?(int)$wg:$wg).'g'];
                 if($disc>0) $specs[]=['Discount',($discP>0?number_format($discP,1).'% — ':'').number_format($disc,2).' '.$currency];
+                $itemTaxPct = (float)($item['tax_percent'] ?? 0);
+                $itemTaxAmt = (float)($item['tax_amount'] ?? 0);
+                if ($itemTaxPct > 0 && $itemTaxAmt <= 0) {
+                    $itemTaxAmt = round(($net * $itemTaxPct) / 100, 2);
+                }
+                $itemTotalWithTax = $net + $itemTaxAmt;
             @endphp
             <tr>
                 <td class="sn">{{ $loop->iteration }}</td>
@@ -726,9 +735,9 @@ body{
                 <td class="tc">{{ $qd }}</td>
                 <td class="tr">{{ number_format($item['price'],2) }}</td>
                 <td class="tr">{{ number_format($gross,2) }}</td>
-                <td class="tc">0%</td>
-                <td class="tc">—</td>
-                <td class="tr" style="font-weight:700;">{{ $currency }} {{ number_format($net,0) }}</td>
+                <td class="tc">{{ $itemTaxPct > 0 ? (float)$itemTaxPct.'%' : '0%' }}</td>
+                <td class="tr">{{ $itemTaxAmt > 0 ? number_format($itemTaxAmt,2) : '—' }}</td>
+                <td class="tr" style="font-weight:700;">{{ $currency }} {{ number_format($itemTotalWithTax,0) }}</td>
             </tr>
             @endforeach
 
@@ -771,7 +780,7 @@ body{
         {{-- Terms --}}
         <div class="terms">
             @php
-                $tc = \App\Models\Setting::get('invoice_terms',"Payment due within 30 days.\nGoods once sold will not be returned without original invoice.\nWarranty covers manufacturing defects only.");
+                $tc = !empty($sale->terms_and_conditions) ? $sale->terms_and_conditions : \App\Models\Setting::get('invoice_terms',"Payment due within 30 days.\nGoods once sold will not be returned without original invoice.\nWarranty covers manufacturing defects only.");
                 $tl = array_values(array_filter(array_map('trim',explode("\n",str_replace("\r","",$tc)))));
             @endphp
             <div class="t-ttl">Terms &amp; Conditions</div>
@@ -797,13 +806,16 @@ body{
         <div class="fin-box">
             <div class="fin-hdr">Financial Summary</div>
             <table class="fin-tbl">
-                @if($subTotal!=$finalPayable || $extraDisc>0 || $itemDisc>0 || $exAmt>0)
+                @if($subTotal!=$finalPayable || $extraDisc>0 || $itemDisc>0 || $exAmt>0 || ($sale->tax_amount ?? 0) > 0)
                 <tr><td class="fl">Sub Total:</td><td class="fv">{{ number_format($subTotal,2) }}</td></tr>
                 @if($itemDisc>0)
                 <tr><td class="fl">Item Discount:</td><td class="fv red">-{{ number_format($itemDisc,2) }}</td></tr>
                 @endif
                 @if($extraDisc>0)
                 <tr><td class="fl">Extra Discount:</td><td class="fv red">-{{ number_format($extraDisc,2) }}</td></tr>
+                @endif
+                @if(($sale->tax_amount ?? 0) > 0 || ($sale->tax_percent ?? 0) > 0)
+                <tr><td class="fl">Sales Tax / GST ({{ (float)($sale->tax_percent ?? 0) }}%):</td><td class="fv green">+{{ number_format((float)($sale->tax_amount ?? 0),2) }}</td></tr>
                 @endif
                 @if($exAmt>0)
                 <tr><td class="fl">Return Deduction:</td><td class="fv red">-{{ number_format($exAmt,2) }}</td></tr>

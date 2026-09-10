@@ -103,29 +103,44 @@
     .sale-table-wrap::-webkit-scrollbar-thumb:hover { background: #64748b; }
 
     #saleReport {
-        font-size: .78rem;
+        font-size: .88rem;
         margin-bottom: 0;
+        color: #0f172a;
     }
 
     #saleReport thead th {
         position: sticky;
         top: 0;
         z-index: 10;
-        background-color: #1e293b !important;
+        background-color: #0f172a !important;
         color: #ffffff !important;
-        font-size: .75rem;
-        font-weight: 700;
-        padding: 9px 10px;
+        font-size: .80rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+        padding: 12px 10px;
         border-bottom: 2px solid #334155;
         white-space: nowrap;
+    }
+
+    #saleReport tbody td {
+        padding: 10px 10px;
+        font-size: .86rem;
+        color: #1e293b;
+        vertical-align: middle;
+        border-color: #e2e8f0;
+    }
+
+    #saleReport tbody tr:hover td {
+        background-color: #f8fafc !important;
     }
 
     /* Compact Returns Column */
     #saleReport th:nth-child(11),
     #saleReport td:nth-child(11) {
-        max-width: 135px !important;
-        width: 135px !important;
-        font-size: .72rem;
+        max-width: 140px !important;
+        width: 140px !important;
+        font-size: .78rem;
         word-break: break-word;
         white-space: normal;
     }
@@ -374,8 +389,15 @@
 
         // Auto Search Trigger
         $(document).on('click', '.btnSearchTrigger', function() {
-            let start = $('#start_date_desk').val() || $('#start_date_mob').val();
-            let end   = $('#end_date_desk').val() || $('#end_date_mob').val();
+            loadSalesReport();
+        });
+
+        // Trigger load immediately on page load
+        loadSalesReport();
+
+        function loadSalesReport() {
+            let start = $('#start_date_desk').val() || $('#start_date_mob').val() || '';
+            let end   = $('#end_date_desk').val() || $('#end_date_mob').val() || '';
             $('.searchProductInput').val('');
 
             $(".loader").show();
@@ -401,54 +423,68 @@
                         grandNet = 0,
                         grandReturn = 0;
 
-                    salesData.forEach((s, i) => {
-                        let products = s.product.split(',').join('<br>');
-                        let qtyArr = s.qty.split(',');
-                        let qtyPiecesArr = s.total_pieces ? s.total_pieces.split(',') : (s.qty_decimal ? s.qty_decimal.split(',') : qtyArr);
-                        let price = s.per_price.split(',').join('<br>');
-                        let total = s.per_total.split(',').join('<br>');
+                    if (!salesData || salesData.length === 0) {
+                        $('#saleBody').html('<tr><td colspan="11" class="text-center py-4 text-muted">No sales records found.</td></tr>');
+                        $('#saleMobileContainer').html('<div class="card border-0 shadow-sm rounded-3 text-center py-4 bg-white"><div class="card-body py-4 text-muted"><i class="fas fa-folder-open fa-2x mb-2 text-secondary"></i><p class="small fw-bold mb-0">No Sales Data Found</p></div></div>');
+                        updateSingleLineSummary(0, 0, 0, 0, 0);
+                        return;
+                    }
 
-                        let rowQty = qtyPiecesArr.reduce((a, b) => parseFloat(a) + parseFloat(b), 0);
+                    salesData.forEach((s, i) => {
+                        let prodStr = s.product ? String(s.product) : '-';
+                        let products = prodStr.split(',').join('<br>');
+                        let qtyRaw = s.qty ? String(s.qty) : '0';
+                        let qtyArr = qtyRaw.split(',');
+                        let qtyPiecesArr = s.total_pieces ? String(s.total_pieces).split(',') : (s.qty_decimal ? String(s.qty_decimal).split(',') : qtyArr);
+                        let priceArr = s.per_price ? String(s.per_price).split(',') : ['0'];
+                        let totalArr = s.per_total ? String(s.per_total).split(',') : ['0'];
+                        let price = priceArr.join('<br>');
+                        let total = totalArr.join('<br>');
+
+                        let rowQty = qtyPiecesArr.reduce((a, b) => (parseFloat(a) || 0) + (parseFloat(b) || 0), 0);
                         grandQty += rowQty;
 
-                        let rowTotal = s.per_total.split(',').reduce((a, b) => parseFloat(a) + parseFloat(b), 0);
-                        grandTotal += parseFloat(rowTotal);
-                        grandNet += parseFloat(s.total_net);
+                        let rowTotal = totalArr.reduce((a, b) => (parseFloat(a) || 0) + (parseFloat(b) || 0), 0);
+                        grandTotal += parseFloat(rowTotal) || 0;
+                        grandNet += parseFloat(s.total_net) || 0;
 
                         let returnHtml = "";
                         let returnTotal = 0;
                         if (s.returns && s.returns.length > 0) {
                             s.returns.forEach(r => {
-                                returnHtml += `<span class="text-danger fw-semibold">${r.product} (${r.qty}) - ${r.per_total}</span><br>`;
-                                returnTotal += parseFloat(r.per_total);
+                                let rProd = r.product ? String(r.product) : '-';
+                                let rQty = r.qty ?? 0;
+                                let rTotal = parseFloat(r.per_total) || 0;
+                                returnHtml += `<span class="text-danger fw-semibold">${rProd} (${rQty}) - ${rTotal}</span><br>`;
+                                returnTotal += rTotal;
                             });
                         }
                         grandReturn += returnTotal;
 
                         // Desktop Row
                         html += `<tr data-qty="${rowQty}" data-total="${rowTotal}" data-net="${s.total_net}" data-return="${returnTotal}">
-                            <td>${i+1}</td>
-                            <td class="small text-nowrap">${s.created_at}</td>
-                            <td class="font-monospace fw-bold text-primary">INVSLE-${s.id}</td>
-                            <td>${s.customer_name ?? '-'}</td>
-                            <td>${s.reference ?? '-'}</td>
-                            <td>${products}</td>
-                            <td class="fw-semibold">${qtyArr.join('<br>')}</td>
-                            <td>${price}</td>
-                            <td>${total}</td>
-                            <td class="fw-bold text-dark">${parseFloat(s.total_net).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
-                            <td>${returnHtml || '-'}</td>
+                            <td class="text-muted fw-bold text-center">${i+1}</td>
+                            <td class="fw-semibold text-secondary text-nowrap" style="font-size: .82rem;">${s.created_at || '-'}</td>
+                            <td><span class="badge bg-light text-primary border font-monospace fw-bold" style="font-size: .84rem; padding: 4px 7px;">INVSLE-${s.id}</span></td>
+                            <td class="fw-bold text-dark">${s.customer_name ?? '-'}</td>
+                            <td class="text-muted">${s.reference ?? '-'}</td>
+                            <td class="fw-semibold text-dark" style="line-height: 1.45;">${products}</td>
+                            <td class="fw-bold text-center text-primary" style="font-size: .86rem;">${qtyArr.join('<br>')}</td>
+                            <td class="text-end text-secondary fw-semibold">${price}</td>
+                            <td class="text-end fw-bold text-dark">${total}</td>
+                            <td class="text-end fw-bold text-success" style="font-size: .90rem;">${(parseFloat(s.total_net) || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+                            <td>${returnHtml || '<span class="text-muted text-center d-block">—</span>'}</td>
                         </tr>`;
 
                         // Mobile Card
                         mobHtml += `
-                        <div class="mob-card p-2.5 p-2 mb-2 mob-sale-card" data-search="${(s.product + ' INVSLE-' + s.id + ' ' + (s.customer_name||'') + ' ' + (s.reference||'')).toLowerCase()}">
+                        <div class="mob-card p-2.5 p-2 mb-2 mob-sale-card" data-search="${(prodStr + ' INVSLE-' + s.id + ' ' + (s.customer_name||'') + ' ' + (s.reference||'')).toLowerCase()}">
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <div class="d-flex align-items-center gap-1">
                                     <span class="badge bg-light text-muted border" style="font-size: 10px;">#${i+1}</span>
                                     <span class="badge bg-light text-primary border font-monospace fw-bold" style="font-size: 11px;">INVSLE-${s.id}</span>
                                 </div>
-                                <small class="text-muted" style="font-size: 10.5px;">${s.created_at}</small>
+                                <small class="text-muted" style="font-size: 10.5px;">${s.created_at || '-'}</small>
                             </div>
                             <div class="mb-1">
                                 <strong class="text-dark d-block" style="font-size: 12.5px;">${s.customer_name ?? 'Walking Customer'}</strong>
@@ -466,11 +502,11 @@
                                     </div>
                                     <div class="col-4 border-end">
                                         <span class="text-muted d-block" style="font-size: 10px;">Gross</span>
-                                        <strong class="text-dark">Rs ${parseFloat(rowTotal).toLocaleString(undefined, {minimumFractionDigits:2})}</strong>
+                                        <strong class="text-dark">Rs ${(parseFloat(rowTotal) || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</strong>
                                     </div>
                                     <div class="col-4">
                                         <span class="text-muted d-block" style="font-size: 10px;">Net Sale</span>
-                                        <strong class="text-success">Rs ${parseFloat(s.total_net).toLocaleString(undefined, {minimumFractionDigits:2})}</strong>
+                                        <strong class="text-success">Rs ${(parseFloat(s.total_net) || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</strong>
                                     </div>
                                 </div>
                             </div>
@@ -491,9 +527,14 @@
                     $('#saleMobileContainer').html(mobHtml || '<div class="card border-0 shadow-sm rounded-3 text-center py-4 bg-white"><div class="card-body py-4 text-muted"><i class="fas fa-folder-open fa-2x mb-2 text-secondary"></i><p class="small fw-bold mb-0">No Sales Data Found</p></div></div>');
 
                     updateSingleLineSummary(salesData.length, grandQty, grandTotal, grandReturn, grandNet);
+                },
+                error: function(xhr, status, err) {
+                    $(".loader").hide();
+                    console.error("Sale Report Fetch Error:", err, xhr.responseText);
+                    $('#saleBody').html('<tr><td colspan="11" class="text-center py-4 text-danger">Failed to load sales data. Please check console or try again.</td></tr>');
                 }
             });
-        });
+        }
 
         // Function to update Summary Metrics (Desktop & Mobile)
         function updateSingleLineSummary(count, qty, gross, returns, net) {

@@ -340,7 +340,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/invoice-series/fetch', [SaleController::class, 'fetchInvoiceSeries'])->name('invoice_series.fetch');
     Route::post('/invoice-series/store', [SaleController::class, 'storeInvoiceSeries'])->name('invoice_series.store');
     Route::get('/invoice-series/generate-no', [SaleController::class, 'generateInvoiceNoAjax'])->name('invoice_series.generate_no');
-    Route::get('pos', [App\Http\Controllers\POSController::class, 'index'])->middleware('permission:sales.create')->name('pos.index');
+    Route::get('pos', [App\Http\Controllers\POSController::class, 'index'])->middleware('permission:pos.view|sales.create')->name('pos.index');
     Route::post('/pos/search-invoice', [App\Http\Controllers\POSController::class, 'searchInvoice'])->middleware('permission:sales.create')->name('pos.search_invoice');
     Route::get('/products/search', [ProductController::class, 'searchProducts'])->name('products.search');
     Route::get('/search-product-name', [SaleController::class, 'searchpname'])->name('search-product-name');
@@ -359,6 +359,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/sales/{id}/dc', [SaleController::class, 'saledc'])->middleware('permission:sales.view')->name('sales.dc');
     Route::get('/sales/{id}/dc-thermal', [SaleController::class, 'saledcThermal'])->middleware('permission:sales.view')->name('sales.dc_thermal');
     Route::get('/sales/{id}/recepit', [SaleController::class, 'salereceipt'])->middleware('permission:sales.view')->name('sales.receipt');
+    Route::get('/sales/{id}/technical-doc', [SaleController::class, 'technicalDocument'])->middleware('permission:sales.view')->name('sales.technical_doc');
     Route::post('/sales/{id}/order-status', [SaleController::class, 'updateOrderStatus'])->middleware('permission:sales.edit|bookings.edit|sales.create|bookings.create')->name('sales.update_order_status');
     Route::post('/sale/{id}/order-status', [SaleController::class, 'updateOrderStatus'])->middleware('permission:sales.edit|bookings.edit|sales.create|bookings.create');
     Route::get('/sales/{id}/delivery-details', [SaleController::class, 'getDeliveryDetails'])->middleware('permission:sales.edit|bookings.edit|sales.create|bookings.create')->name('sales.delivery_details');
@@ -564,25 +565,25 @@ Route::middleware('auth')->group(function () {
 
     // Purchase Requisitions (PR)
     Route::get('/purchase-requisitions', [\App\Http\Controllers\PurchaseRequisitionController::class, 'index'])
-        ->middleware('permission:purchases.view')->name('purchase-requisitions.index');
+        ->middleware('permission:purchase.requisitions.view|purchases.view')->name('purchase-requisitions.index');
     Route::get('/purchase-requisitions/create', [\App\Http\Controllers\PurchaseRequisitionController::class, 'create'])
-        ->middleware('permission:purchases.create')->name('purchase-requisitions.create');
+        ->middleware('permission:purchase.requisitions.create|purchases.create')->name('purchase-requisitions.create');
     Route::post('/purchase-requisitions', [\App\Http\Controllers\PurchaseRequisitionController::class, 'store'])
-        ->middleware('permission:purchases.create')->name('purchase-requisitions.store');
+        ->middleware('permission:purchase.requisitions.create|purchases.create')->name('purchase-requisitions.store');
     Route::get('/purchase-requisitions/{id}', [\App\Http\Controllers\PurchaseRequisitionController::class, 'show'])
-        ->middleware('permission:purchases.view')->name('purchase-requisitions.show');
+        ->middleware('permission:purchase.requisitions.view|purchases.view')->name('purchase-requisitions.show');
     Route::post('/purchase-requisitions/{id}/approve', [\App\Http\Controllers\PurchaseRequisitionController::class, 'approve'])
-        ->middleware('permission:purchases.edit')->name('purchase-requisitions.approve');
+        ->middleware('permission:purchase.requisitions.edit|purchases.edit')->name('purchase-requisitions.approve');
     Route::post('/purchase-requisitions/{id}/reject', [\App\Http\Controllers\PurchaseRequisitionController::class, 'reject'])
-        ->middleware('permission:purchases.edit')->name('purchase-requisitions.reject');
+        ->middleware('permission:purchase.requisitions.edit|purchases.edit')->name('purchase-requisitions.reject');
     Route::get('/purchase-requisitions/{id}/convert-to-po', [\App\Http\Controllers\PurchaseRequisitionController::class, 'convertToPO'])
-        ->middleware('permission:purchases.create')->name('purchase-requisitions.convert-to-po');
+        ->middleware('permission:purchase.requisitions.create|purchases.create')->name('purchase-requisitions.convert-to-po');
     Route::delete('/purchase-requisitions/{id}', [\App\Http\Controllers\PurchaseRequisitionController::class, 'destroy'])
-        ->middleware('permission:purchases.delete')->name('purchase-requisitions.destroy');
+        ->middleware('permission:purchase.requisitions.delete|purchases.delete')->name('purchase-requisitions.destroy');
 
     // GRN (Goods Received Note)
     Route::get('/grn', [\App\Http\Controllers\GrnController::class, 'index'])
-        ->middleware('permission:purchases.view')->name('grn.index');
+        ->middleware('permission:grn.view|purchases.view')->name('grn.index');
     Route::get('/grn/create', [\App\Http\Controllers\GrnController::class, 'create'])
         ->middleware('permission:purchases.create')->name('grn.create');
     Route::post('/grn', [\App\Http\Controllers\GrnController::class, 'store'])

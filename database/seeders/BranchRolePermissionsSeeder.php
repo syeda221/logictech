@@ -25,31 +25,30 @@ class BranchRolePermissionsSeeder extends Seeder
 
         $allPermissions = Permission::all();
 
-        // ── Branch Manager Permissions (Full Management & Approvals) ──
+        // ── Branch Manager Permissions (Strict: Vendor, Purchase Orders, Material Usage, Sales, Customer) ──
         $managerPatterns = [
             // Core
             'home.view', 'profile.*',
 
-            // Products & Catalog
-            'products.*', 'categories.*', 'subcategories.*', 'brands.*', 'units.*',
-            'discount.products.*', 'product.bookings.*', 'web_products.*',
+            // 1. Vendors
+            'vendors.*', 'vendor.ledger.*',
 
-            // Inventory & Warehouse
-            'stocks.*', 'stock.adjust.*', 'stock.transfer.*', 'inventory.onhand.*',
-            'item.stock.report.*', 'warehouse.*', 'warehouse.stock.*',
+            // 2. Purchase Orders (PO)
+            'purchases.*', 'purchase.report.*',
+
+            // 3. Material Usage & Reporting
             'material.usage.*', 'material.usage.report.*',
 
-            // Purchase & Supply Chain
-            'purchases.*', 'purchase.returns.*', 'purchase.report.*',
-            'inward.gatepass.*', 'vendors.*', 'vendor.ledger.*', 'vendor.bilties.*', 'payable.report.*',
+            // 4. Sales (excluding sales officers)
+            'sales.view',
+            'sales.create',
+            'sales.edit',
+            'sales.delete',
+            'sales.returns.*',
+            'sale.report.*',
 
-            // Sales, POS & Customers
-            'sales.*', 'sales.officers.*', 'sales.returns.*', 'sale.report.*',
-            'customers.*', 'customer.ledger.*', 'coupons.*',
-
-            // Accounts & Vouchers
-            'expense.voucher.*', 'income.voucher.*', 'receipts.voucher.*', 'payment.voucher.*',
-            'parties.balance.report.*', 'aging.report.*', 'reporting.*'
+            // 5. Customers
+            'customers.*', 'customer.ledger.*',
         ];
 
         $managerPerms = $this->matchPermissions($allPermissions, $managerPatterns);

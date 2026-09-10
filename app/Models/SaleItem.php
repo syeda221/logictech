@@ -11,8 +11,10 @@ class SaleItem extends Model
         'brand_id', 'category_id', 'sub_category_id', 'unit_id', 'size_mode',
         'qty', 'price', 'total',
         'discount_percent', 'discount_amount',
+        'tax_percent', 'tax_amount',
         'color', 'total_pieces', 'loose_pieces',
         'price_per_piece', 'price_per_m2', 'is_manual', 'vendor_id', 'purchase_price',
+        'technical_name', 'technical_specs', 'technical_remarks',
     ];
 
     public function sale()

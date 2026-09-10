@@ -791,18 +791,18 @@
                 <!-- TOP INFORMATION PANEL (PILL TOOLBAR LAYOUT) -->
                 <div class="card-panel mb-2">
                     <div class="d-flex flex-wrap align-items-end gap-3 w-100">
-                        <!-- Customer & Walk-in Toggle (WIDE & PROMINENT) -->
+                        <!-- Customer & Add Customer Button (WIDE & PROMINENT) -->
                         <div style="flex: 2 1 280px; min-width: 230px;">
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <label class="form-label mb-0"><i class="fas fa-user text-primary me-1"></i>Customer</label>
-                                <div class="form-check form-switch mb-0 d-flex align-items-center p-0">
-                                    <input class="form-check-input ms-0 me-1" type="checkbox" role="switch" id="walkinToggle" name="is_walkin" value="1" checked style="cursor: pointer; width: 28px; height: 14px;">
-                                    <label class="form-check-label fw-bold" for="walkinToggle" style="color: #2563eb; font-size: 0.70rem; cursor: pointer;">Walk-in</label>
-                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 fw-bold d-flex align-items-center gap-1" id="btnHeaderAddCustomer" data-bs-toggle="modal" data-bs-target="#addCustomerModal" data-toggle="modal" data-target="#addCustomerModal" style="font-size: 0.70rem; height: 22px; border-radius: 4px;">
+                                    <i class="fas fa-plus"></i> Add Customer
+                                </button>
+                                <input type="hidden" id="walkinToggle" name="is_walkin" value="0">
                             </div>
                             <div id="customerInputWrapper">
-                                <input type="text" class="form-control fw-bold" name="walkin_name" id="walkinNameInput" value="Walk-in Customer" placeholder="Enter Customer Name...">
-                                <select class="form-select d-none" id="customerSelect" name="customer" style="width:100%">
+                                <input type="text" class="form-control fw-bold d-none" name="walkin_name" id="walkinNameInput" placeholder="Enter Customer Name...">
+                                <select class="form-select" id="customerSelect" name="customer" style="width:100%">
                                     <option value=""></option>
                                 </select>
                             </div>
@@ -830,10 +830,10 @@
                         <input type="hidden" name="order_status" id="orderStatusSelect" value="pending">
                         <input type="hidden" name="delivery_date" id="actualDeliveryDateInput" value="">
 
-                        <!-- Remarks (User Choice: WIDE & PROMINENT) -->
+                        <!-- Subject (Formerly Remarks) -->
                         <div style="flex: 1.5 1 180px; min-width: 150px;">
-                            <label class="form-label"><i class="fas fa-comment-dots text-primary me-1"></i>Remarks</label>
-                            <input type="text" class="form-control" name="reference" id="remarks" placeholder="e.g. Self Collected">
+                            <label class="form-label"><i class="fas fa-file-alt text-primary me-1"></i>Subject</label>
+                            <input type="text" class="form-control" name="reference" id="remarks" placeholder="e.g. Induction Heater Order / Subject">
                         </div>
 
                         <!-- Quick Save / Book Order Button (Hidden) -->
@@ -863,7 +863,7 @@
                                         <i class="fas fa-th me-1"></i>Quick Products Panel
                                     </button>
                                 </div>
-                                <div class="d-flex gap-1">
+                                <div class="d-flex gap-1 align-items-center">
                                     <button type="button" class="btn btn-erp-pill-outline py-1 px-3 fw-bold" id="btnOpenCreateProduct" data-bs-toggle="modal" data-bs-target="#quickAddProductModal" data-toggle="modal" data-target="#quickAddProductModal" style="height: 30px; font-size:0.75rem;">
                                         <i class="fas fa-bolt text-warning me-1"></i>Create Product
                                     </button>
@@ -881,11 +881,12 @@
                                             <th class="col-product" style="min-width: 160px;">PRODUCT / SPECIFICATIONS</th>
                                             <th class="col-model" style="width: 95px;">MODEL</th>
                                             <th class="col-serial" style="width: 85px;">SERIAL NO</th>
-                                            <th class="col-stock" style="width: 55px;">STOCK</th>
+                                            <th class="col-stock d-none" style="width: 55px;">STOCK</th>
                                             <th class="col-qty" style="width: 85px;">QTY</th>
                                             <th class="col-pieces" style="width: 50px;">UNIT</th>
                                             <th class="col-price-p" style="width: 85px;">PRICE</th>
                                             <th class="col-disc" style="width: 75px;">DISCOUNT</th>
+                                            <th class="col-tax" style="width: 80px;">GST %</th>
                                             <th class="col-amount" style="width: 90px;">AMOUNT</th>
                                             <th class="col-action" style="width: 30px;">×</th>
                                         </tr>
@@ -906,6 +907,15 @@
                                                 <input type="hidden" class="size-h">
                                                 <input type="hidden" class="size-w">
                                                 <input type="hidden" class="size-mode-text">
+                                                <div class="mt-1 d-flex align-items-center gap-1">
+                                                    <button type="button" class="btn btn-sm btn-outline-primary py-0 px-1.5 btn-toggle-specs" style="font-size: 0.68rem; height: 20px; border-radius: 4px;" title="Enter Specifications & Details Manually">
+                                                        <i class="fas fa-sliders-h me-1"></i>+ Specs / Details <i class="fas fa-chevron-down ms-0.5 arrow-icon"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-sm btn-outline-success py-0 px-1.5 btn-toggle-row-gst" style="font-size: 0.68rem; height: 20px; border-radius: 4px;" title="Toggle GST Tax on this product">
+                                                        <i class="fas fa-percent me-0.5"></i><span class="row-gst-btn-text">+ GST %</span>
+                                                    </button>
+                                                    <span class="badge bg-light text-muted border specs-filled-badge d-none" style="font-size: 0.65rem;">Specs Added</span>
+                                                </div>
                                             </td>
 
                                             <!-- MODEL -->
@@ -918,8 +928,8 @@
                                                 <input type="text" class="form-control serial-no-input text-center font-monospace" name="serial_no[]" placeholder="e.g. 10001">
                                             </td>
 
-                                            <!-- STOCK -->
-                                            <td class="col-stock">
+                                            <!-- STOCK (HIDDEN) -->
+                                            <td class="col-stock d-none">
                                                 <input type="text" class="form-control stock text-center input-readonly" readonly tabindex="-1">
                                                 <input type="hidden" class="warehouse" name="warehouse_id[]" value="{{ auth()->user()->warehouse_id ?? 1 }}">
                                                 <input type="hidden" class="variant-stock-value">
@@ -983,6 +993,26 @@
                                                 <input type="hidden" class="discount-amount" value="0">
                                             </td>
 
+                                            <!-- GST % -->
+                                            <td class="col-tax">
+                                                <div class="d-flex align-items-center gap-1">
+                                                    <input type="number"
+                                                           step="any"
+                                                           min="0"
+                                                           max="100"
+                                                           class="form-control item-tax-percent text-end font-monospace fw-bold"
+                                                           name="item_tax_percent[]"
+                                                           placeholder="0"
+                                                           value="0"
+                                                           style="flex: 1; min-width: 0; height: 26px; font-size: 0.82rem; padding: 1px 4px;">
+                                                    <button type="button"
+                                                           class="btn btn-sm btn-outline-success btn-row-gst px-1 py-0 fw-bold"
+                                                           title="Toggle 18% GST on this item"
+                                                           style="font-size: 0.65rem; height: 26px; min-width: 24px; border-radius: 4px; flex-shrink: 0;">%</button>
+                                                </div>
+                                                <input type="hidden" class="item-tax-amount" name="item_tax_amount[]" value="0">
+                                            </td>
+
                                             <!-- AMOUNT -->
                                             <td class="col-amount">
                                                 <input type="text" class="form-control sales-amount text-end input-readonly fw-bold text-dark" name="total[]" value="0" readonly tabindex="-1">
@@ -994,10 +1024,37 @@
                                                 <button type="button" class="btn btn-sm btn-outline-danger del-row" tabindex="-1">&times;</button>
                                             </td>
                                         </tr>
+                                        <!-- EXPANDABLE SPECIFICATIONS SUB-ROW -->
+                                        <tr class="specs-subrow bg-light d-none" style="border-top: 1px dashed #cbd5e1;">
+                                            <td colspan="12" class="p-2 bg-light">
+                                                <div class="p-2 bg-white rounded border border-primary-subtle shadow-sm">
+                                                    <div class="d-flex align-items-center justify-content-between mb-1">
+                                                        <span class="fw-bold text-primary" style="font-size: 0.75rem;">
+                                                            <i class="fas fa-microchip me-1"></i>Manual Specifications &amp; Technical Details (Item #<span class="specs-row-num">1</span>)
+                                                        </span>
+                                                        <span class="text-muted small" style="font-size: 0.68rem;">Will appear in Company Technical Document &amp; Specifications</span>
+                                                    </div>
+                                                    <div class="row g-2">
+                                                        <div class="col-md-4">
+                                                            <label class="form-label mb-0 fw-semibold text-secondary" style="font-size: 0.68rem;">Equipment / Technical Title</label>
+                                                            <input type="text" class="form-control form-control-sm item-tech-name" name="technical_name[]" placeholder="e.g. Induction Heater 60 KW Forging Machine" style="font-size: 0.75rem;">
+                                                        </div>
+                                                        <div class="col-md-5">
+                                                            <label class="form-label mb-0 fw-semibold text-secondary" style="font-size: 0.68rem;">Technical Specifications &amp; Parameters</label>
+                                                            <input type="text" class="form-control form-control-sm item-tech-specs" name="technical_specs[]" placeholder="e.g. Power: 60KW, Frequency: 10-30kHz, Coil Size: 150mm..." style="font-size: 0.75rem;">
+                                                        </div>
+                                                        <div class="col-md-3">
+                                                            <label class="form-label mb-0 fw-semibold text-secondary" style="font-size: 0.68rem;">QC / Engineering Remarks</label>
+                                                            <input type="text" class="form-control form-control-sm item-tech-remarks" name="technical_remarks[]" placeholder="e.g. Approved with Chiller" style="font-size: 0.75rem;">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
                                     </tbody>
                                     <tfoot>
                                         <tr id="gridAlertRow" class="d-none">
-                                            <td colspan="11" class="p-1 border-0" style="background-color: transparent !important;">
+                                            <td colspan="12" class="p-1 border-0" style="background-color: transparent !important;">
                                                 <div id="gridAlertBox" class="alert alert-warning d-flex align-items-center justify-content-between px-2 py-1 mb-0 rounded border border-warning shadow-sm" style="font-size: 0.78rem; font-weight: 600; color: #856404; background-color: #fff3cd;">
                                                     <div class="d-flex align-items-center gap-1">
                                                         <i class="fas fa-exclamation-triangle text-warning me-1 alert-icon" style="font-size: 0.85rem;"></i>
@@ -1012,8 +1069,43 @@
                                             <td class="text-end fw-bold fs-6" style="color: #059669;"><span id="totalAmount">0.00</span></td>
                                             <td></td>
                                         </tr>
+                                        <!-- GST / Sales Tax Row (Toggleable) -->
+                                        <tr id="gstFooterRow" class="d-none" style="background-color: #f0fdf4;">
+                                            <td colspan="9" class="text-end fw-bold" style="font-size:0.78rem; color: #047857;">
+                                                <span class="d-inline-flex align-items-center gap-1 justify-content-end">
+                                                    <i class="fas fa-receipt me-1"></i> Sales Tax / GST Rate:
+                                                    <div class="input-group input-group-sm" style="width: 100px;">
+                                                        <input type="number" step="0.5" min="0" max="100" class="form-control form-control-sm text-end fw-bold font-monospace" id="gstPercentInput" name="tax_percent" value="18" placeholder="18">
+                                                        <span class="input-group-text bg-white fw-bold px-1 text-success">%</span>
+                                                    </div>
+                                                </span>
+                                            </td>
+                                            <td class="text-end fw-bold font-monospace" style="font-size:0.78rem; color: #047857;">
+                                                GST Amount:
+                                            </td>
+                                            <td class="text-end fw-bold font-monospace fs-6" style="color: #047857;">
+                                                <span id="gstAmountDisplay">0.00</span>
+                                                <input type="hidden" id="taxAmountInput" name="tax_amount" value="0">
+                                            </td>
+                                            <td class="text-center">
+                                                <button type="button" class="btn btn-sm text-danger p-0" id="btnRemoveGst" title="Remove GST" style="font-size: 1.1rem; line-height: 1;">&times;</button>
+                                            </td>
+                                        </tr>
                                     </tfoot>
                                 </table>
+                            </div>
+
+                            <!-- Terms & Conditions Card (Manual / Client Order) -->
+                            <div class="card-panel p-2.5 bg-white mt-2" style="border-radius:10px;">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label class="form-label mb-0 fw-bold text-dark" style="font-size: 0.78rem;">
+                                        <i class="fas fa-file-contract text-primary me-1"></i>Terms &amp; Conditions (Manual as per Client Order / Payments)
+                                    </label>
+                                    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none text-muted" id="btnResetTerms" style="font-size: 0.68rem;" title="Reset to default terms">
+                                        <i class="fas fa-undo me-1"></i>Default
+                                    </button>
+                                </div>
+                                <textarea class="form-control" name="terms_and_conditions" id="termsAndConditions" rows="2" style="font-size: 0.78rem; resize: vertical;" placeholder="Enter Terms & Conditions manually as per client order, payment terms, warranty, etc.">{{ \App\Models\Setting::get('invoice_terms', '1. Payment terms as agreed. 2. Warranty 1 year. 3. Goods once sold will not be returned without authorization.') }}</textarea>
                             </div>
                         </div>
                     </div>
@@ -1036,6 +1128,10 @@
                                     <span class="text-muted fw-semibold">Discount</span>
                                     <span class="fw-bold text-danger font-monospace" id="tLineDisc">0.00</span>
                                 </div>
+                                <div class="summary-row d-none" id="summaryGstRow">
+                                    <span class="text-muted fw-semibold">GST / Tax (<span id="summaryGstRate">18</span>%)</span>
+                                    <span class="fw-bold font-monospace text-success" id="summaryGstAmount">0.00</span>
+                                </div>
                                 <div class="summary-row">
                                     <span class="fw-bold text-dark">Net Total</span>
                                     <span class="summary-val-net font-monospace" id="tSub">0.00</span>
@@ -1054,7 +1150,14 @@
                             <div class="card-panel p-3 bg-white flex-grow-1 d-flex flex-column" style="border-radius:10px;">
                                 <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom" style="border-color: #dbeafe !important;">
                                     <span class="fw-bold text-dark" style="font-size:0.82rem;"><i class="fas fa-wallet text-success me-1"></i>Advance / Payment</span>
-                                    <button type="button" class="btn btn-erp-pill-outline py-0 px-2 fw-bold" id="btnAddRV" style="height: 26px; font-size:0.7rem;"><i class="fas fa-plus me-1"></i>Add Account</button>
+                                    <div class="d-flex align-items-center gap-1">
+                                        <button type="button" class="btn btn-erp-pill-outline py-0 px-2 fw-bold" id="btnOpenAddAccountModal" data-bs-toggle="modal" data-bs-target="#quickAddAccountModal" data-toggle="modal" data-target="#quickAddAccountModal" style="height: 26px; font-size:0.7rem;" title="Create new account in Chart of Accounts">
+                                            <i class="fas fa-plus text-success me-1"></i>Add Account
+                                        </button>
+                                        <button type="button" class="btn btn-erp-pill-outline py-0 px-1.5 fw-bold" id="btnAddRV" style="height: 26px; font-size:0.7rem;" title="Add payment row for split payment">
+                                            <i class="fas fa-layer-group me-0.5"></i>Split
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div id="rvWrapper" class="mb-2">
@@ -1088,12 +1191,13 @@
                         <span class="fs-6 fw-bold text-danger font-monospace" id="bottomTotalDiscount">0.00</span>
                     </div>
 
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="text-muted fw-semibold" style="font-size:0.8rem;">Extra Disc:</span>
-                        <div class="input-group input-group-sm" style="width: 120px;">
-                            <input type="number" class="form-control text-end fw-bold text-danger font-monospace" id="walkinDiscountRs" value="0" placeholder="0">
-                            <span class="input-group-text bg-light text-muted px-1">Rs</span>
-                        </div>
+                    <!-- Hidden Extra Disc input to keep calculations safe without UI clutter -->
+                    <input type="hidden" id="walkinDiscountRs" name="total_extra_cost" value="0">
+
+                    <!-- GST Strip -->
+                    <div class="d-flex align-items-center gap-2 d-none" id="bottomGstStrip">
+                        <span class="text-muted fw-semibold" style="font-size:0.8rem;">GST:</span>
+                        <span class="fs-6 fw-bold text-success font-monospace" id="bottomGstVal">0.00</span>
                     </div>
 
                     <div class="d-flex align-items-center gap-2">
@@ -1226,6 +1330,62 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     <button type="button" class="btn btn-primary" id="btnSaveAjaxCustomer">Save Customer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Add Account (Chart of Accounts) Modal -->
+    <div class="modal fade" id="quickAddAccountModal" tabindex="-1" aria-labelledby="quickAddAccountModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="quickAddAccountModalLabel">
+                        <i class="fas fa-university text-success me-2"></i>New Account (Chart of Accounts)
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="ajaxAddAccountForm">
+                        @csrf
+                        <input type="hidden" name="_ajax" value="1">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Account Title <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="title" id="quickAccountTitle" required placeholder="e.g. Meezan Bank, Cash Counter 2, HBL">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Category / Head <span class="text-danger">*</span></label>
+                            <select class="form-select" name="head_id" id="quickAccountHeadId" required>
+                                @if(isset($accountHeads) && count($accountHeads) > 0)
+                                    @foreach($accountHeads as $head)
+                                        <option value="{{ $head->id }}">{{ $head->name }} ({{ $head->type ?? 'Asset' }})</option>
+                                    @endforeach
+                                @else
+                                    <option value="1">Cash (Asset)</option>
+                                    <option value="2">Bank (Asset)</option>
+                                @endif
+                            </select>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Account Type</label>
+                                <select class="form-select" name="type" id="quickAccountType">
+                                    <option value="Debit" selected>Debit (Cash / Bank Asset)</option>
+                                    <option value="Credit">Credit</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Opening Balance</label>
+                                <input type="number" step="0.01" class="form-control text-end font-monospace" name="opening_balance" id="quickAccountBalance" value="0.00">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-success" id="btnSaveQuickAccount">
+                        <i class="fas fa-check me-1"></i>Create &amp; Select Account
+                    </button>
                 </div>
             </div>
         </div>
@@ -1572,6 +1732,74 @@
                             msg = err.responseJSON.message;
                         }
                         
+                        if (typeof showAlert === 'function') {
+                            showAlert('error', msg);
+                        } else if (typeof Swal !== 'undefined') {
+                            Swal.fire('Error', msg, 'error');
+                        } else {
+                            alert(msg);
+                        }
+                    }
+                });
+            });
+
+            // Reset Terms & Conditions to Default
+            $('#btnResetTerms').on('click', function(e) {
+                e.preventDefault();
+                $('#termsAndConditions').val("{{ \App\Models\Setting::get('invoice_terms', '1. Payment terms as agreed. 2. Warranty 1 year. 3. Goods once sold will not be returned without authorization.') }}");
+            });
+
+            // Quick Add Account (Chart of Accounts) AJAX Submit
+            $('#btnSaveQuickAccount').on('click', function(e) {
+                e.preventDefault();
+                let form = $('#ajaxAddAccountForm');
+                if (!form[0].checkValidity()) {
+                    form[0].reportValidity();
+                    return;
+                }
+
+                let btn = $(this);
+                btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Saving...');
+
+                $.ajax({
+                    url: "{{ route('accounts.store') }}",
+                    type: "POST",
+                    data: form.serialize(),
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    },
+                    success: function(res) {
+                        btn.prop('disabled', false).html('<i class="fas fa-check me-1"></i> Create &amp; Select Account');
+                        if (res.success && res.account) {
+                            $('#quickAddAccountModal').modal('hide');
+                            form[0].reset();
+
+                            // Append option to all .rv-account dropdowns
+                            const newOpt = new Option(res.account.title, res.account.id, true, true);
+                            $('.rv-account').append(newOpt);
+
+                            // Select in the latest / active row
+                            $('.rv-account').last().val(res.account.id).trigger('change');
+
+                            if (typeof accountData !== 'undefined' && Array.isArray(accountData)) {
+                                accountData.push(res.account);
+                            }
+
+                            if (typeof showAlert === 'function') {
+                                showAlert('success', 'Account "' + res.account.title + '" created & selected!');
+                            } else if (typeof Swal !== 'undefined') {
+                                Swal.fire({ icon: 'success', title: 'Created!', text: 'Account created & selected!', timer: 1500, showConfirmButton: false });
+                            }
+                        } else {
+                            location.reload();
+                        }
+                    },
+                    error: function(xhr) {
+                        btn.prop('disabled', false).html('<i class="fas fa-check me-1"></i> Create &amp; Select Account');
+                        let msg = 'Failed to create account. Please check inputs.';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            msg = xhr.responseJSON.message;
+                        }
                         if (typeof showAlert === 'function') {
                             showAlert('error', msg);
                         } else if (typeof Swal !== 'undefined') {

@@ -70,22 +70,32 @@ class AccountsHeadController extends Controller
 
     public function storeAccount(Request $request)
     {
+        // If head_id is missing or invalid, fallback to/create default Cash head
+        if (!$request->filled('head_id') || !AccountHead::where('id', $request->head_id)->exists()) {
+            $defaultHead = AccountHead::firstOrCreate(
+                ['name' => 'Cash'],
+                ['code' => '1001', 'type' => 'Asset', 'level' => 1]
+            );
+            $request->merge(['head_id' => $defaultHead->id]);
+        }
+
         $request->validate([
             'head_id' => 'required|exists:account_heads,id',
-            'title' => 'required',
-            'opening_balance' => 'required|numeric',
-            'type' => 'required',
+            'title' => 'required|string|max:255',
+            'opening_balance' => 'nullable|numeric',
+            'type' => 'nullable|string',
         ]);
 
-        $initialBalance = (float) $request->opening_balance;
+        $initialBalance = (float) ($request->opening_balance ?? 0);
+        $type = $request->type ?: 'Debit';
 
         $account = Account::create([
             'head_id' => $request->head_id,
             'title' => $request->title,
             'opening_balance' => $initialBalance,
-            'current_balance' => $initialBalance, // Sync current balance initially
-            'type' => $request->type,
-            'status' => $request->has('status') ? 1 : 0,
+            'current_balance' => $initialBalance,
+            'type' => $type,
+            'status' => 1,
         ]);
 
         $account->account_code = 'ACC-'.str_pad($account->id, 4, '0', STR_PAD_LEFT);
@@ -100,6 +110,14 @@ class AccountsHeadController extends Controller
             'user_name' => auth()->user()->name ?? 'User',
             'note' => 'Account created with initial balance: Rs ' . number_format($initialBalance, 2),
         ]);
+
+        if ($request->ajax() || $request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest' || $request->filled('_ajax')) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Account created successfully!',
+                'account' => $account,
+            ]);
+        }
 
         return back()->with('success', 'Account added successfully!');
     }

@@ -799,7 +799,8 @@
                             @canany(['products.view', 'discount.products.view', 'categories.view', 'subcategories.view',
                                 'brands.view', 'units.view', 'vendors.view', 'purchases.view', 'purchase_pos.create',
                                 'warehouse.view', 'warehouse.stock.view', 'stock.transfer.view', 'stock.adjust.view', 'stock.adjust.create',
-                                'sales.view', 'sales.create', 'customers.view', 'zones.view', 'sales.officers.view', 'receipts.voucher.view'])
+                                'material.usage.view',
+                                'sales.view', 'sales.create', 'pos.view', 'customers.view', 'zones.view', 'sales.officers.view', 'receipts.voucher.view'])
                                 <a href="#" class="nav-link">
                                      <i class="menu_icon fas fa-cogs"></i>
                                      <span class="menu-title">Management</span>
@@ -848,18 +849,22 @@
                                             </div>
                                         @endcanany
                                         <!-- Purchase & Inventory -->
-                                        @canany(['vendors.view', 'purchases.view', 'purchase_pos.create'])
+                                        @canany(['vendors.view', 'purchases.view', 'purchase.requisitions.view', 'grn.view', 'purchase_pos.create'])
                                             <div class="col-group col-md-3">
                                                 <p class="category-heading">Purchase &amp; Procurement</p>
                                                 <ul class="submenu-item">
                                                     @can('vendors.view')
                                                         <li><a href="{{ url('vendor') }}"><i class="fas fa-truck"></i> Vendors / Suppliers</a></li>
                                                     @endcan
-                                                    <li><a href="{{ route('purchase-requisitions.index') }}"><i class="fas fa-file-contract"></i> Purchase Requisitions (PR)</a></li>
+                                                    @can('purchase.requisitions.view')
+                                                        <li><a href="{{ route('purchase-requisitions.index') }}"><i class="fas fa-file-contract"></i> Purchase Requisitions (PR)</a></li>
+                                                    @endcan
                                                     @can('purchases.view')
                                                         <li><a href="{{ route('Purchase.home') }}"><i class="fas fa-shopping-cart"></i> Purchase Orders (PO)</a></li>
                                                     @endcan
-                                                    <li><a href="{{ route('grn.index') }}"><i class="fas fa-dolly-flatbed"></i> Goods Receipts (GRN)</a></li>
+                                                    @can('grn.view')
+                                                        <li><a href="{{ route('grn.index') }}"><i class="fas fa-dolly-flatbed"></i> Goods Receipts (GRN)</a></li>
+                                                    @endcan
                                                     @can('purchase_pos.create')
                                                         <li><a href="{{ route('purchase-pos.index') }}"><i class="fas fa-cash-register"></i> Purchase POS</a></li>
                                                     @endcan
@@ -867,7 +872,7 @@
                                             </div>
                                         @endcanany
                                         <!-- Accounts / Inventory -->
-                                        @canany(['warehouse.view', 'warehouse.stock.view', 'stock.transfer.view', 'stock.adjust.view', 'stock.adjust.create'])
+                                        @canany(['warehouse.view', 'warehouse.stock.view', 'stock.transfer.view', 'stock.adjust.view', 'stock.adjust.create', 'material.usage.view'])
                                             <div class="col-group col-md-3">
                                                 <p class="category-heading">Inventory Management</p>
                                                 <ul class="submenu-item">
@@ -895,7 +900,7 @@
                                             </div>
                                         @endcanany
                                         <!-- Customers & Sales -->
-                                        @canany(['sales.view', 'sales.create', 'customers.view', 'sales.officers.view',
+                                        @canany(['sales.view', 'pos.view', 'customers.view', 'sales.officers.view',
                                             'receipts.voucher.view', 'zones.view'])
                                             <div class="col-group col-md-3">
                                                 <p class="category-heading">Sales & Customers</p>
@@ -904,7 +909,7 @@
                                                         <li><a href="{{ url('sale') }}"><i class="fas fa-receipt"></i>
                                                                 Sales</a></li>
                                                     @endcan
-                                                    @can('sales.create')
+                                                    @can('pos.view')
                                                         <li><a href="{{ route('pos.index') }}"><i class="fas fa-cash-register"></i>
                                                                 POS System</a></li>
                                                     @endcan
@@ -976,7 +981,7 @@
                             @endcanany
                         </li>
                         <li class="nav-item">
-                            @canany(['item.stock.report.view', 'purchase.report.view', 'sale.report.view',
+                            @canany(['item.stock.report.view', 'material.usage.report.view', 'purchase.report.view', 'sale.report.view',
                                 'customer.ledger.view', 'vendor.ledger.view', 'inventory.onhand.view', 'profit.loss.report.view',
                                 'recovery.report.view', 'payable.report.view', 'parties.balance.report.view', 'aging.report.view', 'balance.sheet.report.view', 'executive.report.view'])
                                 <a href="#" class="nav-link">

@@ -33,8 +33,19 @@ class ReportingController extends Controller
     public function item_stock_report()
     {
         $user = auth()->user();
-        $categories = Category::orderBy('name')->get();
-        $units      = Unit::orderBy('name')->get();
+        
+        // Fetch only categories that have raw materials
+        $rawCategoryIds = Product::whereIn('item_type', ['raw_material', 'both'])
+            ->pluck('category_id')
+            ->filter()
+            ->unique();
+
+        $categories = Category::whereIn('id', $rawCategoryIds)->orderBy('name')->get();
+        if ($categories->isEmpty()) {
+            $categories = Category::orderBy('name')->get();
+        }
+
+        $units = Unit::orderBy('name')->get();
 
         // Warehouse Permission Filter: Show warehouses only if user has warehouse permission
         if ($user && ($user->email === 'admin@admin.com' || $user->hasRole('Super Admin') || $user->hasRole('Admin') || $user->can('warehouse.view') || $user->can('warehouse.stock.view'))) {
@@ -57,7 +68,8 @@ class ReportingController extends Controller
         $dateFrom    = $request->date_from;
         $dateTo      = $request->date_to;
 
-        $productsQuery = Product::with(['warehouseStocks', 'unit', 'category_relation']);
+        $productsQuery = Product::with(['warehouseStocks', 'unit', 'category_relation'])
+            ->whereIn('item_type', ['raw_material', 'both']);
 
         if ($productId && $productId !== 'all') {
             $productsQuery->where('id', $productId);
@@ -82,6 +94,8 @@ class ReportingController extends Controller
         $rows = [];
         $grandTotalValue   = 0;
         $totalCurrentStock = 0;
+        $totalMaterialUsed = 0;
+        $totalPurchasedQty = 0;
         $totalAdjustments  = 0;
         $totalSoldAmount   = 0;
 
@@ -396,8 +410,22 @@ class ReportingController extends Controller
                 if ($dateTo)   $adjQuery->whereDate('created_at', '<=', $dateTo);
                 $adjustments = (float) $adjQuery->sum('qty');
 
-                // Opening stock
-                $initial = max(0, $balance - $purchased + $sold - $returnedQty + $pReturned - $adjustments);
+                // Material Usage (Consumption in Production)
+                $usageQuery = DB::table('material_usage_items as mui')
+                    ->join('material_usages as mu', 'mu.id', '=', 'mui.material_usage_id')
+                    ->where('mui.product_id', $product->id);
+                if ($warehouseId && $warehouseId !== 'all') {
+                    $usageQuery->where('mu.warehouse_id', $warehouseId);
+                }
+                if ($dateFrom) $usageQuery->whereDate('mu.date', '>=', $dateFrom);
+                if ($dateTo)   $usageQuery->whereDate('mu.date', '<=', $dateTo);
+
+                $usageStats = $usageQuery->selectRaw('COALESCE(SUM(mui.qty_used), 0) as total_qty, COALESCE(SUM(mui.total_cost), 0) as total_cost')->first();
+                $materialUsedQty  = (float) ($usageStats->total_qty ?? 0);
+                $materialUsedCost = (float) ($usageStats->total_cost ?? 0);
+
+                // Opening stock = Closing Balance - Purchased + Material Used + Sold - Sale Return + Purchase Return - Adjustments
+                $initial = max(0, $balance - $purchased + $materialUsedQty + $sold - $returnedQty + $pReturned - $adjustments);
 
                 // Weighted Average Purchase Price
                 $initialAmount  = $initial * $productPurchPrice;
@@ -408,6 +436,8 @@ class ReportingController extends Controller
                 $stockValue        = $balance * $averagePrice;
                 $grandTotalValue  += $stockValue;
                 $totalCurrentStock += $balance;
+                $totalMaterialUsed += $materialUsedQty;
+                $totalPurchasedQty += $purchased;
                 $totalAdjustments  += $adjustments;
                 $totalSoldAmount   += $saleAmount;
 
@@ -437,28 +467,30 @@ class ReportingController extends Controller
                 elseif ($product->alert_quantity && $balance < $product->alert_quantity) $status = 'low_stock';
 
                 $rows[] = [
-                    'id'              => $product->id,
-                    'item_code'       => $product->item_code,
-                    'item_name'       => $product->item_name,
-                    'category_name'   => $product->category_relation->name ?? 'Standard',
-                    'unit_name'       => $unitName,
-                    'size_mode'       => $sizeMode,
-                    'initial_stock'   => $initial,
-                    'purchased'       => $purchased,
-                    'purchase_amount' => $purchaseAmount,
-                    'sold'            => $sold,
-                    'sale_amount'     => $saleAmount,
-                    'returned_qty'    => $returnedQty,
+                    'id'                 => $product->id,
+                    'item_code'          => $product->item_code,
+                    'item_name'          => $product->item_name,
+                    'category_name'      => $product->category_relation->name ?? 'Standard',
+                    'unit_name'          => $unitName,
+                    'size_mode'          => $sizeMode,
+                    'initial_stock'      => $initial,
+                    'purchased'          => $purchased,
+                    'purchase_amount'    => $purchaseAmount,
+                    'material_used'      => $materialUsedQty,
+                    'material_used_cost' => $materialUsedCost,
+                    'sold'               => $sold,
+                    'sale_amount'        => $saleAmount,
+                    'returned_qty'       => $returnedQty,
                     'purch_returned_qty' => $pReturned,
-                    'adjustments'     => $adjustments,
-                    'balance'         => $balance,
-                    'formatted_stock' => $formattedStock,
-                    'carton_display'  => $cartonDisplay,
-                    'cartons'         => $cartons,
-                    'loose'           => $loose,
-                    'average_price'   => $averagePrice,
-                    'stock_value'     => $stockValue,
-                    'status'          => $status,
+                    'adjustments'        => $adjustments,
+                    'balance'            => $balance,
+                    'formatted_stock'    => $formattedStock,
+                    'carton_display'     => $cartonDisplay,
+                    'cartons'            => $cartons,
+                    'loose'              => $loose,
+                    'average_price'      => $averagePrice,
+                    'stock_value'        => $stockValue,
+                    'status'             => $status,
                 ];
             }
         }
@@ -467,6 +499,8 @@ class ReportingController extends Controller
             'data'                  => $rows,
             'grand_total'           => $grandTotalValue,
             'total_current_stock'   => $totalCurrentStock,
+            'total_material_used'   => $totalMaterialUsed,
+            'total_purchased_qty'   => $totalPurchasedQty,
             'total_adjustments_qty' => $totalAdjustments,
             'total_sold_amount'     => $totalSoldAmount,
         ]);
@@ -486,7 +520,10 @@ class ReportingController extends Controller
             ->map(function ($m) {
                 $typeBadge = 'info';
                 $typeLabel = strtoupper($m->type);
-                if ($m->type === 'in' || $m->type === 'assembly_in') {
+                if ($m->ref_type === 'MATERIAL_USAGE') {
+                    $typeBadge = 'primary';
+                    $typeLabel = 'MATERIAL USAGE (-)';
+                } elseif ($m->type === 'in' || $m->type === 'assembly_in') {
                     $typeBadge = 'success';
                     $typeLabel = 'INWARD (+)';
                 } elseif ($m->type === 'out' || $m->type === 'assembly_out') {

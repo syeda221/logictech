@@ -11,7 +11,8 @@ class Sale extends Model
         'customer_id', 'walkin_name', 'reference', 'total_amount_Words', 'total_bill_amount',
         'total_extradiscount', 'total_net', 'cash', 'card', 'change',
         'total_items', 'discount_type', 'sale_status', 'order_status', 'invoice_no', 'is_booking',
-        'credit_days', 'due_date', 'estimated_delivery_date', 'delivery_date', 'payment_details'
+        'credit_days', 'due_date', 'estimated_delivery_date', 'delivery_date', 'payment_details',
+        'delivery_source', 'delivery_remarks', 'tax_percent', 'tax_amount', 'terms_and_conditions'
     ];
 
     public function customer_relation()

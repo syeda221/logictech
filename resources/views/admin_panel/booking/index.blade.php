@@ -19,6 +19,12 @@
                     </div>
                 </div>
 
+                <style>
+                    /* Dropdown overflow fix — prevent card/table-responsive from clipping dropdown menus */
+                    .card { overflow: visible !important; }
+                    .table-responsive { min-height: 380px; padding-bottom: 120px; overflow-x: auto; }
+                    .table-responsive .dropdown-menu { z-index: 1060 !important; }
+                </style>
                 <div class="card border-0 shadow-sm rounded-4">
                     <div class="card-body p-4">
                         @if (session('success'))
@@ -161,7 +167,7 @@
                                                                     <form action="{{ route('sales.confirm', $booking->id) }}" method="POST" class="d-inline confirm-booking-form">
                                                                         @csrf
                                                                         <button type="button" class="dropdown-item d-flex align-items-center gap-2 py-2 text-success confirm-booking-btn">
-                                                                            <i class="fas fa-check-circle fa-fw text-success"></i> Confirm Booking
+                                                                            <i class="fas fa-check-circle fa-fw text-success"></i> Confirm Order
                                                                         </button>
                                                                     </form>
                                                                 </li>
@@ -248,8 +254,8 @@
                     $('input[name="order_state_' + saleId + '"][value="' + prevStatus + '"], input[name="m_order_state_' + saleId + '"][value="' + prevStatus + '"]').prop('checked', true);
                     Swal.fire({
                         icon: 'warning',
-                        title: 'Confirm Booking First!',
-                        text: 'This sale has not been confirmed yet. Please confirm the booking before marking it as delivered.',
+                        title: 'Confirm Order First!',
+                        text: 'This sale has not been confirmed yet. Please confirm the order before marking it as delivered.',
                         confirmButtonText: 'OK',
                         confirmButtonColor: '#f59e0b',
                     });
@@ -381,6 +387,8 @@
                             $('#modalDeliveryInvoiceNo').text('#' + res.sale.id + ' (' + res.sale.invoice_no + ')');
                             $('#modalDeliveryCustomer').text(res.sale.customer_name || 'Walk-in Customer');
                             $('#modalDeliveryDate').val(res.sale.delivery_date || new Date().toISOString().split('T')[0]);
+                            $('#modalDeliverySource').val(res.sale.delivery_source || '');
+                            $('#modalDeliveryRemarks').val(res.sale.delivery_remarks || '');
                             $('#modalDeliveryItemsCount').text(res.sale.items.length);
 
                             let html = '';
@@ -388,31 +396,87 @@
                                 html = '<div class="alert alert-warning py-2 text-center small">No items found for this booking.</div>';
                             } else {
                                 res.sale.items.forEach(function(item, idx) {
+                                    let techNameVal = item.technical_name || item.product_name || '';
                                     html += `
-                                    <div class="card border rounded-3 p-3 bg-white shadow-none" style="border-color: #e2e8f0 !important;">
-                                        <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom">
-                                            <div class="fw-bold text-dark" style="font-size: 0.82rem;">
-                                                <span class="badge bg-primary me-1 font-monospace px-2">${idx + 1}</span>
-                                                ${item.product_name}
-                                                ${item.brand ? '<span class="badge bg-light text-secondary border ms-1 font-monospace" style="font-size: 0.68rem;">' + item.brand + '</span>' : ''}
-                                                ${item.item_code ? '<span class="badge bg-light text-muted border ms-1 font-monospace" style="font-size: 0.68rem;">SKU: ' + item.item_code + '</span>' : ''}
+                                    <div class="card border rounded-3 p-3 bg-white shadow-sm mb-3" style="border-color: #cbd5e1 !important;">
+                                        {{-- Item Header --}}
+                                        <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+                                            <div class="fw-bold text-dark d-flex align-items-center flex-wrap gap-1" style="font-size: 0.86rem;">
+                                                <span class="badge bg-primary text-white font-monospace px-2 py-1">Item #${idx + 1}</span>
+                                                <span class="text-dark fw-bold ms-1">${item.product_name}</span>
+                                                ${item.brand ? '<span class="badge bg-light text-secondary border font-monospace" style="font-size: 0.72rem;">' + item.brand + '</span>' : ''}
+                                                ${item.item_code ? '<span class="badge bg-light text-muted border font-monospace" style="font-size: 0.72rem;">SKU: ' + item.item_code + '</span>' : ''}
                                             </div>
-                                            <span class="badge rounded-pill px-2.5 py-1 fw-bold font-monospace" style="background-color: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; font-size: 0.75rem;">
+                                            <span class="badge rounded-pill px-2.5 py-1 fw-bold font-monospace" style="background-color: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; font-size: 0.76rem;">
                                                 Quantity: ${parseFloat(item.qty) || item.qty}
                                             </span>
                                         </div>
-                                        <div class="row g-2.5">
-                                            <div class="col-md-4">
-                                                <label class="form-label text-secondary fw-bold mb-1" style="font-size: 0.72rem;">Model / Specifications</label>
-                                                <input type="text" class="form-control form-control-sm fw-semibold" name="items[${item.id}][model]" value="${item.model || ''}" placeholder="e.g. LTZ-35KW, 3-Phase 380V">
+
+                                        {{-- Side-by-Side Dual Card Grid --}}
+                                        <div class="row g-3">
+                                            {{-- LEFT CARD: Image 1 - Company Technical Document Card --}}
+                                            <div class="col-lg-6">
+                                                <div class="h-100 p-3 rounded-3 border" style="background-color: #f8fafc; border-color: #93c5fd !important; border-top: 3px solid #2563eb !important;">
+                                                    <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom" style="border-color: #e2e8f0 !important;">
+                                                        <span class="fw-bold text-primary small d-flex align-items-center gap-1.5">
+                                                            <i class="fas fa-file-contract"></i>
+                                                            <span>Company Technical Document</span>
+                                                        </span>
+                                                        <span class="badge bg-primary text-white" style="font-size: 0.65rem; letter-spacing: 0.3px;">INTERNAL SPEC SHEET</span>
+                                                    </div>
+
+                                                    <div class="mb-2">
+                                                        <label class="form-label text-dark fw-bold mb-1" style="font-size: 0.73rem;">
+                                                            Equipment / Technical Title <span class="text-danger">*</span>
+                                                        </label>
+                                                        <input type="text" class="form-control form-control-sm fw-bold bg-white text-dark" name="items[${item.id}][technical_name]" value="${techNameVal}" placeholder='e.g. Induction Heater 60 kw for Forging' required>
+                                                        <div class="text-muted" style="font-size: 0.68rem;">Company technical sheet par title print hoga</div>
+                                                    </div>
+
+                                                    <div class="mb-2">
+                                                        <label class="form-label text-dark fw-bold mb-1" style="font-size: 0.73rem;">
+                                                            Technical Specifications &amp; Parameters
+                                                        </label>
+                                                        <textarea class="form-control form-control-sm bg-white" rows="2" name="items[${item.id}][technical_specs]" placeholder="e.g. Power: 60KW, Input: 380V 3-Phase, Frequency: 30-100kHz, Water Cooled, Custom Coil">${item.technical_specs || ''}</textarea>
+                                                    </div>
+
+                                                    <div class="mb-0">
+                                                        <label class="form-label text-dark fw-bold mb-1" style="font-size: 0.73rem;">
+                                                            Technical Details, QC &amp; Engineering Remarks
+                                                        </label>
+                                                        <input type="text" class="form-control form-control-sm bg-white" name="items[${item.id}][technical_remarks]" value="${item.technical_remarks || ''}" placeholder="e.g. Tested on full load, tuned coil, ready for dispatch">
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div class="col-md-4">
-                                                <label class="form-label text-secondary fw-bold mb-1" style="font-size: 0.72rem;">Serial Number / Unique Code</label>
-                                                <input type="text" class="form-control form-control-sm font-monospace fw-bold text-primary" name="items[${item.id}][serial_no]" value="${item.serial_no || ''}" placeholder="e.g. SN-2026-00891">
-                                            </div>
-                                            <div class="col-md-4">
-                                                <label class="form-label text-secondary fw-bold mb-1" style="font-size: 0.72rem;">Configuration / Notes / Specs</label>
-                                                <input type="text" class="form-control form-control-sm" name="items[${item.id}][specs]" value="${item.specs || ''}" placeholder="e.g. 50Hz Water Cooled, Custom Coil">
+
+                                            {{-- RIGHT CARD: Image 2 - Customer Sale Invoice Card --}}
+                                            <div class="col-lg-6">
+                                                <div class="h-100 p-3 rounded-3 border" style="background-color: #fcfdfd; border-color: #86efac !important; border-top: 3px solid #10b981 !important;">
+                                                    <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom" style="border-color: #e2e8f0 !important;">
+                                                        <span class="fw-bold text-success small d-flex align-items-center gap-1.5">
+                                                            <i class="fas fa-file-invoice"></i>
+                                                            <span>Sale Invoice Specifications</span>
+                                                        </span>
+                                                        <span class="badge bg-success text-white" style="font-size: 0.65rem; letter-spacing: 0.3px;">CUSTOMER PRINT</span>
+                                                    </div>
+
+                                                    <div class="mb-2">
+                                                        <label class="form-label text-secondary fw-bold mb-1" style="font-size: 0.73rem;">Model / Specifications</label>
+                                                        <input type="text" class="form-control form-control-sm fw-semibold bg-white" name="items[${item.id}][model]" value="${item.model || ''}" placeholder="e.g. LTZ-60KW, 3-Phase 380V">
+                                                        <div class="text-muted" style="font-size: 0.68rem;">Customer invoice ke Model field me aayega</div>
+                                                    </div>
+
+                                                    <div class="mb-2">
+                                                        <label class="form-label text-secondary fw-bold mb-1" style="font-size: 0.73rem;">Serial Number / Unique Code</label>
+                                                        <input type="text" class="form-control form-control-sm font-monospace fw-bold text-primary bg-white" name="items[${item.id}][serial_no]" value="${item.serial_no || ''}" placeholder="e.g. SN-2026-00891">
+                                                    </div>
+
+                                                    <div class="mb-0">
+                                                        <label class="form-label text-secondary fw-bold mb-1" style="font-size: 0.73rem;">Configuration / Notes / Specs</label>
+                                                        <input type="text" class="form-control form-control-sm bg-white" name="items[${item.id}][specs]" value="${item.specs || ''}" placeholder="e.g. T9 sport, 50Hz Water Cooled">
+                                                        <div class="text-muted" style="font-size: 0.68rem;">Customer invoice par specifications me aayega</div>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>`;
@@ -443,6 +507,62 @@
         };
 
         $(document).ready(function() {
+            let submenuHoverTimer = null;
+
+            // Hover into submenu or toggle button: show instantly and clear hide timer
+            $(document).on('mouseenter', '.dropdown-submenu', function() {
+                clearTimeout(submenuHoverTimer);
+                let $submenu = $(this);
+                $('.dropdown-submenu').not($submenu).removeClass('show is-hovered');
+                $submenu.addClass('show is-hovered');
+            });
+
+            // Hover out: 1-second (1000ms) grace period delay before closing to prevent accidental collapse
+            $(document).on('mouseleave', '.dropdown-submenu', function() {
+                let $submenu = $(this);
+                submenuHoverTimer = setTimeout(function() {
+                    $submenu.removeClass('show is-hovered');
+                }, 1000);
+            });
+
+            // Click toggle support
+            $(document).on('click', '.dropdown-submenu-toggle', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                clearTimeout(submenuHoverTimer);
+                let $submenu = $(this).closest('.dropdown-submenu');
+                $('.dropdown-submenu').not($submenu).removeClass('show is-hovered');
+                $submenu.toggleClass('show');
+            });
+
+            // Prevent dropdown from closing prematurely when clicking within submenu header/options
+            $(document).on('click', '.dropdown-submenu-menu', function(e) {
+                e.stopPropagation();
+            });
+
+            // Clean up when parent action dropdown is closed
+            $(document).on('hidden.bs.dropdown', '.dropdown', function() {
+                clearTimeout(submenuHoverTimer);
+                $(this).find('.dropdown-submenu').removeClass('show is-hovered');
+            });
+
+            // Auto-dropup: flip dropdown upward if it would overflow the viewport bottom
+            $(document).on('show.bs.dropdown', function(e) {
+                var $toggle = $(e.target);
+                var $menu = $toggle.next('.dropdown-menu');
+                if (!$menu.length) return;
+                var toggleBottom = $toggle[0].getBoundingClientRect().bottom;
+                var menuHeight = $menu.outerHeight() || 200;
+                var viewportHeight = $(window).height();
+                if (toggleBottom + menuHeight > viewportHeight - 20) {
+                    $menu.addClass('dropdown-menu-up');
+                    $menu.css({ top: 'auto', bottom: '100%' });
+                } else {
+                    $menu.removeClass('dropdown-menu-up');
+                    $menu.css({ top: '', bottom: '' });
+                }
+            });
+
             // Initialize DataTable
             if ($.fn.DataTable.isDataTable('.datanew')) {
                 $('.datanew').DataTable().destroy();
@@ -494,15 +614,20 @@
                                     $('body').removeClass('modal-open').css('padding-right', '');
                                 }, 300);
 
-                                // Show SweetAlert then reload page so state shows "Delivered"
+                                let docUrl = response.technical_doc_url || ('{{ url("sales") }}/' + saleId + '/technical-doc');
+
+                                // Show SweetAlert with direct link to Technical Document
                                 if (typeof Swal !== 'undefined') {
                                     Swal.fire({
                                         icon: 'success',
-                                        title: 'Delivered!',
-                                        text: response.message || 'Specifications saved & Order marked as Delivered!',
-                                        timer: 2500,
-                                        showConfirmButton: false,
-                                        timerProgressBar: true,
+                                        title: 'Specifications Saved!',
+                                        html: `<p class="mb-3 text-muted" style="font-size: 0.95rem;">${response.message || 'Specifications saved &amp; Technical Document created!'}</p>
+                                               <a href="${docUrl}" target="_blank" class="btn btn-primary btn-sm px-3 py-2 fw-bold shadow-sm d-inline-flex align-items-center gap-1.5" style="border-radius: 6px;">
+                                                   <i class="fas fa-file-contract"></i> View Technical Document
+                                               </a>`,
+                                        showConfirmButton: true,
+                                        confirmButtonText: 'Done / Reload Page',
+                                        confirmButtonColor: '#10b981',
                                     }).then(function() {
                                         window.location.reload();
                                     });
@@ -552,8 +677,8 @@
                 let form = $(this).closest("form");
 
                 Swal.fire({
-                    title: "Confirm Booking?",
-                    text: "This will convert the booking into a confirmed sale, deduct stock, and update customer ledger.",
+                    title: "Confirm Order?",
+                    text: "This will convert the order into a confirmed sale, deduct stock, and update customer ledger.",
                     icon: "question",
                     showCancelButton: true,
                     confirmButtonColor: "#28a745",

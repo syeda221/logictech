@@ -15,14 +15,14 @@
         
         if ($sale->sale_status === 'posted') {
             if ($sale->is_booking) {
-                $saleStatusBadge = '<span class="erp-badge badge-posted"><i class="fas fa-check-circle me-1"></i>Confirmed Booking</span>';
+                $saleStatusBadge = '<span class="erp-badge badge-posted"><i class="fas fa-check-circle me-1"></i>Confirmed Order</span>';
             } elseif ($isExchange) {
                 $saleStatusBadge = '<span class="erp-badge badge-exchange"><i class="fas fa-exchange-alt me-1"></i>Exchange</span>';
             } else {
                 $saleStatusBadge = '<span class="erp-badge badge-posted"><i class="fas fa-check-circle me-1"></i>Posted</span>';
             }
         } elseif ($sale->sale_status === 'booked') {
-            $saleStatusBadge = '<span class="erp-badge badge-booked"><i class="fas fa-bookmark me-1"></i>Booked</span>';
+            $saleStatusBadge = '<span class="erp-badge badge-booked"><i class="fas fa-bookmark me-1"></i>Order</span>';
         } elseif ($sale->sale_status === 'returned' || $sale->sale_status == 1) {
             $saleStatusBadge = '<span class="erp-badge badge-returned"><i class="fas fa-undo me-1"></i>Returned</span>';
         } elseif ($sale->sale_status === 'draft') {
@@ -156,6 +156,13 @@
                                 <i class="fas fa-file-invoice text-info fa-fw"></i> View Invoice
                             </a>
                         </li>
+                        @if($ordStatus === 'delivered')
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('sales.technical_doc', $sale->id) }}" target="_blank">
+                                <i class="fas fa-file-contract text-warning fa-fw"></i> Technical Document
+                            </a>
+                        </li>
+                        @endif
                     @endcan
 
                     @can('sales.edit')
@@ -201,7 +208,7 @@
                                 <form action="{{ route('sales.confirm', $sale->id) }}" method="POST" class="confirm-booking-form">
                                     @csrf
                                     <button type="submit" class="dropdown-item text-success d-flex align-items-center gap-2 py-2">
-                                        <i class="fas fa-check-circle fa-fw"></i> Confirm Booking
+                                        <i class="fas fa-check-circle fa-fw"></i> Confirm Order
                                     </button>
                                 </form>
                             </li>
@@ -323,6 +330,11 @@
                         <a href="{{ route('sales.invoice', $sale->id) }}" target="_blank" class="btn btn-sm btn-erp-outline fw-bold justify-content-center" style="border-radius: 8px;">
                             <i class="fas fa-file-invoice me-1 text-info"></i> Invoice
                         </a>
+                        @if($ordStatus === 'delivered')
+                        <a href="{{ route('sales.technical_doc', $sale->id) }}" target="_blank" class="btn btn-sm btn-erp-outline fw-bold justify-content-center" style="border-radius: 8px;">
+                            <i class="fas fa-file-contract me-1 text-warning"></i> Tech Doc
+                        </a>
+                        @endif
                     @endcan
 
                     @if ($sale->sale_status === 'posted')

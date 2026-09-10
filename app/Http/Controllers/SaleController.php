@@ -126,9 +126,11 @@ class SaleController extends Controller
             ->orderBy('title')
             ->get();
 
+        $accountHeads = \App\Models\AccountHead::orderBy('name')->get();
+
         return view('admin_panel.sale.add_sale222', compact(
             'warehouse', 'customer', 'nextInvoiceNumber', 'accounts', 
-            'recentProducts', 'allSeries', 'activePrefix'
+            'recentProducts', 'allSeries', 'activePrefix', 'accountHeads'
         ));
     }
 
@@ -1098,6 +1100,7 @@ class SaleController extends Controller
             $sale->walkin_name = $isWalkin ? $request->walkin_name : null;
             $sale->reference = $request->reference;
             $sale->total_amount_Words = $request->total_amount_Words;
+            $sale->terms_and_conditions = $request->terms_and_conditions;
 
             // Product / Order Status (Condition: pending, ready, delivered, cancelled)
             if ($request->filled('order_status')) {
@@ -1324,15 +1327,26 @@ class SaleController extends Controller
                 $saleItem->model = $request->model[$index] ?? null;
                 $saleItem->serial_no = $request->serial_no[$index] ?? null;
                 $saleItem->color = $request->color[$index] ?? null;
+                $saleItem->technical_name = $request->technical_name[$index] ?? null;
+                $saleItem->technical_specs = $request->technical_specs[$index] ?? null;
+                $saleItem->technical_remarks = $request->technical_remarks[$index] ?? null;
                 $saleItem->warehouse_id = !empty($warehouses[$index]) ? $warehouses[$index] : $defaultWhId;
 
                 $saleItem->qty = $storedQtyBox; // Store as Box equivalent for consistency
                 $saleItem->total_pieces = $totalPieces;
                 $saleItem->loose_pieces = $loose;
 
+                $itemTaxPercent = isset($request->item_tax_percent[$index]) ? max(0, (float)$request->item_tax_percent[$index]) : 0;
+                $itemTaxAmount = isset($request->item_tax_amount[$index]) ? max(0, (float)$request->item_tax_amount[$index]) : 0;
+                if ($itemTaxPercent > 0 && $itemTaxAmount <= 0) {
+                    $itemTaxAmount = round(($lineTotal * $itemTaxPercent) / 100, 2);
+                }
+
                 $saleItem->price = $dbPrice;
                 $saleItem->discount_percent = $calcDiscountPercent;
                 $saleItem->discount_amount = $calcDiscountAmount;
+                $saleItem->tax_percent = $itemTaxPercent;
+                $saleItem->tax_amount = $itemTaxAmount;
                 $saleItem->total = $lineTotal;
 
                 // Meta
@@ -1359,12 +1373,25 @@ class SaleController extends Controller
 
                 $total_bill += $lineTotal;
                 $total_items += $totalPieces;
+                if (!isset($total_item_tax)) { $total_item_tax = 0; }
+                $total_item_tax += $itemTaxAmount;
             }
 
             // Update Sale Totals (Extra discount cannot exceed total bill)
+            $taxPercent = max(0, (float)($request->tax_percent ?? 0));
+            $taxAmount = (float)($request->tax_amount ?? 0);
+            if (!empty($total_item_tax) && $total_item_tax > 0) {
+                $taxAmount = $total_item_tax;
+                $taxPercent = $total_bill > 0 ? round(($taxAmount / $total_bill) * 100, 2) : 0;
+            } elseif ($taxPercent > 0 && $taxAmount <= 0) {
+                $taxAmount = round(($total_bill * $taxPercent) / 100, 2);
+            }
+
+            $sale->tax_percent = $taxPercent;
+            $sale->tax_amount = $taxAmount;
             $sale->total_bill_amount = $total_bill;
             $sale->total_extradiscount = min($total_bill, max(0, (float)($request->total_extra_cost ?? 0)));
-            $sale->total_net = max(0, $total_bill - $sale->total_extradiscount);
+            $sale->total_net = max(0, ($total_bill - $sale->total_extradiscount) + $taxAmount);
             $sale->total_items = $total_items;
 
             // Extract Payment Breakdown (Accounts & Amounts)
@@ -2100,6 +2127,11 @@ class SaleController extends Controller
                 'width' => $item->product->width ?? 0,
                 'pieces_per_m2' => $item->product->pieces_per_m2 ?? 0,
                 'size_mode' => $item->size_mode ?? $item->product->size_mode ?? 'std',
+                'technical_name' => $item->technical_name ?? '',
+                'technical_specs' => $item->technical_specs ?? '',
+                'technical_remarks' => $item->technical_remarks ?? '',
+                'tax_percent' => (float) ($item->tax_percent ?? 0),
+                'tax_amount' => (float) ($item->tax_amount ?? 0),
             ];
         });
     }
@@ -2375,6 +2407,9 @@ class SaleController extends Controller
                 'model' => $item->model ?? '',
                 'serial_no' => $item->serial_no ?? '',
                 'specs' => $specs,
+                'technical_name' => $item->technical_name ?: ($item->product_name ?: ($item->product->item_name ?? '')),
+                'technical_specs' => $item->technical_specs ?? '',
+                'technical_remarks' => $item->technical_remarks ?? '',
                 'qty' => $formattedQty,
             ];
         });
@@ -2387,6 +2422,8 @@ class SaleController extends Controller
                 'customer_name' => $sale->customer_relation->customer_name ?? ($sale->walkin_name ?? 'Walk-in Customer'),
                 'order_status' => $sale->order_status,
                 'delivery_date' => $sale->delivery_date ? \Carbon\Carbon::parse($sale->delivery_date)->format('Y-m-d') : date('Y-m-d'),
+                'delivery_source' => $sale->delivery_source ?? '',
+                'delivery_remarks' => $sale->delivery_remarks ?? '',
                 'items' => $items,
             ]
         ]);
@@ -2412,6 +2449,15 @@ class SaleController extends Controller
                     if (isset($itemData['specs'])) {
                         $saleItem->color = trim($itemData['specs']);
                     }
+                    if (isset($itemData['technical_name'])) {
+                        $saleItem->technical_name = trim($itemData['technical_name']);
+                    }
+                    if (isset($itemData['technical_specs'])) {
+                        $saleItem->technical_specs = trim($itemData['technical_specs']);
+                    }
+                    if (isset($itemData['technical_remarks'])) {
+                        $saleItem->technical_remarks = trim($itemData['technical_remarks']);
+                    }
                     $saleItem->save();
                 }
             }
@@ -2423,6 +2469,13 @@ class SaleController extends Controller
             $sale->delivery_date = now()->toDateString();
         }
 
+        if ($request->has('delivery_source')) {
+            $sale->delivery_source = trim($request->delivery_source ?? '');
+        }
+        if ($request->has('delivery_remarks')) {
+            $sale->delivery_remarks = trim($request->delivery_remarks ?? '');
+        }
+
         $sale->order_status = 'delivered';
         $sale->save();
 
@@ -2430,9 +2483,22 @@ class SaleController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Product specifications saved and order marked as Delivered!',
+            'message' => 'Specifications saved and order marked as Delivered!',
             'order_status' => 'delivered',
             'badge_html' => $badgeHtml,
+            'technical_doc_url' => route('sales.technical_doc', $sale->id),
         ]);
+    }
+
+    /**
+     * Display Company Technical Document (New Order Process Sheet) for Sale / Equipment
+     */
+    public function technicalDocument($id)
+    {
+        $sale = Sale::with(['customer_relation', 'items.product.brand'])->findOrFail($id);
+        $setting = \App\Models\Setting::pluck('value', 'key')->toArray();
+        $logoUrl = \App\Models\Setting::getLogoUrl();
+
+        return view('admin_panel.sale.technical_doc', compact('sale', 'setting', 'logoUrl'));
     }
 }
