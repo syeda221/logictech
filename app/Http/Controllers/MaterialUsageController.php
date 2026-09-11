@@ -19,11 +19,25 @@ class MaterialUsageController extends Controller
     private function checkPermission()
     {
         $user = Auth::user();
+        if (!$user) {
+            abort(403, 'Unauthorized. Please login.');
+        }
+
         if ($user->email === 'admin@admin.com' || $user->hasRole('Super Admin') || $user->hasRole('Admin')) {
             return true;
         }
 
-        if ($user->can('warehouse.view') || $user->can('warehouse.stock.view') || $user->can('stock.adjust.create') || $user->can('stock.adjust.view')) {
+        if (
+            $user->can('material.usage.view') ||
+            $user->can('material.usage.create') ||
+            $user->can('material.usage.edit') ||
+            $user->can('material.usage.delete') ||
+            $user->can('material.usage.report.view') ||
+            $user->can('warehouse.view') ||
+            $user->can('warehouse.stock.view') ||
+            $user->can('stock.adjust.create') ||
+            $user->can('stock.adjust.view')
+        ) {
             return true;
         }
 

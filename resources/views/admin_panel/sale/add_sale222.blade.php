@@ -439,6 +439,37 @@
             box-shadow: inset 0 0 0 1.5px #2563eb !important;
         }
 
+        /* Specifications Sub-row Inputs (Clear Crisp Borders & Clean UI) */
+        .sales-table tbody .specs-subrow .form-control {
+            border: 1.5px solid #cbd5e1 !important;
+            border-radius: 6px !important;
+            background-color: #ffffff !important;
+            text-align: left !important;
+            padding: 4px 10px !important;
+            height: 32px !important;
+            font-size: 0.78rem !important;
+            color: #1e293b !important;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+            transition: all 0.2s ease !important;
+        }
+
+        .sales-table tbody .specs-subrow .form-control:hover {
+            border-color: #94a3b8 !important;
+        }
+
+        .sales-table tbody .specs-subrow .form-control:focus {
+            border-color: #2563eb !important;
+            background-color: #ffffff !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+            outline: none !important;
+        }
+
+        .sales-table tbody .specs-subrow .form-control::placeholder {
+            color: #94a3b8 !important;
+            font-size: 0.75rem !important;
+            font-style: italic;
+        }
+
         .sales-table tbody .input-readonly,
         .sales-table tbody input[readonly],
         .sales-table tbody select[disabled] {
@@ -878,15 +909,14 @@
                                     <thead>
                                         <tr>
                                             <th style="width:25px;" class="text-center">#</th>
-                                            <th class="col-product" style="min-width: 160px;">PRODUCT / SPECIFICATIONS</th>
-                                            <th class="col-model" style="width: 95px;">MODEL</th>
-                                            <th class="col-serial" style="width: 85px;">SERIAL NO</th>
+                                            <th class="col-product" style="min-width: 140px; width: 220px;">PRODUCT / SPECIFICATIONS</th>
+                                            <th class="col-model" style="width: 85px;">MODEL</th>
                                             <th class="col-stock d-none" style="width: 55px;">STOCK</th>
-                                            <th class="col-qty" style="width: 85px;">QTY</th>
-                                            <th class="col-pieces" style="width: 50px;">UNIT</th>
+                                            <th class="col-qty" style="width: 55px;">QTY</th>
+                                            <th class="col-pieces" style="width: 45px;">UNIT</th>
                                             <th class="col-price-p" style="width: 85px;">PRICE</th>
                                             <th class="col-disc" style="width: 75px;">DISCOUNT</th>
-                                            <th class="col-tax" style="width: 80px;">GST %</th>
+                                            <th class="col-tax" style="width: 110px;">GST %</th>
                                             <th class="col-amount" style="width: 90px;">AMOUNT</th>
                                             <th class="col-action" style="width: 30px;">×</th>
                                         </tr>
@@ -907,12 +937,10 @@
                                                 <input type="hidden" class="size-h">
                                                 <input type="hidden" class="size-w">
                                                 <input type="hidden" class="size-mode-text">
+                                                <input type="hidden" class="serial-no-input" name="serial_no[]" value="">
                                                 <div class="mt-1 d-flex align-items-center gap-1">
                                                     <button type="button" class="btn btn-sm btn-outline-primary py-0 px-1.5 btn-toggle-specs" style="font-size: 0.68rem; height: 20px; border-radius: 4px;" title="Enter Specifications & Details Manually">
                                                         <i class="fas fa-sliders-h me-1"></i>+ Specs / Details <i class="fas fa-chevron-down ms-0.5 arrow-icon"></i>
-                                                    </button>
-                                                    <button type="button" class="btn btn-sm btn-outline-success py-0 px-1.5 btn-toggle-row-gst" style="font-size: 0.68rem; height: 20px; border-radius: 4px;" title="Toggle GST Tax on this product">
-                                                        <i class="fas fa-percent me-0.5"></i><span class="row-gst-btn-text">+ GST %</span>
                                                     </button>
                                                     <span class="badge bg-light text-muted border specs-filled-badge d-none" style="font-size: 0.65rem;">Specs Added</span>
                                                 </div>
@@ -923,11 +951,6 @@
                                                 <input type="text" class="form-control model-input text-center fw-semibold" name="model[]" placeholder="e.g. LTZ-35KW">
                                             </td>
 
-                                            <!-- PRODUCT SERIAL NO -->
-                                            <td class="col-serial">
-                                                <input type="text" class="form-control serial-no-input text-center font-monospace" name="serial_no[]" placeholder="e.g. 10001">
-                                            </td>
-
                                             <!-- STOCK (HIDDEN) -->
                                             <td class="col-stock d-none">
                                                 <input type="text" class="form-control stock text-center input-readonly" readonly tabindex="-1">
@@ -936,7 +959,7 @@
                                             </td>
 
                                             <!-- QTY -->
-                                            <td style="width:85px;min-width:85px;" class="col-qty-wrapper">
+                                            <td style="width:55px;min-width:55px;" class="col-qty-wrapper">
                                                 <div class="d-flex align-items-center gap-1">
                                                     <input type="number" step="any" class="form-control carton-qty text-center fw-bold" name="carton_qty[]" placeholder="1" min="0" value="1" style="flex: 1; min-width: 0; height: 26px; font-size: 0.85rem; padding: 1px 4px;">
                                                     <button type="button" class="btn btn-sm btn-outline-primary qty-unit-toggle px-1 py-0 d-none" 
@@ -994,8 +1017,8 @@
                                             </td>
 
                                             <!-- GST % -->
-                                            <td class="col-tax">
-                                                <div class="d-flex align-items-center gap-1">
+                                            <td class="col-tax" style="width: 110px; min-width: 110px;">
+                                                <div class="d-flex align-items-center gap-1 px-1">
                                                     <input type="number"
                                                            step="any"
                                                            min="0"
@@ -1004,11 +1027,11 @@
                                                            name="item_tax_percent[]"
                                                            placeholder="0"
                                                            value="0"
-                                                           style="flex: 1; min-width: 0; height: 26px; font-size: 0.82rem; padding: 1px 4px;">
+                                                           style="flex: 1; min-width: 45px; height: 26px; font-size: 0.85rem; padding: 1px 4px;">
                                                     <button type="button"
                                                            class="btn btn-sm btn-outline-success btn-row-gst px-1 py-0 fw-bold"
                                                            title="Toggle 18% GST on this item"
-                                                           style="font-size: 0.65rem; height: 26px; min-width: 24px; border-radius: 4px; flex-shrink: 0;">%</button>
+                                                           style="font-size: 0.68rem; height: 26px; min-width: 26px; border-radius: 4px; flex-shrink: 0;">%</button>
                                                 </div>
                                                 <input type="hidden" class="item-tax-amount" name="item_tax_amount[]" value="0">
                                             </td>
@@ -1027,25 +1050,29 @@
                                         <!-- EXPANDABLE SPECIFICATIONS SUB-ROW -->
                                         <tr class="specs-subrow bg-light d-none" style="border-top: 1px dashed #cbd5e1;">
                                             <td colspan="12" class="p-2 bg-light">
-                                                <div class="p-2 bg-white rounded border border-primary-subtle shadow-sm">
-                                                    <div class="d-flex align-items-center justify-content-between mb-1">
-                                                        <span class="fw-bold text-primary" style="font-size: 0.75rem;">
-                                                            <i class="fas fa-microchip me-1"></i>Manual Specifications &amp; Technical Details (Item #<span class="specs-row-num">1</span>)
-                                                        </span>
-                                                        <span class="text-muted small" style="font-size: 0.68rem;">Will appear in Company Technical Document &amp; Specifications</span>
+                                                <div class="p-2.5 bg-white rounded-3 border shadow-sm" style="border-color: #cbd5e1 !important; border-left: 3px solid #2563eb !important;">
+                                                    <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom" style="border-color: #f1f5f9 !important;">
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-0.5 rounded" style="font-size: 0.7rem; font-weight: 700;">
+                                                                <i class="fas fa-sliders-h me-1"></i>SPECIFICATIONS (Item #<span class="specs-row-num">1</span>)
+                                                            </span>
+                                                            <span class="text-secondary fw-semibold" style="font-size: 0.72rem;">Manual Specifications &amp; Technical Details</span>
+                                                        </div>
+                                                        <span class="text-muted" style="font-size: 0.68rem;"><i class="fas fa-file-contract me-1 text-primary"></i>Will appear in Technical Document &amp; Specifications</span>
                                                     </div>
                                                     <div class="row g-2">
-                                                        <div class="col-md-4">
-                                                            <label class="form-label mb-0 fw-semibold text-secondary" style="font-size: 0.68rem;">Equipment / Technical Title</label>
-                                                            <input type="text" class="form-control form-control-sm item-tech-name" name="technical_name[]" placeholder="e.g. Induction Heater 60 KW Forging Machine" style="font-size: 0.75rem;">
-                                                        </div>
                                                         <div class="col-md-5">
-                                                            <label class="form-label mb-0 fw-semibold text-secondary" style="font-size: 0.68rem;">Technical Specifications &amp; Parameters</label>
-                                                            <input type="text" class="form-control form-control-sm item-tech-specs" name="technical_specs[]" placeholder="e.g. Power: 60KW, Frequency: 10-30kHz, Coil Size: 150mm..." style="font-size: 0.75rem;">
+                                                            <label class="form-label mb-1 fw-bold text-dark text-uppercase" style="font-size: 0.68rem; letter-spacing: 0.02em;">
+                                                                <i class="fas fa-tag me-1 text-primary"></i>Equipment / Technical Title
+                                                            </label>
+                                                            <input type="text" class="form-control form-control-sm item-tech-name" name="technical_name[]" placeholder="e.g. Induction Heater 60 KW Forging Machine" style="border: 1px solid #cbd5e1 !important; border-radius: 5px !important; background-color: #ffffff !important; font-size: 0.76rem !important; height: 32px !important; text-align: left !important; padding: 4px 10px !important;">
                                                         </div>
-                                                        <div class="col-md-3">
-                                                            <label class="form-label mb-0 fw-semibold text-secondary" style="font-size: 0.68rem;">QC / Engineering Remarks</label>
-                                                            <input type="text" class="form-control form-control-sm item-tech-remarks" name="technical_remarks[]" placeholder="e.g. Approved with Chiller" style="font-size: 0.75rem;">
+                                                        <div class="col-md-7">
+                                                            <label class="form-label mb-1 fw-bold text-dark text-uppercase" style="font-size: 0.68rem; letter-spacing: 0.02em;">
+                                                                <i class="fas fa-list-check me-1 text-primary"></i>Technical Specifications &amp; Parameters
+                                                            </label>
+                                                            <input type="text" class="form-control form-control-sm item-tech-specs" name="technical_specs[]" placeholder="e.g. Power: 60KW, Frequency: 10-30kHz, Coil Size: 150mm..." style="border: 1px solid #cbd5e1 !important; border-radius: 5px !important; background-color: #ffffff !important; font-size: 0.76rem !important; height: 32px !important; text-align: left !important; padding: 4px 10px !important;">
+                                                            <input type="hidden" class="item-tech-remarks" name="technical_remarks[]" value="">
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1065,13 +1092,13 @@
                                             </td>
                                         </tr>
                                         <tr>
-                                            <td colspan="9" class="text-end fw-bold text-uppercase" style="font-size:0.78rem; color: #1e40af;">Invoice Total:</td>
+                                            <td colspan="8" class="text-end fw-bold text-uppercase" style="font-size:0.78rem; color: #1e40af;">Invoice Total:</td>
                                             <td class="text-end fw-bold fs-6" style="color: #059669;"><span id="totalAmount">0.00</span></td>
                                             <td></td>
                                         </tr>
                                         <!-- GST / Sales Tax Row (Toggleable) -->
                                         <tr id="gstFooterRow" class="d-none" style="background-color: #f0fdf4;">
-                                            <td colspan="9" class="text-end fw-bold" style="font-size:0.78rem; color: #047857;">
+                                            <td colspan="8" class="text-end fw-bold" style="font-size:0.78rem; color: #047857;">
                                                 <span class="d-inline-flex align-items-center gap-1 justify-content-end">
                                                     <i class="fas fa-receipt me-1"></i> Sales Tax / GST Rate:
                                                     <div class="input-group input-group-sm" style="width: 100px;">
@@ -1128,8 +1155,8 @@
                                     <span class="text-muted fw-semibold">Discount</span>
                                     <span class="fw-bold text-danger font-monospace" id="tLineDisc">0.00</span>
                                 </div>
-                                <div class="summary-row d-none" id="summaryGstRow">
-                                    <span class="text-muted fw-semibold">GST / Tax (<span id="summaryGstRate">18</span>%)</span>
+                                <div class="summary-row" id="summaryGstRow">
+                                    <span class="text-muted fw-semibold">GST / Tax (<span id="summaryGstRate">0</span>%)</span>
                                     <span class="fw-bold font-monospace text-success" id="summaryGstAmount">0.00</span>
                                 </div>
                                 <div class="summary-row">
@@ -1161,12 +1188,20 @@
                                 </div>
 
                                 <div id="rvWrapper" class="mb-2">
-                                    <div class="d-flex gap-1 align-items-center mb-2 rv-row">
-                                        <select class="form-select form-select-sm rv-account fw-bold" name="receipt_account_id[]" style="font-size:0.75rem;">
-                                            @foreach ($accounts as $acc)
-                                                <option value="{{ $acc->id }}" {{ str_contains(strtolower($acc->title), 'cash') || str_contains(strtolower($acc->title), 'easypaisa') ? 'selected' : '' }}>{{ $acc->title }}</option>
-                                            @endforeach
-                                        </select>
+                                    <div class="d-flex gap-1 align-items-start mb-2 rv-row">
+                                        <div class="flex-grow-1">
+                                            <select class="form-select form-select-sm rv-account fw-bold" name="receipt_account_id[]" style="font-size:0.75rem;">
+                                                <option value="" selected disabled>Select Account</option>
+                                                @foreach ($accounts as $acc)
+                                                    <option value="{{ $acc->id }}" data-balance="{{ $acc->current_balance ?? 0 }}">{{ $acc->title }}</option>
+                                                @endforeach
+                                            </select>
+                                            <div class="account-balance-badge-wrap mt-0.5" style="display: none;">
+                                                <span class="badge bg-light text-secondary border px-1.5 py-0.5 font-monospace fw-bold account-balance-badge" style="font-size: 0.65rem;">
+                                                    Bal: <span class="bal-val">0.00</span>
+                                                </span>
+                                            </div>
+                                        </div>
                                         <input type="number" step="0.01" class="form-control form-control-sm text-end rv-amount fw-bold" name="receipt_amount[]" placeholder="0.00" style="width: 110px; font-size:0.75rem;">
                                     </div>
                                 </div>
@@ -1295,7 +1330,7 @@
                     <h5 class="modal-title" id="addCustomerModalLabel">
                         <i class="fas fa-user-plus text-primary me-2"></i>New Customer
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" data-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="ajaxAddCustomerForm">
@@ -1313,6 +1348,14 @@
                                 <input type="text" class="form-control" name="customer_name" required placeholder="Customer Name">
                             </div>
                             <div class="col-md-6">
+                                <label class="form-label fw-bold">NTN</label>
+                                <input type="text" class="form-control" name="ntn" placeholder="NTN Number">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">STRN</label>
+                                <input type="text" class="form-control" name="strn" placeholder="STRN Number">
+                            </div>
+                            <div class="col-md-6">
                                 <label class="form-label fw-bold">Mobile</label>
                                 <input type="text" class="form-control" name="mobile" placeholder="0300-1234567">
                             </div>
@@ -1328,7 +1371,7 @@
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-dismiss="modal">Close</button>
                     <button type="button" class="btn btn-primary" id="btnSaveAjaxCustomer">Save Customer</button>
                 </div>
             </div>
@@ -1343,7 +1386,7 @@
                     <h5 class="modal-title" id="quickAddAccountModalLabel">
                         <i class="fas fa-university text-success me-2"></i>New Account (Chart of Accounts)
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" data-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="ajaxAddAccountForm">
@@ -1382,7 +1425,7 @@
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-dismiss="modal">Close</button>
                     <button type="button" class="btn btn-success" id="btnSaveQuickAccount">
                         <i class="fas fa-check me-1"></i>Create &amp; Select Account
                     </button>
@@ -1773,17 +1816,26 @@
                         if (res.success && res.account) {
                             $('#quickAddAccountModal').modal('hide');
                             form[0].reset();
-
-                            // Append option to all .rv-account dropdowns
-                            const newOpt = new Option(res.account.title, res.account.id, true, true);
-                            $('.rv-account').append(newOpt);
-
-                            // Select in the latest / active row
-                            $('.rv-account').last().val(res.account.id).trigger('change');
-
-                            if (typeof accountData !== 'undefined' && Array.isArray(accountData)) {
-                                accountData.push(res.account);
+                            // Ensure window.accountData is initialized & updated
+                            if (!window.accountData) {
+                                window.accountData = [];
                             }
+                            if (!window.accountData.some(a => a.id == res.account.id)) {
+                                window.accountData.push(res.account);
+                            }
+
+                            const bal = parseFloat(res.account.current_balance) || 0;
+
+                            // Append option to all existing .rv-account dropdowns
+                            $('.rv-account').each(function() {
+                                const $sel = $(this);
+                                if ($sel.find(`option[value="${res.account.id}"]`).length === 0) {
+                                    $sel.append(`<option value="${res.account.id}" data-balance="${bal}">${res.account.title}</option>`);
+                                }
+                            });
+
+                            // Select in the latest / active row and update balance badge
+                            $('.rv-account').last().val(res.account.id).trigger('change');
 
                             if (typeof showAlert === 'function') {
                                 showAlert('success', 'Account "' + res.account.title + '" created & selected!');
@@ -1810,6 +1862,24 @@
                     }
                 });
             });
+
+            // Ensure backdrop is properly removed and screen does not stay dim when modals close
+            $(document).on('hidden.bs.modal', '.modal', function () {
+                $('.modal-backdrop').remove();
+                $('body').removeClass('modal-open').css({'overflow': '', 'padding-right': ''});
+            });
+
+            // Universal modal close handler for both Bootstrap 4 and Bootstrap 5
+            $(document).on('click', '[data-bs-dismiss="modal"], [data-dismiss="modal"]', function(e) {
+                const $modal = $(this).closest('.modal');
+                if ($modal.length) {
+                    $modal.modal('hide');
+                    setTimeout(function() {
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css({'overflow': '', 'padding-right': ''});
+                    }, 250);
+                }
+            });
         });
     </script>
 
@@ -1821,7 +1891,7 @@
                     <h6 class="modal-title fw-bold text-dark mb-0" id="modalAddInvoiceSeriesLabel">
                         <i class="fas fa-barcode text-success me-1"></i> Add Invoice Series
                     </h6>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" data-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form id="formAddInvoiceSeries">
                     @csrf
@@ -1844,7 +1914,7 @@
                         </div>
                     </div>
                     <div class="modal-footer bg-light border-top p-2 px-3">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal" data-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-success btn-sm fw-bold px-3" id="btnSaveSeries">
                             <i class="fas fa-save me-1"></i> Save &amp; Select
                         </button>

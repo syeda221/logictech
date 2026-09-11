@@ -22,10 +22,10 @@
     }
 
     /* ── Settings ── */
-    $coName    = \App\Models\Setting::get('company_name',    'LOGIC TECH ENGINEERING');
-    $coAddr    = \App\Models\Setting::get('company_address', '01-KM Sharaqpur Road');
-    $coEmail   = \App\Models\Setting::get('web_contact_email') ?: \App\Models\Setting::get('company_email','info@logictech.com.pk');
-    $coPhone   = \App\Models\Setting::get('company_phone')   ?: \App\Models\Setting::get('web_contact_phone','92 300 5308035');
+    $coName    = 'LOGIC TECH ENGINEERING';
+    $coAddr    = \App\Models\Setting::get('company_address', 'Hno 2/11B near bight future high school husri distric hyderabad');
+    $coEmail   = 'info@logictech.com.pk';
+    $coPhone   = '92 300 5308035, 92 336 1500082';
     $coLogo    = \App\Models\Setting::getLogoUrl();
     $coNtn     = \App\Models\Setting::get('company_ntn',  '5561761-4');
     $coStrn    = \App\Models\Setting::get('company_strn',  '');
@@ -67,10 +67,18 @@
 
     /* ── Payment Mode ── */
     $payMode = $paidCash>0&&$paidCard>0?'Cash + Card':($paidCard>0?'Card':($paidCash>0?'Cash':'Credit'));
-
-    /* ── Status Labels ── */
-    $saleStatus  = ucfirst($sale->sale_status  ?? 'N/A');
-    $orderStatus = ucfirst($sale->order_status ?? 'N/A');
+    if (!empty($sale->payment_details)) {
+        $pDetails = json_decode($sale->payment_details, true);
+        if (is_array($pDetails) && count($pDetails) > 0) {
+            $accountIds = collect($pDetails)->pluck('account_id')->filter()->unique();
+            if ($accountIds->isNotEmpty()) {
+                $accTitles = \App\Models\Account::whereIn('id', $accountIds)->pluck('title')->toArray();
+                if (!empty($accTitles)) {
+                    $payMode = implode(' + ', $accTitles);
+                }
+            }
+        }
+    }
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -599,22 +607,8 @@ body{
                 </td>
             </tr>
             <tr>
-                <td class="ml">Sale Status</td>
-                <td class="mv"><span style="display:inline-block;padding:1px 6px;border-radius:3px;background:#e0f2fe;color:#0369a1;font-size:9.5px;font-weight:700;">{{ $saleStatus }}</span></td>
-                <td class="ml">Order Status</td>
-                <td class="mv">
-                    @if($sale->order_status && strtolower($sale->order_status) !== 'n/a')
-                        <span style="display:inline-block;padding:1px 6px;border-radius:3px;background:#f1f5f9;color:#334155;font-size:9.5px;font-weight:700;">{{ $orderStatus }}</span>
-                    @else
-                        —
-                    @endif
-                </td>
-            </tr>
-            <tr>
-                <td class="ml">Payment Mode</td>
-                <td class="mv">{{ $payMode }}</td>
                 <td class="ml">Due Date</td>
-                <td class="mv">
+                <td class="mv" colspan="3">
                     @if($sale->due_date)
                         {{ \Carbon\Carbon::parse($sale->due_date)->format('d-M-Y') }}
                         @if($sale->credit_days > 0)
@@ -786,20 +780,14 @@ body{
             <div class="t-ttl">Terms &amp; Conditions</div>
             <ol>@foreach($tl as $t)<li>{{ $t }}</li>@endforeach</ol>
 
-            @if(!$isWalkin && (abs($previousBalance)>0 || $paidTotal>0))
             <div class="ledger-box" style="margin-top:8px;">
-                <div style="font-weight:800;color:#1d4fa0;font-size:9.5px;margin-bottom:3px;text-transform:uppercase;">Ledger Summary</div>
-                @if(abs($previousBalance)>0)
-                <div class="lb-row"><span class="lb-lbl">Previous Balance:</span><span class="lb-val">{{ number_format(abs($previousBalance),2) }} {{ $previousBalance>=0?'Dr':'Cr' }}</span></div>
-                @endif
-                @if($paidTotal>0)
+                <div style="font-weight:800;color:#1d4fa0;font-size:9.5px;margin-bottom:3px;text-transform:uppercase;">Payment Remarks</div>
+                <div class="lb-row"><span class="lb-lbl">Payment Mode:</span><span class="lb-val">{{ $payMode }}</span></div>
                 <div class="lb-row"><span class="lb-lbl">Payment Received:</span><span class="lb-val" style="color:#2e7d32;">{{ number_format($paidTotal,2) }}</span></div>
-                @endif
                 @if($changeGiven>0)
                 <div class="lb-row"><span class="lb-lbl">Change Returned:</span><span class="lb-val">{{ number_format($changeGiven,2) }}</span></div>
                 @endif
             </div>
-            @endif
         </div>
 
         {{-- Financial Summary --}}
@@ -832,11 +820,6 @@ body{
                 <tr><td class="fl">Change Given:</td><td class="fv">{{ number_format($changeGiven,2) }}</td></tr>
                 @endif
                 <tr><td class="fl">Balance Due:</td><td class="fv {{ $balanceDue>0?'red':'green' }}">{{ number_format($balanceDue,2) }}</td></tr>
-                @endif
-                @if(!$isWalkin && abs($previousBalance)>0)
-                <tr><td class="fl">Prev. Balance:</td><td class="fv">{{ number_format(abs($previousBalance),2) }} {{ $previousBalance>=0?'Dr':'Cr' }}</td></tr>
-                @php $cb=$previousBalance+($finalPayable>0?$finalPayable:$netPayable)-$paidTotal; @endphp
-                <tr class="fin-hl"><td class="fl" style="font-weight:800;">Closing Balance:</td><td class="fv {{ $cb>0?'red':'green' }}">{{ number_format(abs($cb),2) }} {{ $cb>=0?'Dr':'Cr' }}</td></tr>
                 @endif
             </table>
         </div>

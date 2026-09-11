@@ -184,7 +184,7 @@ class AccountsHeadController extends Controller
         $account = Account::findOrFail($id);
 
         $query = JournalEntry::where('account_id', $id)
-            ->with('party')
+            ->with(['party', 'source'])
             ->orderBy('entry_date', 'asc')
             ->orderBy('id', 'asc');
 

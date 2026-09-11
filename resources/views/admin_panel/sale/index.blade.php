@@ -747,7 +747,7 @@
                                     <tr>
                                         <th class="ps-2 text-center" style="width: 50px;">Bill#</th>
                                         <th style="min-width: 110px;">Customer</th>
-                                        <th style="width: 55px;">M.Bill</th>
+                                        <th style="min-width: 100px;">Unique Serial No</th>
                                         <th style="min-width: 100px;">Products</th>
                                         <th class="text-center" style="width: 38px;">Qty</th>
                                         <th class="text-end" style="width: 80px;">Gross</th>
@@ -848,6 +848,9 @@
                         if (response && response.success) {
                             // Update badge HTML in both desktop table and mobile card
                             $('.sale-state-cell[data-sale-id="' + saleId + '"]').html(response.badge_html);
+                            if (newStatus !== 'delivered') {
+                                $('.sale-serial-cell[data-sale-id="' + saleId + '"]').html('<span class="text-muted font-monospace" style="font-size: 0.75rem;">-</span>');
+                            }
 
                             // Update active indicator in dropdowns for this sale
                             $('[data-id="' + saleId + '"].btn-change-order-status').removeClass('active fw-bold');

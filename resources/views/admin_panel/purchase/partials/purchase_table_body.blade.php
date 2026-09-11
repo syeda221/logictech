@@ -4,7 +4,7 @@
         <td class="ps-3 text-center" style="width: 40px; vertical-align: middle;">
             <input type="checkbox" class="select-purchase-row" value="{{ $purchase->id }}" style="cursor: pointer; width: 16px; height: 16px; display: inline-block; vertical-align: middle; margin: 0 auto !important;">
         </td>
-        <td class="fw-bold text-muted">
+        <td class="fw-bold text-muted" data-order="{{ $purchase->id }}">
             #{{ $purchase->id }}
             <div>
                 @if(($purchase->purchase_type ?? 'local') === 'import')
@@ -20,16 +20,7 @@
         <td class="font-monospace text-dark">{{ $purchase->invoice_no }}</td>
         <td class="font-monospace text-dark small">{{ $purchase->note ?? '-' }}</td>
         <td>
-            @if ($purchase->status_purchase == 'draft')
-                <span class="badge badge-warning text-dark border border-warning">Draft</span>
-            @elseif ($purchase->status_purchase == 'Returned')
-                <span class="badge bg-danger text-white border border-danger">Returned</span>
-            @else
-                <span class="badge badge-success border border-success">Approved</span>
-            @endif
-            <div class="mt-1">
-                {!! $purchase->po_status_badge !!}
-            </div>
+            {!! $purchase->po_status_badge !!}
         </td>
         <td>
             <div class="d-flex align-items-center">
@@ -117,11 +108,6 @@
                                 <i class="fas fa-edit text-primary fa-fw"></i> Edit (Simple)
                             </a>
                         </li>
-                        <li>
-                            <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('purchase-pos.index') }}?edit_id={{ $purchase->id }}">
-                                <i class="fas fa-cash-register text-success fa-fw"></i> Edit (POS Purchase)
-                            </a>
-                        </li>
                     @endcan
 
                     @if ($purchase->status_purchase == 'draft')
@@ -136,11 +122,6 @@
                     @endif
 
                     @if ($purchase->status_purchase != 'draft')
-                        <li>
-                            <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-primary" href="{{ route('grn.create', ['purchase_id' => $purchase->id]) }}">
-                                <i class="fas fa-dolly-flatbed text-primary fa-fw"></i> Create GRN (Receive)
-                            </a>
-                        </li>
                         @if(($purchase->purchase_type ?? 'local') === 'import')
                             <li>
                                 <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-info" href="{{ route('import-costs.show', $purchase->id) }}">
@@ -204,13 +185,6 @@
                         @endif
                     </div>
                     <div class="d-flex align-items-center gap-1">
-                        @if ($purchase->status_purchase == 'draft')
-                            <span class="badge bg-warning text-dark">Draft</span>
-                        @elseif ($purchase->status_purchase == 'Returned')
-                            <span class="badge bg-danger">Returned</span>
-                        @else
-                            <span class="badge bg-success">Approved</span>
-                        @endif
                         {!! $purchase->po_status_badge !!}
                     </div>
                 </div>
@@ -251,9 +225,6 @@
                     @can('purchases.edit')
                         <a href="{{ route('purchase.edit', $purchase->id) }}" class="btn btn-sm btn-outline-primary fw-bold" style="border-radius: 8px;">
                             <i class="fas fa-edit me-1"></i> Edit (Simple)
-                        </a>
-                        <a href="{{ route('purchase-pos.index') }}?edit_id={{ $purchase->id }}" class="btn btn-sm btn-outline-success fw-bold" style="border-radius: 8px;">
-                            <i class="fas fa-cash-register me-1"></i> Edit (POS)
                         </a>
                     @endcan
 

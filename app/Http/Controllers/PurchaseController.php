@@ -133,12 +133,14 @@ class PurchaseController extends Controller
             $query->where('vendor_id', $request->vendor_id);
         }
 
-        // Order By
-        $orderBy = $request->input('order_by', 'purchase_date');
+        // Order By ID / Invoice / Date descending
+        $orderBy = $request->input('order_by', 'id');
         if ($orderBy === 'invoice_no') {
             $query->orderBy('invoice_no', 'desc');
+        } elseif ($orderBy === 'purchase_date') {
+            $query->orderBy('purchase_date', 'desc')->orderBy('id', 'desc');
         } else {
-            $query->orderBy('purchase_date', 'desc');
+            $query->orderBy('id', 'desc');
         }
 
         $Purchase = $query->get();
@@ -2052,5 +2054,110 @@ class PurchaseController extends Controller
     {
         $return = \App\Models\PurchaseReturn::with(['vendor', 'warehouse', 'items.product'])->findOrFail($id);
         return view('admin_panel.purchase.purchase_return.show', compact('return'));
+    }
+
+    /**
+     * Store a simple Credit Purchase without product line items
+     * Directly creates approved purchase, posts to double-entry journal, and updates vendor ledger
+     */
+    public function storeCreditPurchase(Request $request)
+    {
+        $request->validate([
+            'vendor_id' => 'required|exists:vendors,id',
+            'm_bill' => 'required|string|max:255',
+            'amount' => 'required|numeric|min:0.01',
+            'purchase_date' => 'required|date',
+            'description' => 'nullable|string|max:1000',
+        ]);
+
+        try {
+            return DB::transaction(function () use ($request) {
+                // 1. Generate Next Invoice
+                $lastInvoice = Purchase::latest('id')->value('invoice_no');
+                $nextInvoice = $lastInvoice
+                    ? 'PUR-'.str_pad(((int) preg_replace('/[^0-9]/', '', $lastInvoice)) + 1, 3, '0', STR_PAD_LEFT)
+                    : 'PUR-001';
+
+                $warehouseId = \App\Models\Warehouse::first()->id ?? 1;
+                $branchId = auth()->user()->branch_id ?? \App\Models\Branch::first()->id ?? 1;
+
+                // Format note: M-Bill with description if provided
+                $fullNote = trim($request->m_bill . ($request->description ? ' - ' . $request->description : ''));
+
+                // 2. Create Purchase Record
+                $purchase = Purchase::create([
+                    'branch_id' => $branchId,
+                    'warehouse_id' => $warehouseId,
+                    'vendor_id' => $request->vendor_id,
+                    'purchase_type' => 'local',
+                    'currency' => 'PKR',
+                    'exchange_rate' => 1.0,
+                    'po_status' => 'complete',
+                    'proforma_invoice_no' => $request->m_bill,
+                    'payment_method' => 'credit',
+                    'purchase_date' => $request->purchase_date,
+                    'invoice_no' => $nextInvoice,
+                    'note' => $fullNote,
+                    'subtotal' => $request->amount,
+                    'discount' => 0,
+                    'additional_discount' => 0,
+                    'extra_cost' => 0,
+                    'net_amount' => $request->amount,
+                    'paid_amount' => 0,
+                    'due_amount' => $request->amount,
+                    'status_purchase' => 'approved',
+                    'created_by' => auth()->id(),
+                ]);
+
+                // 3. Update Legacy VendorLedger
+                $netAmount = (float) $purchase->net_amount;
+                $prevClosing = \App\Models\VendorLedger::where('vendor_id', $purchase->vendor_id)
+                    ->value('closing_balance') ?? 0;
+
+                \App\Models\VendorLedger::updateOrCreate(
+                    ['vendor_id' => $purchase->vendor_id],
+                    [
+                        'vendor_id' => $purchase->vendor_id,
+                        'admin_or_user_id' => auth()->id(),
+                        'previous_balance' => $prevClosing,
+                        'opening_balance' => $prevClosing,
+                        'closing_balance' => $prevClosing + $netAmount,
+                    ]
+                );
+
+                // 4. Double-Entry Accounting via TransactionService
+                try {
+                    $transactionService = app(\App\Services\TransactionService::class);
+                    $transactionService->createPurchaseVoucher($purchase);
+                } catch (\Exception $e) {
+                    \Log::error('Accounting voucher creation error for credit purchase: ' . $e->getMessage());
+                }
+
+                $msg = "Credit Purchase #{$purchase->invoice_no} created successfully and posted to Vendor Ledger!";
+
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json([
+                        'status'   => 'success',
+                        'success'  => $msg,
+                        'message'  => $msg,
+                        'reload'   => true,
+                        'purchase' => $purchase,
+                    ]);
+                }
+
+                return redirect()->route('Purchase.home')->with('success', $msg);
+            });
+        } catch (\Exception $e) {
+            \Log::error('Credit Purchase Creation Error: ' . $e->getMessage());
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'status'  => 'error',
+                    'error'   => 'Failed to save credit purchase: ' . $e->getMessage(),
+                    'message' => 'Failed to save credit purchase: ' . $e->getMessage(),
+                ], 422);
+            }
+
+            return redirect()->back()->withInput()->with('error', 'Failed to save credit purchase: ' . $e->getMessage());
+        }
     }
 }

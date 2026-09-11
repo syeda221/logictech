@@ -47,6 +47,14 @@
             $orderStatusBadge = '<span class="erp-badge state-pending"><i class="fas fa-hourglass-half me-1"></i>Pending</span>';
         }
 
+        // Serial numbers are shown ONLY after delivered
+        $serialNumbers = collect();
+        if ($ordStatus === 'delivered' && $sale->items && $sale->items->count() > 0) {
+            $serialNumbers = $sale->items->pluck('serial_no')->filter(function($val) {
+                return !is_null($val) && trim($val) !== '';
+            })->values();
+        }
+
         $inline_val = $sale->items ? $sale->items->sum('discount_amount') : 0;
         $bill_amount = $sale->total_bill_amount > 0 ? $sale->total_bill_amount : (float) $sale->per_total;
         $gross_subtotal = $bill_amount + $inline_val;
@@ -91,7 +99,21 @@
                 </div>
             </div>
         </td>
-        <td><span class="font-monospace text-muted" style="font-size: 0.75rem;">{{ $sale->reference ?? '-' }}</span></td>
+        <td class="sale-serial-cell" data-sale-id="{{ $sale->id }}">
+            @if ($ordStatus === 'delivered' && $serialNumbers->isNotEmpty())
+                @if ($serialNumbers->count() === 1)
+                    <span class="font-monospace fw-bold text-dark" style="font-size: 0.75rem;">{{ $serialNumbers->first() }}</span>
+                @else
+                    <div class="d-flex flex-column gap-0.5">
+                        @foreach ($serialNumbers as $sn)
+                            <span class="font-monospace fw-bold text-dark text-truncate" style="font-size: 0.72rem;" title="{{ $sn }}">{{ $sn }}</span>
+                        @endforeach
+                    </div>
+                @endif
+            @else
+                <span class="font-monospace text-muted" style="font-size: 0.75rem;">-</span>
+            @endif
+        </td>
         <td title="{{ $pNames }}" class="text-muted small" style="max-width: 120px;">
             <div class="text-truncate" style="max-width: 120px;">
                 {{ \Illuminate\Support\Str::limit($pNames, 22) }}
@@ -262,6 +284,13 @@
                             <i class="far fa-calendar-alt me-1"></i> {{ $sale->created_at->format('d/m/Y') }}
                             <span class="ms-2"><i class="fas fa-box me-1"></i> {{ $sale->total_items > 0 ? $sale->total_items : $sale->qty }} Items</span>
                         </div>
+                        @if ($ordStatus === 'delivered' && $serialNumbers->isNotEmpty())
+                            <div class="mt-1">
+                                <span class="badge bg-light text-dark border font-monospace" style="font-size: 0.68rem;">
+                                    <i class="fas fa-barcode text-primary me-1"></i>SN: {{ $serialNumbers->implode(', ') }}
+                                </span>
+                            </div>
+                        @endif
                     </div>
                 </div>
 

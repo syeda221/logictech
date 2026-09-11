@@ -837,20 +837,24 @@
                                         </div>
                                     </div>
                                     <div class="role-actions">
-                                        @can('roles.edit')
-                                            <button class="btn btn-edit-perm edit-permission-btn" title="Edit Permissions">
-                                                <i class="fa fa-key"></i>
-                                            </button>
-                                            <button class="btn btn-edit edit-role-btn" title="Edit Role">
-                                                <i class="fa fa-pen"></i>
-                                            </button>
-                                        @endcan
-                                        @can('roles.delete')
-                                            <button class="btn btn-delete delete-role-btn" data-id="{{ $role->id }}"
-                                                title="Delete Role">
-                                                <i class="fa fa-trash"></i>
-                                            </button>
-                                        @endcan
+                                        @if($role->name === 'Super Admin')
+                                            <span class="badge badge-primary px-2 py-1 text-white" style="font-size: 11px; background-color: #6366f1;"><i class="fa fa-shield-alt me-1"></i> Root</span>
+                                        @else
+                                            @can('roles.edit')
+                                                <button class="btn btn-edit-perm edit-permission-btn" title="Edit Permissions">
+                                                    <i class="fa fa-key"></i>
+                                                </button>
+                                                <button class="btn btn-edit edit-role-btn" title="Edit Role">
+                                                    <i class="fa fa-pen"></i>
+                                                </button>
+                                            @endcan
+                                            @can('roles.delete')
+                                                <button class="btn btn-delete delete-role-btn" data-id="{{ $role->id }}"
+                                                    title="Delete Role">
+                                                    <i class="fa fa-trash"></i>
+                                                </button>
+                                            @endcan
+                                        @endif
                                     </div>
                                 </div>
                                 <div class="permissions-section">

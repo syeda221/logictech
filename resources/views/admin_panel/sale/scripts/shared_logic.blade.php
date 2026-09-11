@@ -123,20 +123,12 @@
 
     function formatProduct(repo) {
         if (repo.loading) return repo.text;
-        let stock = repo.stock !== undefined ? repo.stock : 0;
         let sku = repo.sku || 'N/A';
-        let stockVal = parseFloat(repo.stock_pieces !== undefined ? repo.stock_pieces : repo.stock) || 0;
-        let badgeClass = stockVal > 0 ? 'bg-success' : 'bg-danger';
 
         return $(`
-        <div class="clearfix">
-            <div class="float-start">
-                <div class="fw-bold">${repo.name || repo.text}</div>
-                <small class="text-muted">SKU: ${sku}</small>
-            </div>
-            <div class="float-end">
-                <span class="badge ${badgeClass} rounded-pill">Stock: ${stock}</span>
-            </div>
+        <div>
+            <div class="fw-bold">${repo.name || repo.text}</div>
+            <small class="text-muted">SKU: ${sku}</small>
         </div>
     `);
     }
@@ -179,12 +171,10 @@
       <input type="hidden" class="size-h">
       <input type="hidden" class="size-w">
       <input type="hidden" class="size-mode-text">
+      <input type="hidden" class="serial-no-input" name="serial_no[]" value="">
       <div class="mt-1 d-flex align-items-center gap-1">
         <button type="button" class="btn btn-sm btn-outline-primary py-0 px-1.5 btn-toggle-specs" style="font-size: 0.68rem; height: 20px; border-radius: 4px;" title="Enter Specifications & Details Manually">
           <i class="fas fa-sliders-h me-1"></i>+ Specs / Details <i class="fas fa-chevron-down ms-0.5 arrow-icon"></i>
-        </button>
-        <button type="button" class="btn btn-sm btn-outline-success py-0 px-1.5 btn-toggle-row-gst" style="font-size: 0.68rem; height: 20px; border-radius: 4px;" title="Toggle GST Tax on this product">
-          <i class="fas fa-percent me-0.5"></i><span class="row-gst-btn-text">+ GST %</span>
         </button>
         <span class="badge bg-light text-muted border specs-filled-badge d-none" style="font-size: 0.65rem;">Specs Added</span>
       </div>
@@ -195,11 +185,6 @@
       <input type="text" class="form-control model-input text-center fw-semibold" name="model[]" placeholder="e.g. LTZ-35KW">
     </td>
 
-    <!-- PRODUCT SERIAL NO -->
-    <td class="col-serial">
-      <input type="text" class="form-control serial-no-input text-center font-monospace" name="serial_no[]" placeholder="e.g. 10001">
-    </td>
-
     <!-- STOCK (HIDDEN) -->
     <td class="col-stock d-none">
       <input type="text" class="form-control stock text-center input-readonly" readonly tabindex="-1">
@@ -208,7 +193,7 @@
     </td>
 
     <!-- QTY -->
-    <td style="width:85px;min-width:85px;" class="col-qty-wrapper">
+    <td style="width:55px;min-width:55px;" class="col-qty-wrapper">
       <div class="d-flex align-items-center gap-1">
         <input type="number" step="any" class="form-control carton-qty text-center fw-bold" name="carton_qty[]" placeholder="1" min="0" value="1" style="flex: 1; min-width: 0; height: 26px; font-size: 0.85rem; padding: 1px 4px;">
         <button type="button" class="btn btn-sm btn-outline-primary qty-unit-toggle px-1 py-0 d-none" 
@@ -259,15 +244,15 @@
                title="Max 100% in % mode, or Total Amount in PKR mode">
         <input type="hidden" class="discount-type-hidden" name="discount_type[]" value="percent">
         <button type="button"
-                class="btn btn-outline-secondary discount-toggle"
-                data-type="percent" tabindex="-1" title="Toggle % / PKR">%</button>
+               class="btn btn-outline-secondary discount-toggle"
+               data-type="percent" tabindex="-1" title="Toggle % / PKR">%</button>
       </div>
       <input type="hidden" class="discount-amount" value="0">
     </td>
 
     <!-- GST % -->
-    <td class="col-tax">
-      <div class="d-flex align-items-center gap-1">
+    <td class="col-tax" style="width: 110px; min-width: 110px;">
+      <div class="d-flex align-items-center gap-1 px-1">
         <input type="number"
                step="any"
                min="0"
@@ -276,11 +261,11 @@
                name="item_tax_percent[]"
                placeholder="0"
                value="0"
-               style="flex: 1; min-width: 0; height: 26px; font-size: 0.82rem; padding: 1px 4px;">
+               style="flex: 1; min-width: 45px; height: 26px; font-size: 0.85rem; padding: 1px 4px;">
         <button type="button"
                class="btn btn-sm btn-outline-success btn-row-gst px-1 py-0 fw-bold"
                title="Toggle 18% GST on this item"
-               style="font-size: 0.65rem; height: 26px; min-width: 24px; border-radius: 4px; flex-shrink: 0;">%</button>
+               style="font-size: 0.68rem; height: 26px; min-width: 26px; border-radius: 4px; flex-shrink: 0;">%</button>
       </div>
       <input type="hidden" class="item-tax-amount" name="item_tax_amount[]" value="0">
     </td>
@@ -299,25 +284,29 @@
   <!-- EXPANDABLE SPECIFICATIONS SUB-ROW -->
   <tr class="specs-subrow bg-light d-none" style="border-top: 1px dashed #cbd5e1;">
     <td colspan="12" class="p-2 bg-light">
-      <div class="p-2 bg-white rounded border border-primary-subtle shadow-sm">
-        <div class="d-flex align-items-center justify-content-between mb-1">
-          <span class="fw-bold text-primary" style="font-size: 0.75rem;">
-            <i class="fas fa-microchip me-1"></i>Manual Specifications &amp; Technical Details (Item #<span class="specs-row-num">1</span>)
-          </span>
-          <span class="text-muted small" style="font-size: 0.68rem;">Will appear in Company Technical Document &amp; Specifications</span>
+      <div class="p-2.5 bg-white rounded-3 border shadow-sm" style="border-color: #cbd5e1 !important; border-left: 3px solid #2563eb !important;">
+        <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom" style="border-color: #f1f5f9 !important;">
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-0.5 rounded" style="font-size: 0.7rem; font-weight: 700;">
+              <i class="fas fa-sliders-h me-1"></i>SPECIFICATIONS (Item #<span class="specs-row-num">1</span>)
+            </span>
+            <span class="text-secondary fw-semibold" style="font-size: 0.72rem;">Manual Specifications &amp; Technical Details</span>
+          </div>
+          <span class="text-muted" style="font-size: 0.68rem;"><i class="fas fa-file-contract me-1 text-primary"></i>Will appear in Technical Document &amp; Specifications</span>
         </div>
         <div class="row g-2">
-          <div class="col-md-4">
-            <label class="form-label mb-0 fw-semibold text-secondary" style="font-size: 0.68rem;">Equipment / Technical Title</label>
-            <input type="text" class="form-control form-control-sm item-tech-name" name="technical_name[]" placeholder="e.g. Induction Heater 60 KW Forging Machine" style="font-size: 0.75rem;">
-          </div>
           <div class="col-md-5">
-            <label class="form-label mb-0 fw-semibold text-secondary" style="font-size: 0.68rem;">Technical Specifications &amp; Parameters</label>
-            <input type="text" class="form-control form-control-sm item-tech-specs" name="technical_specs[]" placeholder="e.g. Power: 60KW, Frequency: 10-30kHz, Coil Size: 150mm..." style="font-size: 0.75rem;">
+            <label class="form-label mb-1 fw-bold text-dark text-uppercase" style="font-size: 0.68rem; letter-spacing: 0.02em;">
+              <i class="fas fa-tag me-1 text-primary"></i>Equipment / Technical Title
+            </label>
+            <input type="text" class="form-control form-control-sm item-tech-name" name="technical_name[]" placeholder="e.g. Induction Heater 60 KW Forging Machine" style="border: 1px solid #cbd5e1 !important; border-radius: 5px !important; background-color: #ffffff !important; font-size: 0.76rem !important; height: 32px !important; text-align: left !important; padding: 4px 10px !important;">
           </div>
-          <div class="col-md-3">
-            <label class="form-label mb-0 fw-semibold text-secondary" style="font-size: 0.68rem;">QC / Engineering Remarks</label>
-            <input type="text" class="form-control form-control-sm item-tech-remarks" name="technical_remarks[]" placeholder="e.g. Approved with Chiller" style="font-size: 0.75rem;">
+          <div class="col-md-7">
+            <label class="form-label mb-1 fw-bold text-dark text-uppercase" style="font-size: 0.68rem; letter-spacing: 0.02em;">
+              <i class="fas fa-list-check me-1 text-primary"></i>Technical Specifications &amp; Parameters
+            </label>
+            <input type="text" class="form-control form-control-sm item-tech-specs" name="technical_specs[]" placeholder="e.g. Power: 60KW, Frequency: 10-30kHz, Coil Size: 150mm..." style="border: 1px solid #cbd5e1 !important; border-radius: 5px !important; background-color: #ffffff !important; font-size: 0.76rem !important; height: 32px !important; text-align: left !important; padding: 4px 10px !important;">
+            <input type="hidden" class="item-tech-remarks" name="technical_remarks[]" value="">
           </div>
         </div>
       </div>
@@ -567,17 +556,25 @@
         }
         $row.find('.item-tax-amount').val(itemTaxAmt.toFixed(2));
 
-        // Update row GST toggle buttons
+        // Update row GST toggle buttons if present
         const $rowGstBtn = $row.find('.btn-toggle-row-gst');
         const $cellGstBtn = $row.find('.btn-row-gst');
         if (itemTaxPct > 0) {
-            $rowGstBtn.addClass('btn-success text-white').removeClass('btn-outline-success');
-            $rowGstBtn.find('.row-gst-btn-text').text('GST ' + itemTaxPct + '%');
-            $cellGstBtn.addClass('btn-success text-white').removeClass('btn-outline-success');
+            if ($rowGstBtn.length) {
+                $rowGstBtn.addClass('btn-success text-white').removeClass('btn-outline-success');
+                $rowGstBtn.find('.row-gst-btn-text').text('GST ' + itemTaxPct + '%');
+            }
+            if ($cellGstBtn.length) {
+                $cellGstBtn.addClass('btn-success text-white').removeClass('btn-outline-success');
+            }
         } else {
-            $rowGstBtn.removeClass('btn-success text-white').addClass('btn-outline-success');
-            $rowGstBtn.find('.row-gst-btn-text').text('+ GST %');
-            $cellGstBtn.removeClass('btn-success text-white').addClass('btn-outline-success');
+            if ($rowGstBtn.length) {
+                $rowGstBtn.removeClass('btn-success text-white').addClass('btn-outline-success');
+                $rowGstBtn.find('.row-gst-btn-text').text('+ GST %');
+            }
+            if ($cellGstBtn.length) {
+                $cellGstBtn.removeClass('btn-success text-white').addClass('btn-outline-success');
+            }
         }
 
         const lineTotalWithTax = netRow + itemTaxAmt;
@@ -586,6 +583,10 @@
         if (typeof updateGrandTotals === 'function') {
             updateGrandTotals();
         }
+    }
+
+    function calculateLine($row) {
+        computeRow($row);
     }
 
     function updateGrandTotals() {
@@ -638,21 +639,34 @@
             gstAmount = Math.round(((currentInvoiceSubtotal * gstPercent) / 100) * 100) / 100;
         }
 
-        if (gstAmount > 0) {
-            const displayRate = currentInvoiceSubtotal > 0 ? (Math.round((gstAmount / currentInvoiceSubtotal) * 100 * 10) / 10) : gstPercent;
-            $('#gstAmountDisplay').text(gstAmount.toFixed(2));
-            $('#taxAmountInput').val(gstAmount.toFixed(2));
-            $('#summaryGstRate').text(displayRate);
-            $('#summaryGstAmount').text(gstAmount.toFixed(2));
-            $('#summaryGstRow').removeClass('d-none');
+        // Find maximum/active row tax percent if any row has tax entered
+        let maxRowTaxPercent = 0;
+        $('#salesTableBody tr:not(.specs-subrow)').each(function() {
+            const rTax = toNum($(this).find('.item-tax-percent').val());
+            if (rTax > 0) maxRowTaxPercent = rTax;
+        });
+
+        let displayRate = 0;
+        if (currentInvoiceSubtotal > 0 && gstAmount > 0) {
+            displayRate = Math.round((gstAmount / currentInvoiceSubtotal) * 100 * 10) / 10;
+        } else if (maxRowTaxPercent > 0) {
+            displayRate = maxRowTaxPercent;
+        } else if (isGstActive && gstPercent > 0) {
+            displayRate = gstPercent;
+        }
+
+        $('#gstAmountDisplay').text(gstAmount.toFixed(2));
+        $('#taxAmountInput').val(gstAmount.toFixed(2));
+        $('#summaryGstRate').text(displayRate);
+        $('#summaryGstAmount').text(gstAmount.toFixed(2));
+        $('#summaryGstRow').removeClass('d-none');
+
+        if (gstAmount > 0 || displayRate > 0) {
             $('#bottomGstVal').text(gstAmount.toFixed(2));
             $('#bottomGstStrip').removeClass('d-none');
             $('#btnToggleGst').addClass('btn-success text-white').removeClass('btn-erp-pill-outline');
             $('#gstBtnLabel').text('GST (' + displayRate + '%)');
         } else {
-            $('#gstAmountDisplay').text('0.00');
-            $('#taxAmountInput').val('0');
-            $('#summaryGstRow').addClass('d-none');
             $('#bottomGstStrip').addClass('d-none');
             $('#btnToggleGst').removeClass('btn-success text-white').addClass('btn-erp-pill-outline');
             $('#gstBtnLabel').text('+ GST %');
@@ -1492,6 +1506,10 @@
             calculateLine($(this).closest('tr'));
         });
 
+        $(document).on('focus', '.item-tax-percent', function() {
+            $(this).select();
+        });
+
         // Toggle 18% GST button inside col-tax cell
         $(document).on('click', '.btn-row-gst', function(e) {
             e.preventDefault();
@@ -1769,10 +1787,17 @@
 
         $('#btnAddRV').on('click', function() {
             const row = `
-              <div class="d-flex gap-1 align-items-center mb-2 rv-row">
-                <select class="form-select form-select-sm rv-account bg-light fw-bold" name="receipt_account_id[]" style="font-size:0.75rem;">
-                  <option value="">Select account</option>
-                </select>
+              <div class="d-flex gap-1 align-items-start mb-2 rv-row">
+                <div class="flex-grow-1">
+                  <select class="form-select form-select-sm rv-account bg-light fw-bold" name="receipt_account_id[]" style="font-size:0.75rem;">
+                    <option value="" selected disabled>Select Account</option>
+                  </select>
+                  <div class="account-balance-badge-wrap mt-0.5" style="display: none;">
+                    <span class="badge bg-light text-secondary border px-1.5 py-0.5 font-monospace fw-bold account-balance-badge" style="font-size: 0.65rem;">
+                      Bal: <span class="bal-val">0.00</span>
+                    </span>
+                  </div>
+                </div>
                 <input type="number" step="0.01" class="form-control form-control-sm text-end rv-amount fw-bold" name="receipt_amount[]" placeholder="0.00" style="width: 110px; font-size:0.75rem;">
                 <button type="button" class="btn btn-outline-danger btn-sm btnRemRV px-2 py-0" style="height:26px; line-height:1;">&times;</button>
               </div>`;
@@ -1787,26 +1812,98 @@
         });
 
         // --- Customers & Accounts ---
-        // We leave accountData here as a helper if available, but parent should ideally provide it.
-        const accountData =
-            @if (isset($accounts))
-                @json($accounts)
-            @else
-                []
-            @endif ;
+        // Expose accountData globally on window so newly added accounts via AJAX persist across all dropdowns & new split rows
+        if (!window.accountData || !Array.isArray(window.accountData) || window.accountData.length === 0) {
+            window.accountData =
+                @if (isset($accounts))
+                    @json($accounts)
+                @else
+                    []
+                @endif ;
+        }
+        let accountData = window.accountData;
+
+        function updateAccountBalanceBadge($select) {
+            const accId = $select.val();
+            const $wrap = $select.closest('.rv-row').find('.account-balance-badge-wrap');
+            const $badge = $select.closest('.rv-row').find('.account-balance-badge');
+            const $balVal = $select.closest('.rv-row').find('.bal-val');
+
+            if (!accId) {
+                $wrap.hide();
+                return;
+            }
+
+            const currentAccounts = window.accountData || accountData || [];
+            const selectedAcc = (Array.isArray(currentAccounts))
+                ? currentAccounts.find(a => a.id == accId)
+                : null;
+
+            if (selectedAcc && typeof selectedAcc.current_balance !== 'undefined') {
+                const bal = parseFloat(selectedAcc.current_balance) || 0;
+                $balVal.text(bal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+
+                $badge.removeClass('bg-success-subtle text-success border-success bg-danger-subtle text-danger border-danger bg-light text-secondary');
+                if (bal > 0) {
+                    $badge.addClass('bg-success-subtle text-success border-success');
+                } else if (bal < 0) {
+                    $badge.addClass('bg-danger-subtle text-danger border-danger');
+                } else {
+                    $badge.addClass('bg-light text-secondary border');
+                }
+                $wrap.show();
+            } else {
+                // Fallback to data-balance on option element if available
+                const optBal = $select.find('option:selected').data('balance');
+                if (typeof optBal !== 'undefined' && optBal !== null && optBal !== '') {
+                    const bal = parseFloat(optBal) || 0;
+                    $balVal.text(bal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+                    $badge.removeClass('bg-success-subtle text-success border-success bg-danger-subtle text-danger border-danger bg-light text-secondary');
+                    if (bal > 0) {
+                        $badge.addClass('bg-success-subtle text-success border-success');
+                    } else if (bal < 0) {
+                        $badge.addClass('bg-danger-subtle text-danger border-danger');
+                    } else {
+                        $badge.addClass('bg-light text-secondary border');
+                    }
+                    $wrap.show();
+                } else {
+                    $wrap.hide();
+                }
+            }
+        }
+        window.updateAccountBalanceBadge = updateAccountBalanceBadge;
+
+        $(document).on('change', '.rv-account', function() {
+            updateAccountBalanceBadge($(this));
+        });
 
         function loadAccountsInto($select, customerId) {
             const currentVal = $select.val();
-            let options = '<option value="">Select account</option>';
-            accountData.forEach(acc => {
-                options += `<option value="${acc.id}">${acc.title}</option>`;
+            let options = '<option value="" disabled ' + (!currentVal ? 'selected' : '') + '>Select Account</option>';
+            const currentAccounts = window.accountData || accountData || [];
+            currentAccounts.forEach(acc => {
+                const bal = parseFloat(acc.current_balance) || 0;
+                options += `<option value="${acc.id}" data-balance="${bal}">${acc.title}</option>`;
             });
             $select.html(options);
-            if (currentVal) $select.val(currentVal);
+            if (currentVal) {
+                $select.val(currentVal);
+            }
+            updateAccountBalanceBadge($select);
         }
+        window.loadAccountsInto = loadAccountsInto;
+
+        // Initialize badges on page load
+        $('.rv-account').each(function() {
+            updateAccountBalanceBadge($(this));
+        });
 
         window.recomputeReceipts = function() {
             updateGrandTotals();
+            $('.rv-account').each(function() {
+                updateAccountBalanceBadge($(this));
+            });
         }
 
         // --- Sidebar Direct Add Product ---

@@ -106,11 +106,28 @@
         font-weight: bold;
     }
 
+    .ledger-total-strip {
+        background-color: #0f172a !important;
+        border-top: 2.5px solid #eab308 !important;
+        border-bottom: 2.5px solid #0f172a !important;
+    }
+    .ledger-total-strip td {
+        background-color: #0f172a !important;
+        color: #f8fafc !important;
+        padding: 8px 12px !important;
+        vertical-align: middle !important;
+        white-space: nowrap !important;
+        border-color: #1e293b !important;
+        border-top: 2.5px solid #eab308 !important;
+        border-bottom: 2.5px solid #0f172a !important;
+    }
+
     @media print {
         body { background: #ffffff !important; font-size: 11px; }
         .no-print, header, .sidebar, .navbar, footer { display: none !important; }
         .sale-report-container { padding: 0 !important; background: #fff !important; }
         .card { border: 1px solid #dee2e6 !important; box-shadow: none !important; margin-bottom: 10px !important; }
+        .ledger-total-strip td { background-color: #0f172a !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
 </style>
 
@@ -533,14 +550,59 @@
                         `;
                     });
 
-                    // Totals Row
+                    // Totals Color Strip Row (Decent Black & Gold Theme)
+                    let balSign = lastBalance >= 0 ? 'Cr' : 'Dr';
+
                     html += `
-                        <tr class="fw-bold bg-light">
-                            <td colspan="4" class="text-end text-dark">Totals:</td>
-                            <td class="text-end text-success">Rs ${totalDebit.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                            <td class="text-end text-danger">Rs ${totalCredit.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                            <td class="text-end ${lastBalance >= 0 ? 'balance-negative' : 'balance-positive'}">Rs ${Math.abs(lastBalance).toLocaleString(undefined, {minimumFractionDigits: 2})} ${lastBalance >= 0 ? 'Cr' : 'Dr'}</td>
+                        <tr class="ledger-total-strip">
+                            <td colspan="4" class="text-end align-middle">
+                                <span class="fw-bold text-white text-uppercase" style="font-size: 0.82rem; letter-spacing: 0.8px;">
+                                    TOTALS:
+                                </span>
+                            </td>
+                            <td class="text-end align-middle">
+                                <span class="fw-bold" style="color: #86efac; font-size: 0.90rem; white-space: nowrap;">
+                                    Rs ${totalDebit.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                                </span>
+                            </td>
+                            <td class="text-end align-middle">
+                                <span class="fw-bold" style="color: #fca5a5; font-size: 0.90rem; white-space: nowrap;">
+                                    Rs ${totalCredit.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                                </span>
+                            </td>
+                            <td class="text-end align-middle">
+                                <span class="d-inline-flex align-items-center gap-1.5 px-2.5 py-1 rounded shadow-sm" style="background: #facc15; color: #000000; font-weight: 800; font-size: 0.88rem; white-space: nowrap;">
+                                    <span>Rs ${Math.abs(lastBalance).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                                    <span class="badge bg-black text-warning ms-1 px-1.5 py-0.5 fw-bold" style="font-size: 0.68rem; border-radius: 3px;">${balSign}</span>
+                                </span>
+                            </td>
                         </tr>
+                    `;
+
+                    // Mobile Totals Card (Decent Black & Gold Theme)
+                    mobHtml += `
+                        <div class="card border-0 shadow-sm mt-3 mb-2" style="border-radius: 10px; background: #0f172a; border: 1.5px solid #eab308 !important; color: #ffffff;">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom border-secondary">
+                                    <span class="fw-bold text-white" style="font-size: 13px; letter-spacing: 0.5px;">TOTALS SUMMARY</span>
+                                    <span class="badge bg-warning text-dark px-2 py-1 fw-bold">${balSign} (${lastBalance >= 0 ? 'Payable' : 'Advance'})</span>
+                                </div>
+                                <div class="row g-1 text-center mb-2" style="font-size: 12px;">
+                                    <div class="col-6 border-end border-secondary">
+                                        <span class="text-secondary d-block" style="font-size: 10.5px;">Total Debit</span>
+                                        <strong style="color: #86efac;">Rs ${totalDebit.toLocaleString(undefined, {minimumFractionDigits: 2})}</strong>
+                                    </div>
+                                    <div class="col-6">
+                                        <span class="text-secondary d-block" style="font-size: 10.5px;">Total Credit</span>
+                                        <strong style="color: #fca5a5;">Rs ${totalCredit.toLocaleString(undefined, {minimumFractionDigits: 2})}</strong>
+                                    </div>
+                                </div>
+                                <div class="p-2 rounded text-center" style="background: #facc15; color: #000000;">
+                                    <span class="d-block" style="font-size: 10px; opacity: 0.85; text-transform: uppercase; font-weight: 700;">Net Remaining Balance</span>
+                                    <strong style="font-size: 15px; font-weight: 800;">Rs ${Math.abs(lastBalance).toLocaleString(undefined, {minimumFractionDigits: 2})} ${balSign}</strong>
+                                </div>
+                            </div>
+                        </div>
                     `;
 
                     $("#ledgerBody").html(html);

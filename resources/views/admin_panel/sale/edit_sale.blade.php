@@ -720,7 +720,6 @@
                                             <th style="width:25px;" class="text-center">#</th>
                                             <th class="col-product" style="min-width: 160px;">PRODUCT / SPECIFICATIONS</th>
                                             <th class="col-model" style="width: 95px;">MODEL</th>
-                                            <th class="col-serial" style="width: 85px;">SERIAL NO</th>
                                             <th class="col-stock" style="width: 55px;">STOCK</th>
                                             <th class="col-qty" style="width: 85px;">QTY</th>
                                             <th class="col-pieces" style="width: 50px;">UNIT</th>
@@ -786,16 +785,12 @@
                                                         <input type="hidden" class="size-h" value="{{ $prod->height ?? '-' }}">
                                                         <input type="hidden" class="size-w" value="{{ $prod->width ?? '-' }}">
                                                         <input type="hidden" class="size-mode-text" value="{{ $sizeMode }}">
+                                                        <input type="hidden" class="serial-no-input" name="serial_no[]" value="{{ $item->serial_no ?? '' }}">
                                                     </td>
 
                                                     <!-- MODEL -->
                                                     <td class="col-model">
                                                         <input type="text" class="form-control model-input text-center fw-semibold" name="model[]" value="{{ $item->model ?? ($prod->model ?? '') }}" placeholder="e.g. LTZ-35KW">
-                                                    </td>
-
-                                                    <!-- PRODUCT SERIAL NO -->
-                                                    <td class="col-serial">
-                                                        <input type="text" class="form-control serial-no-input text-center font-monospace" name="serial_no[]" value="{{ $item->serial_no ?? '' }}" placeholder="e.g. 10001">
                                                     </td>
 
                                                     <!-- STOCK -->
@@ -888,7 +883,7 @@
                                             </td>
                                         </tr>
                                         <tr>
-                                            <td colspan="9" class="text-end fw-bold text-uppercase" style="font-size:0.78rem; color: #1e40af;">Invoice Total:</td>
+                                            <td colspan="8" class="text-end fw-bold text-uppercase" style="font-size:0.78rem; color: #1e40af;">Invoice Total:</td>
                                             <td class="text-end fw-bold fs-6" style="color: #059669;"><span id="totalAmount">0.00</span></td>
                                             <td></td>
                                         </tr>
@@ -970,21 +965,36 @@
                                         $firstLine = $receiptLines->first();
                                         $otherLines = $receiptLines->skip(1);
                                     @endphp
-                                    <div class="d-flex gap-1 align-items-center mb-2 rv-row">
-                                        <select class="form-select form-select-sm rv-account fw-bold" name="receipt_account_id[]" style="font-size:0.75rem;">
-                                            @foreach ($accounts as $acc)
-                                                <option value="{{ $acc->id }}" {{ $firstLine && $firstLine->account_id == $acc->id ? 'selected' : ($firstLine ? '' : (str_contains(strtolower($acc->title), 'cash') ? 'selected' : '')) }}>{{ $acc->title }}</option>
-                                            @endforeach
-                                        </select>
+                                    <div class="d-flex gap-1 align-items-start mb-2 rv-row">
+                                        <div class="flex-grow-1">
+                                            <select class="form-select form-select-sm rv-account fw-bold" name="receipt_account_id[]" style="font-size:0.75rem;">
+                                                <option value="" {{ !$firstLine ? 'selected disabled' : 'disabled' }}>Select Account</option>
+                                                @foreach ($accounts as $acc)
+                                                    <option value="{{ $acc->id }}" data-balance="{{ $acc->current_balance ?? 0 }}" {{ $firstLine && $firstLine->account_id == $acc->id ? 'selected' : '' }}>{{ $acc->title }}</option>
+                                                @endforeach
+                                            </select>
+                                            <div class="account-balance-badge-wrap mt-0.5" style="display: none;">
+                                                <span class="badge bg-light text-secondary border px-1.5 py-0.5 font-monospace fw-bold account-balance-badge" style="font-size: 0.65rem;">
+                                                    Bal: <span class="bal-val">0.00</span>
+                                                </span>
+                                            </div>
+                                        </div>
                                         <input type="number" step="0.01" class="form-control form-control-sm text-end rv-amount fw-bold" name="receipt_amount[]" value="{{ $firstLine ? number_format($firstLine->debit, 2, '.', '') : '' }}" placeholder="0.00" style="width: 110px; font-size:0.75rem;">
                                     </div>
                                     @foreach ($otherLines as $line)
-                                        <div class="d-flex gap-1 align-items-center mb-2 rv-row">
-                                            <select class="form-select form-select-sm rv-account fw-bold" name="receipt_account_id[]" style="font-size:0.75rem;">
-                                                @foreach ($accounts as $acc)
-                                                    <option value="{{ $acc->id }}" {{ $line->account_id == $acc->id ? 'selected' : '' }}>{{ $acc->title }}</option>
-                                                @endforeach
-                                            </select>
+                                        <div class="d-flex gap-1 align-items-start mb-2 rv-row">
+                                            <div class="flex-grow-1">
+                                                <select class="form-select form-select-sm rv-account fw-bold" name="receipt_account_id[]" style="font-size:0.75rem;">
+                                                    @foreach ($accounts as $acc)
+                                                        <option value="{{ $acc->id }}" data-balance="{{ $acc->current_balance ?? 0 }}" {{ $line->account_id == $acc->id ? 'selected' : '' }}>{{ $acc->title }}</option>
+                                                    @endforeach
+                                                </select>
+                                                <div class="account-balance-badge-wrap mt-0.5" style="display: none;">
+                                                    <span class="badge bg-light text-secondary border px-1.5 py-0.5 font-monospace fw-bold account-balance-badge" style="font-size: 0.65rem;">
+                                                        Bal: <span class="bal-val">0.00</span>
+                                                    </span>
+                                                </div>
+                                            </div>
                                             <input type="number" step="0.01" class="form-control form-control-sm text-end rv-amount fw-bold" name="receipt_amount[]" value="{{ number_format($line->debit, 2, '.', '') }}" placeholder="0.00" style="width: 110px; font-size:0.75rem;">
                                             <button type="button" class="btn btn-outline-danger btn-sm btnRemRV px-2">&times;</button>
                                         </div>
@@ -1095,6 +1105,14 @@
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Full Name <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" name="customer_name" required placeholder="Customer Name">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">NTN</label>
+                                <input type="text" class="form-control" name="ntn" placeholder="NTN Number">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">STRN</label>
+                                <input type="text" class="form-control" name="strn" placeholder="STRN Number">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Mobile</label>

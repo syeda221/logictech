@@ -228,6 +228,7 @@
                         <!-- Section 1 -->
                         <div class="section-label mt-0">Basic Information</div>
 
+                        {{-- Row 1: Customer Code (2), Customer Type (2), Full Name (4), NTN (2), STRN (2) = 12 --}}
                         <div class="input-group-modern" style="grid-column: span 2;">
                             <label class="modern-label">Customer Code</label>
                             <input type="text" class="modern-control bg-light" name="customer_id"
@@ -240,13 +241,23 @@
                                 <option value="Walking Customer">Walking Customer</option>
                             </select>
                         </div>
-                        <div class="input-group-modern" style="grid-column: span 3;">
+                        <div class="input-group-modern" style="grid-column: span 4;">
                             <label class="modern-label">Full Name <span class="text-danger">*</span></label>
                             <input type="text" class="modern-control" name="customer_name" required
                                 placeholder="Customer Name">
                         </div>
                         <div class="input-group-modern" style="grid-column: span 2;">
-                            <label class="modern-label">Mobile</label>
+                            <label class="modern-label">NTN</label>
+                            <input type="text" class="modern-control" name="ntn" placeholder="NTN Number" value="{{ old('ntn') }}">
+                        </div>
+                        <div class="input-group-modern" style="grid-column: span 2;">
+                            <label class="modern-label">STRN</label>
+                            <input type="text" class="modern-control" name="strn" placeholder="STRN Number" value="{{ old('strn') }}">
+                        </div>
+
+                        {{-- Row 2: Mobile / Phone (3), Region (3), Address (6) = 12 --}}
+                        <div class="input-group-modern" style="grid-column: span 3;">
+                            <label class="modern-label">Mobile / Phone</label>
                             <input type="text" class="modern-control" name="mobile" placeholder="0300-1234567">
                         </div>
                         <div class="input-group-modern" style="grid-column: span 3;">
@@ -258,24 +269,24 @@
                                 @endforeach
                             </select>
                         </div>
-
-                        <!-- Financials / Address Line 2 -->
-                        <div class="input-group-modern" style="grid-column: span 3;">
+                        <div class="input-group-modern" style="grid-column: span 6;">
                             <label class="modern-label">Address</label>
                             <input type="text" class="modern-control" name="address"
                                 placeholder="Shop No, Street Area, City">
                         </div>
-                        <div class="input-group-modern" style="grid-column: span 3;">
+
+                        {{-- Row 3: Financials & Payment Terms (4 + 4 + 4 = 12) --}}
+                        <div class="input-group-modern" style="grid-column: span 4;">
                             <label class="modern-label text-danger">Opening Balance (Dr)</label>
                             <input type="number" step="0.01" class="modern-control" name="opening_balance"
                                 value="0" style="border-color: #fca5a5; background: #fff1f2;">
                         </div>
-                        <div class="input-group-modern" style="grid-column: span 3;">
+                        <div class="input-group-modern" style="grid-column: span 4;">
                             <label class="modern-label text-success">Credit Limit <small class="text-muted fw-normal">(0 = Ulmtd)</small></label>
                             <input type="number" step="0.01" class="modern-control" name="balance_range"
                                 value="0" style="border-color: #86efac; background: #f0fdf4;">
                         </div>
-                        <div class="input-group-modern" style="grid-column: span 3;">
+                        <div class="input-group-modern" style="grid-column: span 4;">
                             <label class="modern-label text-primary">Payment Reminder Day</label>
                             <select class="modern-control" name="reminder_day" style="border-color: #93c5fd; background: #eff6ff;">
                                 <option value="">No Reminder</option>

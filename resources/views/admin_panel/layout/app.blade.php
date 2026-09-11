@@ -379,12 +379,27 @@
             }
         }
 
-        /* Fix Navigation Overlapping Page Content Universally */
+        /* Fix Navigation Overlapping Page Content Universally & Stacking Order */
         .rt_nav_header.horizontal-layout {
             position: relative !important;
-            z-index: 1020 !important;
+            z-index: 1030 !important;
             margin-bottom: 0 !important;
             width: 100% !important;
+        }
+        .rt_nav_header.horizontal-layout .top_nav {
+            position: relative !important;
+            z-index: 1035 !important;
+        }
+        .rt_nav_header.horizontal-layout .top_nav > .container-fluid {
+            position: relative !important;
+            z-index: 1050 !important;
+        }
+        .rt_nav_header.horizontal-layout .top_nav .dropdown {
+            position: relative !important;
+            z-index: 1055 !important;
+        }
+        .rt_nav_header.horizontal-layout .top_nav .dropdown-menu {
+            z-index: 1065 !important;
         }
         .rt_nav_header.horizontal-layout .nav-bottom,
         .rt_nav_header.horizontal-layout.fixed-on-scroll .nav-bottom {
@@ -392,7 +407,7 @@
             top: auto !important;
             left: auto !important;
             right: auto !important;
-            z-index: 1020 !important;
+            z-index: 1010 !important;
             background: #fafbfe !important;
             border-top: 1px solid #e2e8f0 !important;
             border-bottom: 1px solid #e2e8f0 !important;
@@ -512,7 +527,7 @@
               Navigation
     *===========================-->
         <nav class="rt_nav_header horizontal-layout col-lg-12 col-12 p-0">
-            <div class="top_nav flex-grow-1" style="background: #ffffff !important; border-bottom: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06); position: relative; z-index: 1025;">
+            <div class="top_nav flex-grow-1" style="background: #ffffff !important; border-bottom: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06); position: relative; z-index: 1035;">
                 <div class="container-fluid px-3 px-md-4 d-flex flex-row h-100 align-items-center justify-content-between">
                     
                     <!-- Left: Dynamic Brand Logo + Company Name Pill -->
@@ -591,7 +606,7 @@
                             </a>
                             <div class="dropdown-menu dropdown-menu-right navbar-dropdown preview-list shadow-lg border-0"
                                 aria-labelledby="notificationDropdown"
-                                style="width: 320px; border-radius: 12px; margin-top: 10px; overflow: hidden;">
+                                style="width: 320px; border-radius: 12px; margin-top: 10px; overflow: hidden; z-index: 1065 !important;">
                                 <div class="dropdown-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center"
                                     style="border-radius: 12px 12px 0 0;">
                                     <p class="mb-0 font-weight-bold text-dark">NOTIFICATIONS</p>
@@ -620,7 +635,7 @@
                                 </div>
                             </a>
                             <div class="dropdown-menu dropdown-menu-right border-0 shadow-lg p-2"
-                                aria-labelledby="profileDropdown" style="border-radius: 12px; margin-top: 10px; min-width: 220px;">
+                                aria-labelledby="profileDropdown" style="border-radius: 12px; margin-top: 10px; min-width: 220px; z-index: 1065 !important;">
                                 <div class="px-3 py-2 border-bottom mb-2 bg-light rounded">
                                     <p class="mb-0 text-dark font-weight-bold" style="font-size: 13px;">{{ Auth::user()->name }}</p>
                                     <small class="text-muted text-break" style="font-size: 11px;">{{ Auth::user()->email ?? '' }}</small>

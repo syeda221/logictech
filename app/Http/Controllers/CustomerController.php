@@ -63,7 +63,9 @@ class CustomerController extends Controller
             $query->where(function ($q) use ($term) {
                 $q->where('customer_name', 'like', "%{$term}%")
                   ->orWhere('mobile', 'like', "%{$term}%")
-                  ->orWhere('email_address', 'like', "%{$term}%");
+                  ->orWhere('email_address', 'like', "%{$term}%")
+                  ->orWhere('ntn', 'like', "%{$term}%")
+                  ->orWhere('strn', 'like', "%{$term}%");
             });
         }
 
@@ -138,6 +140,8 @@ class CustomerController extends Controller
             'customer_name'    => 'nullable',
             'customer_name_ur' => 'nullable',
             'cnic'             => 'nullable',
+            'ntn'              => 'nullable',
+            'strn'             => 'nullable',
             'filer_type'       => 'nullable',
             'zone'             => 'nullable',
             'contact_person'   => 'nullable',

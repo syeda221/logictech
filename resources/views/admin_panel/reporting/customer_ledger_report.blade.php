@@ -107,11 +107,28 @@
         font-weight: bold;
     }
 
+    .ledger-total-strip {
+        background-color: #0f172a !important;
+        border-top: 2.5px solid #eab308 !important;
+        border-bottom: 2.5px solid #0f172a !important;
+    }
+    .ledger-total-strip td {
+        background-color: #0f172a !important;
+        color: #f8fafc !important;
+        padding: 8px 12px !important;
+        vertical-align: middle !important;
+        white-space: nowrap !important;
+        border-color: #1e293b !important;
+        border-top: 2.5px solid #eab308 !important;
+        border-bottom: 2.5px solid #0f172a !important;
+    }
+
     @media print {
         body { background: #ffffff !important; font-size: 11px; }
         .no-print, header, .sidebar, .navbar, footer { display: none !important; }
         .sale-report-container { padding: 0 !important; background: #fff !important; }
         .card { border: 1px solid #dee2e6 !important; box-shadow: none !important; margin-bottom: 10px !important; }
+        .ledger-total-strip td { background-color: #0f172a !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
 </style>
 
@@ -350,13 +367,14 @@
                     <table class="table table-bordered table-hover align-middle mb-0 report-table">
                         <thead>
                             <tr>
-                                <th style="width: 10%;">Date</th>
-                                <th style="width: 12%;">Ref / Invoice</th>
-                                <th style="width: 18%;">Customer</th>
+                                <th style="width: 9%;">Date</th>
+                                <th style="width: 11%;">Ref / Invoice</th>
+                                <th style="width: 14%;">Customer</th>
+                                <th style="width: 18%;">Products</th>
                                 <th>Description</th>
-                                <th style="width: 12%;">Debit (Dr)</th>
-                                <th style="width: 12%;">Credit (Cr)</th>
-                                <th style="width: 14%;">Balance</th>
+                                <th style="width: 11%;">Debit (Dr)</th>
+                                <th style="width: 11%;">Credit (Cr)</th>
+                                <th style="width: 13%;">Balance</th>
                             </tr>
                         </thead>
                         <tbody id="ledgerBody"></tbody>
@@ -496,6 +514,7 @@
                             <td class="text-center">-</td>
                             <td class="text-center">-</td>
                             <td class="text-center">-</td>
+                            <td class="text-center text-muted">-</td>
                             <td class="text-start">Opening Balance (B/F)</td>
                             <td class="text-end">-</td>
                             <td class="text-end">-</td>
@@ -531,7 +550,8 @@
                                 <td class="text-center small text-nowrap">${t.date}</td>
                                 <td class="text-center"><span class="badge bg-light text-primary border font-monospace">${t.invoice ?? '-'}</span></td>
                                 <td class="fw-bold text-dark">${custName}</td>
-                                <td class="text-start">${t.description}</td>
+                                <td class="fw-semibold text-dark" style="font-size: 0.78rem; line-height: 1.35;">${t.products || '-'}</td>
+                                <td class="text-start text-muted" style="font-size: 0.76rem;">${t.description}</td>
                                 <td class="text-end text-danger fw-semibold">${debit > 0 ? 'Rs ' + debit.toLocaleString(undefined, {minimumFractionDigits: 2}) : '-'}</td>
                                 <td class="text-end text-success fw-semibold">${credit > 0 ? 'Rs ' + credit.toLocaleString(undefined, {minimumFractionDigits: 2}) : '-'}</td>
                                 <td class="text-end fw-bold ${balClass}">
@@ -550,6 +570,7 @@
                                 </div>
                                 <div class="mb-1">
                                     <strong class="text-dark d-block" style="font-size: 12.5px;">${custName}</strong>
+                                    ${t.products && t.products !== '-' ? `<span class="badge bg-light text-dark border d-inline-block mb-1" style="font-size: 11px; white-space: normal; text-align: left;"><i class="fas fa-box text-primary me-1"></i>${t.products}</span>` : ''}
                                     <small class="text-muted d-block" style="font-size: 11px;">${t.description}</small>
                                 </div>
                                 <div class="border-top pt-2 mt-1">
@@ -572,14 +593,59 @@
                         `;
                     });
 
-                    // Totals Row
+                    // Totals Color Strip Row (Decent Black & Gold Theme)
+                    let balSign = lastBalance >= 0 ? 'Dr' : 'Cr';
+
                     html += `
-                        <tr class="fw-bold bg-light">
-                            <td colspan="4" class="text-end text-dark">Totals:</td>
-                            <td class="text-end text-danger">Rs ${totalDebit.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                            <td class="text-end text-success">Rs ${totalCredit.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                            <td class="text-end ${lastBalance >= 0 ? 'balance-positive' : 'balance-negative'}">Rs ${Math.abs(lastBalance).toLocaleString(undefined, {minimumFractionDigits: 2})} ${lastBalance >= 0 ? 'Dr' : 'Cr'}</td>
+                        <tr class="ledger-total-strip">
+                            <td colspan="5" class="text-end align-middle">
+                                <span class="fw-bold text-white text-uppercase" style="font-size: 0.82rem; letter-spacing: 0.8px;">
+                                    TOTALS:
+                                </span>
+                            </td>
+                            <td class="text-end align-middle">
+                                <span class="fw-bold" style="color: #fca5a5; font-size: 0.90rem; white-space: nowrap;">
+                                    Rs ${totalDebit.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                                </span>
+                            </td>
+                            <td class="text-end align-middle">
+                                <span class="fw-bold" style="color: #86efac; font-size: 0.90rem; white-space: nowrap;">
+                                    Rs ${totalCredit.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                                </span>
+                            </td>
+                            <td class="text-end align-middle">
+                                <span class="d-inline-flex align-items-center gap-1.5 px-2.5 py-1 rounded shadow-sm" style="background: #facc15; color: #000000; font-weight: 800; font-size: 0.88rem; white-space: nowrap;">
+                                    <span>Rs ${Math.abs(lastBalance).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                                    <span class="badge bg-black text-warning ms-1 px-1.5 py-0.5 fw-bold" style="font-size: 0.68rem; border-radius: 3px;">${balSign}</span>
+                                </span>
+                            </td>
                         </tr>
+                    `;
+
+                    // Mobile Totals Card (Decent Black & Gold Theme)
+                    mobHtml += `
+                        <div class="card border-0 shadow-sm mt-3 mb-2" style="border-radius: 10px; background: #0f172a; border: 1.5px solid #eab308 !important; color: #ffffff;">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom border-secondary">
+                                    <span class="fw-bold text-white" style="font-size: 13px; letter-spacing: 0.5px;">TOTALS SUMMARY</span>
+                                    <span class="badge bg-warning text-dark px-2 py-1 fw-bold">${balSign} (${lastBalance >= 0 ? 'Receivable' : 'Payable'})</span>
+                                </div>
+                                <div class="row g-1 text-center mb-2" style="font-size: 12px;">
+                                    <div class="col-6 border-end border-secondary">
+                                        <span class="text-secondary d-block" style="font-size: 10.5px;">Total Debit</span>
+                                        <strong style="color: #fca5a5;">Rs ${totalDebit.toLocaleString(undefined, {minimumFractionDigits: 2})}</strong>
+                                    </div>
+                                    <div class="col-6">
+                                        <span class="text-secondary d-block" style="font-size: 10.5px;">Total Credit</span>
+                                        <strong style="color: #86efac;">Rs ${totalCredit.toLocaleString(undefined, {minimumFractionDigits: 2})}</strong>
+                                    </div>
+                                </div>
+                                <div class="p-2 rounded text-center" style="background: #facc15; color: #000000;">
+                                    <span class="d-block" style="font-size: 10px; opacity: 0.85; text-transform: uppercase; font-weight: 700;">Net Remaining Balance</span>
+                                    <strong style="font-size: 15px; font-weight: 800;">Rs ${Math.abs(lastBalance).toLocaleString(undefined, {minimumFractionDigits: 2})} ${balSign}</strong>
+                                </div>
+                            </div>
+                        </div>
                     `;
 
                     $("#ledgerBody").html(html);

@@ -265,12 +265,22 @@
         border: 1.5px solid #dbeafe;
         border-radius: 12px;
         box-shadow: 0 1px 4px rgba(37, 99, 235, 0.04);
-        overflow: hidden;
+        overflow: visible !important;
     }
     .erp-table-responsive {
         border-radius: 8px;
         width: 100%;
         overflow-x: auto;
+        min-height: 380px;
+        padding-bottom: 140px;
+    }
+    .erp-table-responsive .dropdown-menu {
+        z-index: 1060 !important;
+        right: 0 !important;
+        left: auto !important;
+        top: 100% !important;
+        bottom: auto !important;
+        margin-top: 2px !important;
     }
     .erp-table {
         width: 100% !important;
@@ -613,6 +623,12 @@
                                                     </span>
                                                     <span class="text-muted text-truncate" style="font-size: 0.68rem; font-weight: 500;">
                                                         {{ $customer->customer_type ?: ($customer->zone ?: 'Standard') }}
+                                                        @if($customer->ntn)
+                                                            &bull; <span class="text-primary fw-semibold">NTN: {{ $customer->ntn }}</span>
+                                                        @endif
+                                                        @if($customer->strn)
+                                                            &bull; <span class="text-info fw-semibold">STRN: {{ $customer->strn }}</span>
+                                                        @endif
                                                     </span>
                                                 </div>
                                             </div>
@@ -669,10 +685,10 @@
                                         {{-- Action Dropdown (Exact Sales UI) --}}
                                         <td class="pe-2 text-center text-nowrap">
                                             <div class="dropdown d-inline-block">
-                                                <button class="btn btn-erp-table-action dropdown-toggle shadow-none" type="button" data-toggle="dropdown" aria-expanded="false">
+                                                <button class="btn btn-erp-table-action dropdown-toggle shadow-none" type="button" data-toggle="dropdown" data-bs-toggle="dropdown" data-display="static" data-bs-display="static" aria-expanded="false">
                                                     <i class="fas fa-ellipsis-v small me-1"></i> Actions
                                                 </button>
-                                                <ul class="dropdown-menu dropdown-menu-right border-0 shadow-lg rounded-3 py-2" style="min-width: 175px;">
+                                                <ul class="dropdown-menu dropdown-menu-right dropdown-menu-end border-0 shadow-lg rounded-3 py-2" style="min-width: 175px;">
                                                     @can('customers.edit')
                                                         <li>
                                                             <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('customers.edit', $customer->id) }}">

@@ -2,6 +2,8 @@
 
 @section('content')
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap');
+
     /* ==========================================================================
        Enterprise ERP Design System - General Ledger
        ========================================================================== */
@@ -17,6 +19,11 @@
         --erp-success: #059669;
         --erp-warning: #d97706;
         --erp-danger: #dc2626;
+    }
+
+    .erp-ledger-wrap {
+        font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        color: #1e293b;
     }
 
     /* Page Header */
@@ -276,9 +283,9 @@
     /* Main Table Card */
     .erp-main-card {
         background: #ffffff;
-        border: 1px solid #e2e8f0;
+        border: 1.5px solid #dbeafe;
         border-radius: 12px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        box-shadow: 0 1px 4px rgba(37, 99, 235, 0.04);
         margin-bottom: 2rem;
         overflow: hidden;
     }
@@ -292,16 +299,17 @@
         width: 100%;
         margin-bottom: 0;
         border-collapse: collapse;
-        font-size: 0.815rem;
+        font-size: 0.90rem;
+        font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
     .erp-table thead th {
         background-color: #eff6ff !important;
         color: #1e40af !important;
         font-weight: 700;
-        font-size: 0.72rem;
+        font-size: 0.78rem;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
-        padding: 0.75rem 0.9rem;
+        letter-spacing: 0.04em;
+        padding: 0.75rem 0.85rem;
         border-top: none;
         border-bottom: 2px solid #60a5fa !important;
         border-right: 1px solid #bfdbfe;
@@ -312,42 +320,106 @@
         border-right: none;
     }
     .erp-table tbody td {
-        padding: 0.75rem 0.9rem;
+        padding: 0.70rem 0.85rem;
         vertical-align: middle;
-        border-bottom: 1px solid #f1f5f9;
-        border-right: 1px solid #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+        border-right: 1px solid #f1f5f9;
         color: #1e293b;
+        font-size: 0.90rem;
+        line-height: 1.45;
+        background-color: #ffffff;
     }
     .erp-table tbody tr:hover td {
-        background-color: #f8fafc;
+        background-color: #f8fbff;
     }
     .erp-table tfoot td {
         background-color: #f8fafc;
-        border-top: 2px solid #bfdbfe;
+        border-top: 2px solid #93c5fd;
         font-weight: 700;
-        padding: 0.85rem 0.9rem;
+        padding: 0.85rem 1rem;
+        font-size: 0.95rem;
     }
 
-    .erp-badge {
-        font-size: 0.68rem;
+    /* Column Specific Styles */
+    .erp-col-date { width: 110px; text-align: center; }
+    .erp-col-voucher { width: 140px; text-align: center; }
+    .erp-col-desc { min-width: 290px; width: 330px; }
+    .erp-col-party { min-width: 190px; }
+    .erp-col-dr { width: 135px; text-align: right; }
+    .erp-col-cr { width: 135px; text-align: right; }
+    .erp-col-bal { width: 160px; text-align: right; }
+
+    /* Voucher / Tag Badge */
+    .erp-bill-tag {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-weight: 600;
+        font-size: 0.82rem;
+        color: #2563eb;
+        background-color: #eff6ff;
+        border: 1px solid #bfdbfe;
+        padding: 0.25rem 0.6rem;
+        border-radius: 6px;
+        display: inline-block;
+        white-space: nowrap;
+    }
+
+    /* Avatar & Party Meta (Matches Receipts & Sales ERP) */
+    .erp-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 7px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.78rem;
         font-weight: 700;
-        padding: 2px 6px;
+        flex-shrink: 0;
+    }
+    .erp-avatar-registered {
+        background-color: #eff6ff;
+        color: #2563eb;
+        border: 1px solid #dbeafe;
+    }
+    .badge-party-type {
+        font-size: 0.70rem;
+        font-weight: 600;
+        color: #64748b;
+        background: #f1f5f9;
+        padding: 1.5px 7px;
+        border-radius: 4px;
+        display: inline-block;
+        margin-top: 2px;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+    }
+
+    /* ERP Status Badges for DR/CR */
+    .erp-badge {
+        font-size: 0.74rem;
+        font-weight: 700;
+        padding: 2.5px 7px;
         border-radius: 4px;
         display: inline-flex;
         align-items: center;
         gap: 3px;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
+        letter-spacing: 0.02em;
     }
     .badge-dr {
-        background-color: #fee2e2;
-        color: #b91c1c;
-        border: 1px solid #fca5a5;
+        background-color: #fef2f2;
+        color: #dc2626;
+        border: 1px solid #fecaca;
     }
     .badge-cr {
         background-color: #ecfdf5;
-        color: #065f46;
+        color: #059669;
         border: 1px solid #a7f3d0;
+    }
+
+    .erp-amount-num {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-weight: 700;
+        font-size: 0.92rem;
+        letter-spacing: -0.01em;
     }
 
     @media print {
@@ -365,7 +437,7 @@
     }
 </style>
 
-<div class="main-content">
+<div class="main-content erp-ledger-wrap">
     <div class="main-content-inner">
         <div class="container-fluid mt-3">
 
@@ -492,13 +564,13 @@
                     <table class="erp-table">
                         <thead>
                             <tr>
-                                <th class="text-center" style="width: 105px;">DATE</th>
-                                <th class="text-center" style="width: 120px;">VOUCHER NO</th>
-                                <th>DESCRIPTION</th>
-                                <th style="width: 180px;">PARTY</th>
-                                <th class="text-end" style="width: 130px;">DEBIT (DR)</th>
-                                <th class="text-end" style="width: 130px;">CREDIT (CR)</th>
-                                <th class="text-end pe-3" style="width: 150px;">BALANCE</th>
+                                <th class="erp-col-date">DATE</th>
+                                <th class="erp-col-voucher">VOUCHER NO</th>
+                                <th class="erp-col-desc">DESCRIPTION</th>
+                                <th class="erp-col-party">PARTY</th>
+                                <th class="erp-col-dr">DEBIT (DR)</th>
+                                <th class="erp-col-cr">CREDIT (CR)</th>
+                                <th class="erp-col-bal pr-3 pe-3">BALANCE</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -508,17 +580,19 @@
 
                             {{-- Opening Balance Row --}}
                             <tr style="background-color: #f8fafc;">
-                                <td class="text-center font-monospace small text-muted">-</td>
-                                <td class="text-center font-monospace small text-muted">-</td>
-                                <td colspan="2" class="fw-bold text-dark" style="font-size: 0.80rem;">
-                                    <i class="fas fa-clock text-primary me-1"></i> Opening Balance B/F
+                                <td class="erp-col-date font-monospace text-muted font-weight-bold" style="font-size: 0.86rem;">-</td>
+                                <td class="erp-col-voucher font-monospace text-muted font-weight-bold" style="font-size: 0.86rem;">-</td>
+                                <td colspan="2" class="font-weight-semibold text-dark" style="font-size: 0.90rem; color: #1e293b;">
+                                    <i class="fas fa-history text-primary mr-1 me-1"></i> Opening Balance B/F
                                 </td>
-                                <td class="text-end font-monospace text-muted">-</td>
-                                <td class="text-end font-monospace text-muted">-</td>
-                                <td class="text-end pe-3 font-monospace fw-bold text-dark" style="font-size: 0.82rem;">
-                                    Rs. {{ number_format(abs($runningBalance), 2) }}
-                                    <span class="erp-badge {{ $runningBalance >= 0 ? 'badge-dr' : 'badge-cr' }} ms-1">
-                                        {{ $runningBalance >= 0 ? 'Dr' : 'Cr' }}
+                                <td class="erp-col-dr font-monospace text-muted font-weight-bold" style="font-size: 0.86rem;">-</td>
+                                <td class="erp-col-cr font-monospace text-muted font-weight-bold" style="font-size: 0.86rem;">-</td>
+                                <td class="erp-col-bal pr-3 pe-3">
+                                    <span class="erp-amount-num font-weight-bold text-dark" style="font-size: 0.94rem;">
+                                        Rs. {{ number_format(abs($runningBalance), 2) }}
+                                    </span>
+                                    <span class="erp-badge {{ $runningBalance >= 0 ? 'badge-dr' : 'badge-cr' }} ml-1 ms-1">
+                                        {{ $runningBalance >= 0 ? 'DR' : 'CR' }}
                                     </span>
                                 </td>
                             </tr>
@@ -537,76 +611,138 @@
                                     }
 
                                     // Resolve party name and type
+                                    $partyObj = $entry->party;
+                                    $partyType = $entry->party_type;
                                     $partyName = '';
-                                    $partyType = '';
-                                    $partyBadgeClass = 'bg-secondary';
-                                    if ($entry->party) {
-                                        if ($entry->party_type === 'App\\Models\\Customer') {
-                                            $partyName = $entry->party->customer_name ?? 'Unknown';
-                                            $partyType = 'Customer';
-                                            $partyBadgeClass = 'bg-primary';
-                                        } elseif ($entry->party_type === 'App\\Models\\Vendor') {
-                                            $partyName = $entry->party->name ?? 'Unknown';
-                                            $partyType = 'Vendor';
-                                            $partyBadgeClass = 'bg-warning text-dark';
-                                        } else {
-                                            $partyName = $entry->party->title ?? $entry->party->name ?? 'Account';
-                                            $partyType = 'Account';
-                                            $partyBadgeClass = 'bg-info text-dark';
+
+                                    // Fallback 1: Source party (VoucherMaster, Sale, Purchase, etc.)
+                                    if (!$partyObj && $entry->source) {
+                                        if (isset($entry->source->party) && $entry->source->party) {
+                                            $partyObj = $entry->source->party;
+                                            $partyType = get_class($partyObj);
+                                        } elseif (isset($entry->source->customer) && $entry->source->customer) {
+                                            $partyObj = $entry->source->customer;
+                                            $partyType = get_class($partyObj);
+                                        } elseif (isset($entry->source->vendor) && $entry->source->vendor) {
+                                            $partyObj = $entry->source->vendor;
+                                            $partyType = get_class($partyObj);
                                         }
                                     }
+
+                                    // Fallback 2: Check invoice in description or remarks
+                                    if (!$partyObj) {
+                                        $textToSearch = ($entry->description ?? '') . ' ' . (isset($entry->source->remarks) ? $entry->source->remarks : '');
+                                        if (preg_match('/(?:Invoice|INV|#INV)[-\s#]*([A-Za-z0-9\-]+)/i', $textToSearch, $m)) {
+                                            $invNo = trim($m[1]);
+                                            $candidates = [$invNo, 'INV-' . $invNo];
+                                            $sale = \App\Models\Sale::whereIn('invoice_no', $candidates)->with('customer')->first();
+                                            if ($sale) {
+                                                if ($sale->customer) {
+                                                    $partyObj = $sale->customer;
+                                                    $partyType = get_class($partyObj);
+                                                } else {
+                                                    $partyName = 'Walk-in Customer';
+                                                    $partyType = 'Customer';
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // Fallback 3: Check sibling journal entry from the same source
+                                    if (!$partyObj && !$partyName && $entry->source_type && $entry->source_id) {
+                                        $sibling = \App\Models\JournalEntry::where('source_type', $entry->source_type)
+                                            ->where('source_id', $entry->source_id)
+                                            ->whereNotNull('party_id')
+                                            ->with('party')
+                                            ->first();
+                                        if ($sibling && $sibling->party) {
+                                            $partyObj = $sibling->party;
+                                            $partyType = $sibling->party_type;
+                                        }
+                                    }
+
+                                    if ($partyObj) {
+                                        if ($partyObj instanceof \App\Models\Customer || str_contains($partyType, 'Customer')) {
+                                            $partyName = $partyObj->customer_name ?? $partyObj->name ?? 'Customer';
+                                            $partyType = 'Customer';
+                                        } elseif ($partyObj instanceof \App\Models\Vendor || str_contains($partyType, 'Vendor')) {
+                                            $partyName = $partyObj->name ?? 'Vendor';
+                                            $partyType = 'Vendor';
+                                        } elseif ($partyObj instanceof \App\Models\Account || str_contains($partyType, 'Account')) {
+                                            $partyName = $partyObj->title ?? $partyObj->name ?? 'Account';
+                                            $partyType = 'Account';
+                                        } else {
+                                            $partyName = $partyObj->name ?? $partyObj->customer_name ?? $partyObj->title ?? class_basename($partyType);
+                                            $partyType = class_basename($partyType);
+                                        }
+                                    }
+
+                                    $initial = strtoupper(substr(trim($partyName ?: 'P'), 0, 1));
                                 @endphp
                                 <tr>
                                     {{-- Date --}}
-                                    <td class="text-center font-monospace small text-muted">
-                                        {{ $entry->entry_date->format('d/m/Y') }}
+                                    <td class="erp-col-date">
+                                        <span class="font-monospace text-dark font-weight-medium" style="font-size: 0.88rem;">
+                                            {{ $entry->entry_date->format('d/m/Y') }}
+                                        </span>
                                     </td>
 
                                     {{-- Voucher No --}}
-                                    <td class="text-center">
-                                        <span class="badge bg-light text-primary border font-monospace" style="font-size: 0.72rem; padding: 3px 6px;">
+                                    <td class="erp-col-voucher">
+                                        <span class="erp-bill-tag">
                                             {{ $voucherNo }}
                                         </span>
                                     </td>
 
                                     {{-- Description --}}
-                                    <td>
-                                        <span class="text-dark fw-semibold" style="font-size: 0.78rem;">
+                                    <td class="erp-col-desc">
+                                        <span class="text-dark font-weight-medium" style="font-size: 0.88rem; line-height: 1.45; color: #1e293b; display: block;">
                                             {{ $entry->description }}
                                         </span>
                                     </td>
 
                                     {{-- Party --}}
-                                    <td>
+                                    <td class="erp-col-party">
                                         @if ($partyName)
-                                            <div class="d-flex align-items-center gap-1.5">
-                                                <span class="badge {{ $partyBadgeClass }}" style="font-size: 0.65rem;">{{ $partyType }}</span>
-                                                <span class="fw-bold text-dark text-truncate" style="font-size: 0.78rem;" title="{{ $partyName }}">
-                                                    {{ $partyName }}
-                                                </span>
+                                            <div class="d-flex align-items-center" style="gap: 8px;">
+                                                <div class="erp-avatar erp-avatar-registered">
+                                                    {{ $initial }}
+                                                </div>
+                                                <div class="d-flex flex-column text-truncate" style="line-height: 1.25;">
+                                                    <span class="font-weight-bold text-dark text-truncate" style="font-size: 0.88rem;" title="{{ $partyName }}">
+                                                        {{ $partyName }}
+                                                    </span>
+                                                    <div>
+                                                        <span class="badge-party-type">{{ $partyType }}</span>
+                                                    </div>
+                                                </div>
                                             </div>
                                         @else
-                                            <span class="text-muted small">-</span>
+                                            <span class="text-muted font-weight-medium" style="font-size: 0.88rem;">—</span>
                                         @endif
                                     </td>
 
                                     {{-- Debit (Dr) --}}
-                                    <td class="text-end font-monospace fw-bold" style="color: #059669; font-size: 0.80rem;">
-                                        {{ $debit > 0 ? number_format($debit, 2) : '-' }}
+                                    <td class="erp-col-dr">
+                                        <span class="erp-amount-num font-weight-bold" style="color: #059669 !important;">
+                                            {{ $debit > 0 ? number_format($debit, 2) : '-' }}
+                                        </span>
                                     </td>
 
                                     {{-- Credit (Cr) --}}
-                                    <td class="text-end font-monospace fw-bold" style="color: #dc2626; font-size: 0.80rem;">
-                                        {{ $credit > 0 ? number_format($credit, 2) : '-' }}
+                                    <td class="erp-col-cr">
+                                        <span class="erp-amount-num font-weight-bold" style="color: #dc2626 !important;">
+                                            {{ $credit > 0 ? number_format($credit, 2) : '-' }}
+                                        </span>
                                     </td>
 
                                     {{-- Running Balance --}}
-                                    <td class="text-end pe-3 font-monospace">
-                                        <span class="fw-bold text-dark" style="font-size: 0.82rem;">
+                                    <td class="erp-col-bal pr-3 pe-3">
+                                        <span class="erp-amount-num font-weight-bold text-dark" style="font-size: 0.94rem;">
                                             Rs. {{ number_format(abs($runningBalance), 2) }}
                                         </span>
-                                        <span class="erp-badge {{ $runningBalance >= 0 ? 'badge-dr' : 'badge-cr' }} ms-1">
-                                            {{ $runningBalance >= 0 ? 'Dr' : 'Cr' }}
+                                        <span class="erp-badge {{ $runningBalance >= 0 ? 'badge-dr' : 'badge-cr' }} ml-1 ms-1">
+                                            {{ $runningBalance >= 0 ? 'DR' : 'CR' }}
                                         </span>
                                     </td>
                                 </tr>
@@ -614,7 +750,7 @@
                                 <tr>
                                     <td colspan="7" class="text-center py-5 text-muted">
                                         <i class="fas fa-book fa-3x mb-3 text-light"></i>
-                                        <h6 class="fw-bold">No ledger journal entries found</h6>
+                                        <h6 class="font-weight-bold">No ledger journal entries found</h6>
                                         <p class="small text-muted mb-0">Select another date range to inspect historical transactions.</p>
                                     </td>
                                 </tr>
@@ -622,15 +758,21 @@
                         </tbody>
                         <tfoot>
                             <tr>
-                                <td colspan="4" class="text-end fw-bold pe-3">Period Totals:</td>
-                                <td class="text-end font-monospace fw-bold" style="color: #059669; font-size: 0.85rem;">
-                                    {{ number_format($totDebit, 2) }}
+                                <td colspan="4" class="text-right text-end font-weight-bold pr-3 pe-3 text-dark" style="font-size: 0.94rem;">Period Totals:</td>
+                                <td class="erp-col-dr">
+                                    <span class="erp-amount-num font-weight-bold" style="color: #059669 !important; font-size: 1.00rem;">
+                                        {{ number_format($totDebit, 2) }}
+                                    </span>
                                 </td>
-                                <td class="text-end font-monospace fw-bold" style="color: #dc2626; font-size: 0.85rem;">
-                                    {{ number_format($totCredit, 2) }}
+                                <td class="erp-col-cr">
+                                    <span class="erp-amount-num font-weight-bold" style="color: #dc2626 !important; font-size: 1.00rem;">
+                                        {{ number_format($totCredit, 2) }}
+                                    </span>
                                 </td>
-                                <td class="text-end pe-3 font-monospace fw-bold text-primary" style="font-size: 0.85rem;">
-                                    Rs. {{ number_format(abs($closeBal), 2) }} {{ $closeBal >= 0 ? 'Dr' : 'Cr' }}
+                                <td class="erp-col-bal pr-3 pe-3">
+                                    <span class="erp-amount-num font-weight-bold text-primary" style="font-size: 1.02rem; color: #2563eb !important;">
+                                        Rs. {{ number_format(abs($closeBal), 2) }} {{ $closeBal >= 0 ? 'DR' : 'CR' }}
+                                    </span>
                                 </td>
                             </tr>
                         </tfoot>

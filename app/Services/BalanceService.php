@@ -191,13 +191,13 @@ class BalanceService
             ->where('vendor_id', $vendorId)
             ->whereIn('status_purchase', ['approved', 'Returned'])
             ->whereBetween('purchase_date', [$startDate, $endDate])
-            ->select('id', 'invoice_no', 'net_amount', 'purchase_date')
+            ->select('id', 'invoice_no', 'net_amount', 'purchase_date', 'note')
             ->get()
             ->map(fn($p) => [
                 'source_type' => 'Purchase',
                 'source_id'   => $p->id,
                 'date'        => $p->purchase_date,
-                'description' => 'Purchase Invoice #' . $p->invoice_no,
+                'description' => 'Purchase Invoice #' . $p->invoice_no . ($p->note ? ' (' . $p->note . ')' : ''),
                 'debit'       => 0,
                 'credit'      => (float) $p->net_amount, // Cr = we owe vendor more
                 'sort_date'   => $p->purchase_date,

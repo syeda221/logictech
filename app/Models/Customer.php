@@ -10,7 +10,7 @@ class Customer extends Model
     use HasFactory;
     
     protected $fillable = [
-        'customer_id', 'customer_name', 'customer_name_ur', 'cnic', 'filer_type', 'zone',
+        'customer_id', 'customer_name', 'customer_name_ur', 'cnic', 'ntn', 'strn', 'filer_type', 'zone',
         'contact_person', 'mobile', 'email_address', 'contact_person_2', 'mobile_2',
         'email_address_2', 'opening_balance', 'balance_range', 'address', 'status',
         'customer_type', 'previous_balance', 'sales_officer_id',

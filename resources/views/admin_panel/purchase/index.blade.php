@@ -482,8 +482,11 @@
                 <div class="d-flex flex-wrap align-items-center gap-2 purch-hdr-actions">
                     @can('purchases.create')
                         <a class="btn-erp-primary" href="{{ route('add_purchase') }}">
-                            <i class="fas fa-plus-circle"></i> Add PO
+                            <i class="fas fa-boxes"></i> Stock Purchase
                         </a>
+                        <button type="button" class="btn-erp-primary btn-open-credit-purchase" id="btnCreditPurchaseModal" data-toggle="modal" data-target="#creditPurchaseModal" data-bs-toggle="modal" data-bs-target="#creditPurchaseModal" style="cursor: pointer;">
+                            <i class="fas fa-credit-card"></i> Credit Purchase
+                        </button>
                     @endcan
                 </div>
             </div>
@@ -705,6 +708,99 @@
         </div>
     </div>
 </div>
+
+{{-- Credit Purchase Modal (No Products - Direct Vendor Ledger Booking) --}}
+<div class="modal fade" id="creditPurchaseModal" tabindex="-1" role="dialog" aria-labelledby="creditPurchaseModalLabel" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+            <div class="modal-header text-white" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); border-bottom: 2.5px solid #60a5fa; padding: 14px 20px;">
+                <div>
+                    <h5 class="modal-title fw-bold mb-0 text-white" id="creditPurchaseModalLabel" style="font-size: 16px;">
+                        <i class="fas fa-credit-card me-2"></i> New Credit Purchase
+                    </h5>
+                    <small class="text-white-50" style="font-size: 11.5px;">Direct vendor credit booking (Without product inventory line items)</small>
+                </div>
+                <button type="button" class="close text-white" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close" style="font-size: 1.5rem; opacity: 0.9; outline: none; border: none; background: transparent; cursor: pointer;">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            
+            <form id="creditPurchaseForm" class="myform" method="POST" action="{{ route('purchase.credit_store') }}">
+                @csrf
+                <div class="modal-body p-4" style="background-color: #f8fafc;">
+                    <div class="row g-3">
+                        {{-- Vendor Selection --}}
+                        <div class="col-md-7 col-12 mb-3">
+                            <label class="form-label fw-bold small text-dark mb-1">
+                                <i class="fas fa-truck text-primary me-1"></i> Vendor Name <span class="text-danger">*</span>
+                            </label>
+                            <select name="vendor_id" id="cp_vendor_id" class="form-control form-select form-select-sm" style="width: 100%; height: 38px;" required>
+                                <option value="">-- Select Vendor --</option>
+                                @foreach ($vendors as $v)
+                                    <option value="{{ $v->id }}">{{ $v->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        {{-- Purchase Date --}}
+                        <div class="col-md-5 col-12 mb-3">
+                            <label class="form-label fw-bold small text-dark mb-1">
+                                <i class="far fa-calendar-alt text-primary me-1"></i> Purchase Date <span class="text-danger">*</span>
+                            </label>
+                            <input type="date" name="purchase_date" id="cp_purchase_date" class="form-control form-control-sm" style="height: 38px;" value="{{ date('Y-m-d') }}" required>
+                        </div>
+
+                        {{-- M.Bill # --}}
+                        <div class="col-md-6 col-12 mb-3">
+                            <label class="form-label fw-bold small text-dark mb-1">
+                                <i class="fas fa-file-invoice text-primary me-1"></i> M-Bill # <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" name="m_bill" id="cp_m_bill" class="form-control form-control-sm" style="height: 38px;" placeholder="e.g. MB-10492" required>
+                        </div>
+
+                        {{-- Purchase Amount --}}
+                        <div class="col-md-6 col-12 mb-3">
+                            <label class="form-label fw-bold small text-dark mb-1">
+                                <i class="fas fa-coins text-primary me-1"></i> Purchase Amount (Rs) <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group input-group-sm" style="height: 38px;">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text bg-white fw-bold text-muted" style="border-color: #cbd5e1;">Rs.</span>
+                                </div>
+                                <input type="number" step="0.01" min="0.01" name="amount" id="cp_amount" class="form-control fw-bold text-dark fs-6" placeholder="0.00" style="border-color: #cbd5e1;" required>
+                            </div>
+                        </div>
+
+                        {{-- Description / Remarks --}}
+                        <div class="col-12 mb-2">
+                            <label class="form-label fw-bold small text-dark mb-1">
+                                <i class="fas fa-comment-alt text-primary me-1"></i> Description / Narration
+                            </label>
+                            <textarea name="description" id="cp_description" class="form-control" rows="2" placeholder="e.g. Credit purchase against raw materials / invoice details..."></textarea>
+                        </div>
+                    </div>
+
+                    {{-- Enterprise Alert Note --}}
+                    <div class="alert alert-light border py-2 px-3 mt-3 mb-0 d-flex align-items-center" style="font-size: 11.5px; border-radius: 8px; background-color: #eff6ff; border-color: #bfdbfe !important;">
+                        <i class="fas fa-shield-alt fs-5 me-2 text-primary"></i>
+                        <div class="text-secondary">
+                            This entry will automatically record an approved purchase and <strong>post credit to the Vendor Ledger</strong> &amp; Accounts Payable balance with full double-entry integrity.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer bg-white border-top px-4 py-3 d-flex justify-content-between">
+                    <button type="button" class="btn btn-sm btn-light border px-3 fw-medium" data-dismiss="modal" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i> Cancel
+                    </button>
+                    <button type="submit" id="btnSaveCreditPurchase" class="btn btn-sm btn-primary px-4 fw-bold save-btn shadow-sm" style="background-color: #2563eb; border-color: #1d4ed8; height: 38px; border-radius: 6px;">
+                        <i class="fas fa-check-circle me-1"></i> Save &amp; Post to Ledger
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('js')
@@ -717,7 +813,10 @@
             }
             $('.datanew').DataTable({
                 "pageLength": 10,
-                "order": [],
+                "order": [[1, 'desc']],
+                "columnDefs": [
+                    { "orderable": false, "targets": [0, 13] }
+                ],
                 "language": {
                     "search": "",
                     "searchPlaceholder": "Search purchases..."
@@ -979,6 +1078,82 @@
                     Swal.fire('Error', msg, 'error');
                 }
             });
+        });
+
+        // Show Credit Purchase Modal
+        $(document).on('click', '#btnCreditPurchaseModal, .btn-open-credit-purchase', function(e) {
+            e.preventDefault();
+            $('#creditPurchaseModal').modal('show');
+        });
+
+        // Initialize Select2 inside Credit Purchase modal when shown
+        $('#creditPurchaseModal').on('shown.bs.modal', function () {
+            if ($.fn.select2) {
+                $('#cp_vendor_id').select2({
+                    dropdownParent: $('#creditPurchaseModal'),
+                    placeholder: "-- Select Vendor --",
+                    allowClear: true,
+                    width: '100%'
+                });
+            }
+            $('#cp_m_bill').trigger('focus');
+        });
+
+        // Credit Purchase Form Submit via standard myAjax
+        $(document).on('submit', '#creditPurchaseForm', function(e) {
+            e.preventDefault();
+
+            let vendorId = $('#cp_vendor_id').val();
+            let mBill = $.trim($('#cp_m_bill').val());
+            let amount = parseFloat($('#cp_amount').val());
+            let date = $('#cp_purchase_date').val();
+
+            if (!vendorId) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Vendor Required',
+                    text: 'Please select a vendor.',
+                    confirmButtonColor: '#2563eb'
+                });
+                return false;
+            }
+            if (!mBill) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'M-Bill Required',
+                    text: 'Please enter M-Bill #.',
+                    confirmButtonColor: '#2563eb'
+                });
+                return false;
+            }
+            if (isNaN(amount) || amount <= 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Invalid Amount',
+                    text: 'Please enter a valid purchase amount greater than zero.',
+                    confirmButtonColor: '#2563eb'
+                });
+                return false;
+            }
+            if (!date) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Date Required',
+                    text: 'Please select a purchase date.',
+                    confirmButtonColor: '#2563eb'
+                });
+                return false;
+            }
+
+            let form = this;
+            let formdata = new FormData(form);
+            let url = $(form).attr('action');
+            let method = $(form).attr('method') || 'POST';
+
+            let $submitBtn = $(form).find(':submit');
+            $submitBtn.prop('disabled', true);
+
+            myAjax(url, formdata, method);
         });
     });
 </script>

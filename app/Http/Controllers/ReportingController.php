@@ -1478,6 +1478,8 @@ class ReportingController extends Controller
                         $ref = $matches[1];
                     } elseif (preg_match('/Receipt #(\S+)/', $desc, $matches)) {
                         $ref = $matches[1];
+                    } elseif (preg_match('/(?:Return|SR) #(\S+)/', $desc, $matches)) {
+                        $ref = $matches[1];
                     }
 
                     $entryDate = $row['date'];
@@ -1493,6 +1495,7 @@ class ReportingController extends Controller
                         'sort_date' => $sortDate,
                         'date' => $formattedDate,
                         'invoice' => $ref,
+                        'products' => '-',
                         'description' => $desc,
                         'customer_name' => $customerName,
                         'debit' => $row['debit'] ?? 0,
@@ -1502,6 +1505,20 @@ class ReportingController extends Controller
                 }
 
                 $totalClosing += $ledgerData['closing_balance'] ?? $ledgerData['opening_balance'];
+            }
+
+            // Batch map products for All Customers
+            $maps = $this->getInvoiceProductsMap($allTransactions);
+            foreach ($allTransactions as &$t) {
+                $desc = $t['description'] ?? '';
+                $ref = $t['invoice'] ?? '-';
+                $productName = '-';
+                if (($t['debit'] > 0 || stripos($desc, 'Sale Invoice') !== false) && isset($maps['sales'][$ref])) {
+                    $productName = $maps['sales'][$ref];
+                } elseif (stripos($desc, 'Sale Return') !== false && isset($maps['returns'][$ref])) {
+                    $productName = $maps['returns'][$ref];
+                }
+                $t['products'] = $productName;
             }
 
             // Sort by date
@@ -1532,8 +1549,9 @@ class ReportingController extends Controller
         }
 
         $ledgerData = $balanceService->getCustomerLedger($customerId, $start, $end);
+        $maps = $this->getInvoiceProductsMap($ledgerData['transactions']);
 
-        $transactions = collect($ledgerData['transactions'])->map(function ($row) {
+        $transactions = collect($ledgerData['transactions'])->map(function ($row) use ($maps) {
             $desc = $row['description'] ?? '';
 
             // Try to find payment account name for receipt entries
@@ -1550,6 +1568,15 @@ class ReportingController extends Controller
                 $ref = $matches[1];
             } elseif (preg_match('/Receipt #(\S+)/', $desc, $matches)) {
                 $ref = $matches[1];
+            } elseif (preg_match('/(?:Return|SR) #(\S+)/', $desc, $matches)) {
+                $ref = $matches[1];
+            }
+
+            $productName = '-';
+            if (($row['debit'] > 0 || stripos($desc, 'Sale Invoice') !== false) && isset($maps['sales'][$ref])) {
+                $productName = $maps['sales'][$ref];
+            } elseif (stripos($desc, 'Sale Return') !== false && isset($maps['returns'][$ref])) {
+                $productName = $maps['returns'][$ref];
             }
 
             $entryDate = $row['date'];
@@ -1562,6 +1589,7 @@ class ReportingController extends Controller
             return [
                 'date' => $formattedDate,
                 'invoice' => $ref,
+                'products' => $productName,
                 'description' => $desc,
                 'debit' => $row['debit'] ?? 0,
                 'credit' => $row['credit'] ?? 0,
@@ -1576,6 +1604,51 @@ class ReportingController extends Controller
             'transactions' => $transactions,
             'report_period' => "$start to $end",
         ]);
+    }
+
+    /**
+     * Build map of invoice/return numbers to product names
+     */
+    private function getInvoiceProductsMap($transactions)
+    {
+        $invoiceNos = [];
+        $returnNos = [];
+        foreach ($transactions as $t) {
+            $desc = is_array($t) ? ($t['description'] ?? '') : ($t->description ?? '');
+            if (preg_match('/Invoice #(\S+)/', $desc, $m)) {
+                $invoiceNos[] = $m[1];
+            } elseif (preg_match('/(?:Return|SR) #(\S+)/', $desc, $m)) {
+                $returnNos[] = $m[1];
+            }
+        }
+
+        $salesMap = [];
+        if (!empty($invoiceNos)) {
+            $sales = \App\Models\Sale::whereIn('invoice_no', array_unique($invoiceNos))
+                ->with(['items.product'])
+                ->get();
+            foreach ($sales as $s) {
+                $prods = $s->items->map(function ($it) {
+                    return $it->product ? $it->product->name : ($it->product_name ?? '');
+                })->filter()->unique()->values()->all();
+                $salesMap[$s->invoice_no] = !empty($prods) ? implode(', ', $prods) : '-';
+            }
+        }
+
+        $returnsMap = [];
+        if (!empty($returnNos)) {
+            $returns = \App\Models\SaleReturn::whereIn('return_invoice', array_unique($returnNos))
+                ->with(['items.product'])
+                ->get();
+            foreach ($returns as $r) {
+                $prods = $r->items->map(function ($it) {
+                    return $it->product ? $it->product->name : ($it->product_name ?? '');
+                })->filter()->unique()->values()->all();
+                $returnsMap[$r->return_invoice] = !empty($prods) ? implode(', ', $prods) : '-';
+            }
+        }
+
+        return ['sales' => $salesMap, 'returns' => $returnsMap];
     }
 
     /**
