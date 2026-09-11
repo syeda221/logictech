@@ -1102,7 +1102,7 @@
                                                 <span class="d-inline-flex align-items-center gap-1 justify-content-end">
                                                     <i class="fas fa-receipt me-1"></i> Sales Tax / GST Rate:
                                                     <div class="input-group input-group-sm" style="width: 100px;">
-                                                        <input type="number" step="0.5" min="0" max="100" class="form-control form-control-sm text-end fw-bold font-monospace" id="gstPercentInput" name="tax_percent" value="18" placeholder="18">
+                                                        <input type="number" step="0.5" min="0" max="100" class="form-control form-control-sm text-end fw-bold font-monospace" id="gstPercentInput" name="tax_percent" value="0" placeholder="0" disabled>
                                                         <span class="input-group-text bg-white fw-bold px-1 text-success">%</span>
                                                     </div>
                                                 </span>
@@ -1112,7 +1112,7 @@
                                             </td>
                                             <td class="text-end fw-bold font-monospace fs-6" style="color: #047857;">
                                                 <span id="gstAmountDisplay">0.00</span>
-                                                <input type="hidden" id="taxAmountInput" name="tax_amount" value="0">
+                                                <input type="hidden" id="taxAmountInput" name="tax_amount" value="0" disabled>
                                             </td>
                                             <td class="text-center">
                                                 <button type="button" class="btn btn-sm text-danger p-0" id="btnRemoveGst" title="Remove GST" style="font-size: 1.1rem; line-height: 1;">&times;</button>

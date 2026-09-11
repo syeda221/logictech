@@ -593,6 +593,9 @@
                         <p class="erp-subtitle">Executive sales ledger, bookings overview, dispatch status and invoice records</p>
                     </div>
                     <div class="sales-hdr-actions">
+                        <a class="btn-erp-outline" href="{{ route('repair.index') }}" title="Repairing & Service Management">
+                            <i class="fas fa-tools text-primary"></i> Repairing
+                        </a>
                         <a class="btn-erp-outline-danger" href="{{ route('sale.return.index') }}">
                             <i class="fas fa-undo-alt"></i> Returns
                         </a>
@@ -753,6 +756,7 @@
                                         <th class="text-end" style="width: 80px;">Gross</th>
                                         <th class="text-end" style="width: 80px;">Add. Disc</th>
                                         <th class="text-end" style="width: 85px;">Net Total</th>
+                                        <th class="text-end" style="width: 85px;">Balance</th>
                                         <th class="text-center" style="width: 70px;">Date</th>
                                         <th class="text-center" style="width: 72px;">Status</th>
                                         <th class="text-center" style="width: 72px;">State</th>

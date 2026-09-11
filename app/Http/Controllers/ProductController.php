@@ -19,7 +19,7 @@ class ProductController extends Controller
 {
     public function getPrice(Request $request)
     {
-        $product = Product::find($request->product_id);
+        $product = Product::with('brand')->find($request->product_id);
 
         if (! $product) {
             return response()->json(['retail_price' => 0]);
@@ -46,6 +46,8 @@ class ProductController extends Controller
             'height'                => $product->height,
             'width'                 => $product->width,
             'item_code'             => $product->item_code,
+            'model'                 => $product->model ?? ($product->brand ? $product->brand->name : ''),
+            'brand'                 => $product->brand ? $product->brand->name : '',
             'purchase_discount_percent' => $product->purchase_discount_percent ?? 0,
             'sale_discount_percent'     => $product->sale_discount_percent ?? 0,
         ]);
@@ -101,8 +103,8 @@ class ProductController extends Controller
         $term = $request->get('term') ?? $request->get('q') ?? '';
 
         $query = Product::query()
-            ->select('id', 'item_name', 'item_code', 'barcode_path', 'size_mode', 'unit_id', 'height', 'width', 'pieces_per_box', 'purchase_price_per_box', 'purchase_price_per_m2', 'purchase_price_per_piece', 'pieces_per_m2', 'purchase_discount_percent', 'sale_discount_percent', 'color', 'sale_price_per_piece', 'item_type')
-            ->with(['unit'])
+            ->select('id', 'item_name', 'item_code', 'model', 'brand_id', 'barcode_path', 'size_mode', 'unit_id', 'height', 'width', 'pieces_per_box', 'purchase_price_per_box', 'purchase_price_per_m2', 'purchase_price_per_piece', 'pieces_per_m2', 'purchase_discount_percent', 'sale_discount_percent', 'color', 'sale_price_per_piece', 'item_type')
+            ->with(['unit', 'brand'])
             ->withSum('warehouseStocks', 'total_pieces') /* Sum PIECES, not boxes */
             ->where('is_active', true) /* Only active products */
             ->where(function ($q) use ($term) {
@@ -328,6 +330,8 @@ class ProductController extends Controller
                         'purchase_price_per_piece' => $v['purch_price'] ?? $p->purchase_price_per_piece ?? 0,
                         'purchase_price_per_m2' => $p->purchase_price_per_m2 ?? 0,
                         'sale_discount_percent' => $p->sale_discount_percent ?? 0,
+                        'model' => !empty($v['color']) && $v['color'] !== '-' ? $v['color'] : ($p->model ?? ($p->brand->name ?? '')),
+                        'brand' => $p->brand->name ?? '',
                         'variant_data' => base64_encode($variantJson)
                     ];
                 }
@@ -341,6 +345,8 @@ class ProductController extends Controller
                 'stock' => $stockDisplay,
                 'stock_pieces' => $stockPieces,
                 'name' => $p->item_name,
+                'model' => $p->model ?? ($p->brand->name ?? ''),
+                'brand' => $p->brand->name ?? '',
                 'size_mode' => $p->size_mode,
                 'unit_name' => $unitName,
                 'pieces_per_box' => $ppb,
@@ -963,7 +969,7 @@ class ProductController extends Controller
         });
 
         // Retrieve the newly created product (outside closure, by latest id)
-        $newProduct = Product::latest('id')->select('id', 'item_name', 'item_code', 'purchase_price_per_piece', 'size_mode', 'pieces_per_box')->first();
+        $newProduct = Product::with('brand')->latest('id')->select('id', 'item_name', 'item_code', 'model', 'brand_id', 'purchase_price_per_piece', 'sale_price_per_box', 'sale_price_per_piece', 'wholesale_price', 'size_mode', 'pieces_per_box', 'item_type')->first();
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -972,14 +978,31 @@ class ProductController extends Controller
                 'product' => $newProduct ? [
                     'id'                       => $newProduct->id,
                     'text'                     => $newProduct->item_name . ' (SKU: ' . $newProduct->item_code . ')',
+                    'name'                     => $newProduct->item_name,
                     'item_name'                => $newProduct->item_name,
                     'item_code'                => $newProduct->item_code,
+                    'sku'                      => $newProduct->item_code,
+                    'model'                    => $newProduct->model ?? ($newProduct->brand ? $newProduct->brand->name : ''),
+                    'brand'                    => $newProduct->brand ? $newProduct->brand->name : '',
+                    'item_type'                => $newProduct->item_type,
                     'purchase_price_per_piece' => (float) ($newProduct->purchase_price_per_piece ?? 0),
+                    'sale_price'               => (float) ($newProduct->sale_price_per_box ?: $newProduct->sale_price_per_piece ?: 0),
+                    'retail_price'             => (float) ($newProduct->sale_price_per_box ?: $newProduct->sale_price_per_piece ?: 0),
+                    'wholesale_price'          => (float) ($newProduct->wholesale_price ?? 0),
                     'size_mode'                => $newProduct->size_mode ?? 'by_pieces',
                     'pieces_per_box'           => (int) ($newProduct->pieces_per_box ?? 1),
-                    'stock'                    => 0,
+                    'stock'                    => $newProduct->item_type === 'finish_goods' ? 'Made to Order' : 0,
                     'stock_pieces'             => 0,
-                    'unit_name'                => 'Pcs',
+                    'unit_name'                => match($newProduct->size_mode) {
+                        'by_kg' => 'Kg',
+                        'by_gm' => 'Gm',
+                        'by_ton' => 'Ton',
+                        'by_meter' => 'Meter',
+                        'by_feet' => 'Ft',
+                        'by_cartons' => 'Carton',
+                        'by_size' => 'M²',
+                        default => 'Pcs',
+                    },
                     'trade_price'              => (float) ($newProduct->purchase_price_per_piece ?? 0),
                 ] : null,
             ]);
@@ -1528,29 +1551,30 @@ class ProductController extends Controller
 
         // Conditional rules logic
         $mode = $request->size_mode;
+        $isFinishGoods = $request->input('item_type') === 'finish_goods';
 
         if ($mode === 'by_size') {
             $rules = array_merge($rules, [
                 'height' => 'required|numeric|gt:0',
                 'width' => 'required|numeric|gt:0',
                 'pieces_per_box' => 'required|integer|gt:0',
-                'boxes_quantity' => 'required|integer|min:0', // Allowed 0 stock
-                'price_per_m2' => 'required|numeric|min:0', // Allowed 0 price
-                'purchase_price_per_m2' => 'required|numeric|min:0',
+                'boxes_quantity' => $isFinishGoods ? 'nullable|integer|min:0' : 'required|integer|min:0',
+                'price_per_m2' => 'required|numeric|min:0',
+                'purchase_price_per_m2' => $isFinishGoods ? 'nullable|numeric|min:0' : 'required|numeric|min:0',
             ]);
         } elseif ($mode === 'by_cartons') {
             $rules = array_merge($rules, [
                 'pieces_per_box' => 'required|integer|min:1',
-                'boxes_quantity' => 'required|integer|min:0',
+                'boxes_quantity' => $isFinishGoods ? 'nullable|integer|min:0' : 'required|integer|min:0',
                 'loose_pieces' => 'nullable|integer|min:0',
                 'sale_price_per_box' => 'required|numeric|min:0',
-                'purchase_price_per_piece' => 'required|numeric|min:0',
+                'purchase_price_per_piece' => $isFinishGoods ? 'nullable|numeric|min:0' : 'required|numeric|min:0',
             ]);
         } else {
             $rules = array_merge($rules, [
-                'piece_quantity' => 'required|integer|min:0', // Allowed 0 stock
+                'piece_quantity' => $isFinishGoods ? 'nullable|integer|min:0' : 'required|integer|min:0',
                 'sale_price_per_box' => 'required|numeric|min:0',
-                'purchase_price_per_piece' => 'required|numeric|min:0',
+                'purchase_price_per_piece' => $isFinishGoods ? 'nullable|numeric|min:0' : 'required|numeric|min:0',
             ]);
         }
 

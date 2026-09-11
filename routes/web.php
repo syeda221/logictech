@@ -376,6 +376,15 @@ Route::middleware('auth')->group(function () {
     Route::get('/sales/from-booking/{id}', [SaleController::class, 'convertFromBooking'])->name('sales.from.booking');
     Route::post('/sales/{id}/confirm', [SaleController::class, 'confirmBooking'])->middleware('permission:sales.create')->name('sales.confirm');
 
+    // Repairing & Service Module
+    Route::get('/repairs', [\App\Http\Controllers\RepairController::class, 'index'])->name('repair.index');
+    Route::get('/repairs/create', [\App\Http\Controllers\RepairController::class, 'create'])->name('repair.create');
+    Route::post('/repairs/store', [\App\Http\Controllers\RepairController::class, 'store'])->name('repair.store');
+    Route::get('/repairs/{id}', [\App\Http\Controllers\RepairController::class, 'show'])->name('repair.show');
+    Route::post('/repairs/{id}/status', [\App\Http\Controllers\RepairController::class, 'updateStatus'])->name('repair.status.update');
+    Route::post('/repairs/{id}/deliver', [\App\Http\Controllers\RepairController::class, 'deliver'])->name('repair.deliver');
+    Route::delete('/repairs/{id}', [\App\Http\Controllers\RepairController::class, 'destroy'])->name('repair.destroy');
+
     // web.php
     Route::get('/warehouse-stock-quantity', [StockTransferController::class, 'getStockQuantity'])->middleware('permission:stock.transfer.view')->name('warehouse.stock.quantity');
     Route::get('/get-products-by-warehouse', [StockTransferController::class, 'getProductsByWarehouse'])->middleware('permission:stock.transfer.view')->name('get.products.by.warehouse');
@@ -452,6 +461,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/getOpeningBalance/{type}/{id}', [VoucherController::class, 'getOpeningBalance'])->name('get.opening.balance');
     Route::get('/party-list', [VoucherController::class, 'partyList'])->name('party.list');
     Route::get('/receipt-vouchers/fetch', [VoucherController::class, 'fetchReceiptVouchers'])->name('receipt_vouchers.fetch');
+    Route::get('/customer/{id}/due-invoices', [VoucherController::class, 'getCustomerDueInvoices'])->name('customer.due.invoices');
 
     Route::post('/accounts-head/store', [AccountsHeadController::class, 'storeHead'])->name('account-heads.store');
     Route::post('/accounts-head/{id}/update', [AccountsHeadController::class, 'updateHead'])->name('account-heads.update');
@@ -610,6 +620,19 @@ Route::middleware('auth')->group(function () {
     // Purchase PO AJAX helpers (for PO items load in GRN)
     Route::get('/purchase/{id}/items-json', [\App\Http\Controllers\PurchaseController::class, 'getItemsJson'])
         ->middleware('permission:purchases.view')->name('purchase.items-json');
+
+    // ============================================================
+    // REPAIRING & SERVICE MANAGEMENT MODULE
+    // ============================================================
+    Route::get('/repair', [\App\Http\Controllers\RepairController::class, 'index'])->name('repair.index');
+    Route::get('/repair/create', [\App\Http\Controllers\RepairController::class, 'create'])->name('repair.create');
+    Route::post('/repair', [\App\Http\Controllers\RepairController::class, 'store'])->name('repair.store');
+    Route::get('/repair/{id}', [\App\Http\Controllers\RepairController::class, 'show'])->name('repair.show');
+    Route::post('/repair/{id}/status', [\App\Http\Controllers\RepairController::class, 'updateStatus'])->name('repair.status.update');
+    Route::post('/repair/{id}/deliver', [\App\Http\Controllers\RepairController::class, 'deliver'])->name('repair.deliver');
+    Route::delete('/repair/{id}', [\App\Http\Controllers\RepairController::class, 'destroy'])->name('repair.destroy');
+    Route::get('/repair/{id}/print-thermal', [\App\Http\Controllers\RepairController::class, 'printThermal'])->name('repair.print.thermal');
+    Route::get('/repair/{id}/print-a4', [\App\Http\Controllers\RepairController::class, 'printA4'])->name('repair.print.a4');
 
 });
 // Temporary debug route to inspect authenticated user's roles & permissions (remove after use)

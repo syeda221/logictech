@@ -501,6 +501,9 @@
                 <a href="{{ route('products.export') }}" class="btn-hdr btn-hdr-success" title="Export all products to CSV">
                     <i class="fas fa-file-download"></i> Export CSV
                 </a>
+                <a href="{{ route('repair.index') }}" class="btn-hdr btn-hdr-outline" title="Repairing & Services Module" style="color: #2563eb; border-color: #bfdbfe; background: #eff6ff; font-weight: 700;">
+                    <i class="fas fa-tools"></i> Repairing
+                </a>
                 @if (auth()->user()->can('products.create') || auth()->user()->email === 'admin@admin.com')
                     <button type="button" class="btn-hdr btn-hdr-outline" id="openImportModalBtn">
                         <i class="fas fa-file-upload"></i> Import CSV

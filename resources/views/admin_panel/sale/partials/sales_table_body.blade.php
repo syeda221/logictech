@@ -68,6 +68,56 @@
                 $refunded = $refundPayment->amount;
             }
         }
+
+        // Balance & Status Determination
+        $isOrderCancelled = ($ordStatus === 'cancelled');
+        $isUnconfirmedOrder = ($sale->sale_status === 'booked' || $sale->sale_status === 'draft');
+        $isFullyReturned = ($sale->sale_status === 'returned' || $sale->sale_status == 1);
+        $hasReturns = ($sale->returns && $sale->returns->count() > 0);
+
+        $balanceDisplayVal = '-';
+        $balanceIsDue = false;
+        $balanceBadgeHtml = '';
+
+        if ($isOrderCancelled) {
+            $balanceDisplayVal = '-';
+            $balanceBadgeHtml = '<div class="mt-0.5"><span class="erp-badge state-cancelled" style="font-size: 0.65rem; padding: 1px 6px;"><i class="fas fa-ban me-1"></i>Cancelled</span></div>';
+        } elseif ($isUnconfirmedOrder) {
+            $balanceDisplayVal = '-';
+            $balanceBadgeHtml = '<div class="mt-0.5"><span class="erp-badge badge-booked" style="font-size: 0.65rem; padding: 1px 6px;"><i class="fas fa-bookmark me-1"></i>Unconfirmed</span></div>';
+        } elseif ($isFullyReturned || ($hasReturns && $sale->returns->sum('net_amount') >= $sale->total_net)) {
+            $totalRefundable = (float) $sale->returns->sum('refundable_amount');
+            $totalRefundPaid = (float) $sale->returns->sum('paid');
+            $refundRemainingDue = max(0, $totalRefundable - $totalRefundPaid);
+
+            if ($refundRemainingDue > 0) {
+                $balanceIsDue = true;
+                $balanceDisplayVal = 'Rs. ' . number_format($refundRemainingDue, 2);
+                $balanceBadgeHtml = '<div class="mt-0.5"><span class="erp-badge" style="font-size: 0.65rem; padding: 1px 6px; color: #dc2626; background-color: #fef2f2; border: 1px solid #fecaca;"><i class="fas fa-clock me-1"></i>Due</span></div>';
+            } else {
+                $balanceDisplayVal = 'Rs. 0.00';
+                $balanceBadgeHtml = '<div class="mt-0.5"><span class="erp-badge badge-returned" style="font-size: 0.65rem; padding: 1px 6px;"><i class="fas fa-undo me-1"></i>Returned</span></div>';
+            }
+        } else {
+            $salePaid = (float)($sale->cash ?? 0) + (float)($sale->card ?? 0);
+            $saleNet = (float)($sale->total_net ?? 0);
+            $retDueAdj = $hasReturns ? (float)$sale->returns->sum('due_adjusted') : 0;
+            
+            if (isset($isExchange) && $isExchange) {
+                $remainingBalance = 0;
+            } else {
+                $remainingBalance = max(0, round($saleNet - $salePaid - $retDueAdj, 2));
+            }
+
+            if ($remainingBalance > 0) {
+                $balanceIsDue = true;
+                $balanceDisplayVal = 'Rs. ' . number_format($remainingBalance, 2);
+                $balanceBadgeHtml = '<div class="mt-0.5"><span class="erp-badge" style="font-size: 0.65rem; padding: 1px 6px; color: #dc2626; background-color: #fef2f2; border: 1px solid #fecaca;"><i class="fas fa-clock me-1"></i>Due</span></div>';
+            } else {
+                $balanceDisplayVal = 'Rs. 0.00';
+                $balanceBadgeHtml = '<div class="mt-0.5"><span class="erp-badge badge-posted" style="font-size: 0.65rem; padding: 1px 6px;"><i class="fas fa-check-circle me-1"></i>Paid</span></div>';
+            }
+        }
         // Customer Name determination
         $custDisplayName = optional($sale->customer_relation)->customer_name;
         $isWalkin = false;
@@ -152,6 +202,16 @@
             @else
                 Rs. {{ number_format($sale->total_net, 2) }}
             @endif
+        </td>
+        <td class="text-end font-monospace">
+            @if ($balanceIsDue)
+                <span class="fw-bold" style="color: #dc2626; font-size: 0.80rem;">{{ $balanceDisplayVal }}</span>
+            @elseif ($balanceDisplayVal === '-')
+                <span class="text-muted fw-bold" style="font-size: 0.80rem;">-</span>
+            @else
+                <span class="fw-bold text-success" style="font-size: 0.80rem;">{{ $balanceDisplayVal }}</span>
+            @endif
+            {!! $balanceBadgeHtml !!}
         </td>
         <td class="text-nowrap small text-muted font-monospace" style="font-size: 0.75rem;">
             {{ $sale->created_at->format('d/m/Y') }}
@@ -260,7 +320,7 @@
         elseif ($sale->sale_status === 'returned' || $sale->sale_status == 1) $cardBorderColor = '#dc2626';
     @endphp
     <tr class="d-table-row d-md-none border-0">
-        <td colspan="12" class="p-0 border-0 bg-transparent">
+        <td colspan="13" class="p-0 border-0 bg-transparent">
             <div class="sale-mcard p-3 bg-white rounded-3 border mb-3 shadow-sm" style="border-left: 4px solid {{ $cardBorderColor }} !important;">
                 <div class="d-flex align-items-center justify-content-between mb-2">
                     <div class="d-flex align-items-center gap-2">
@@ -295,13 +355,24 @@
                 </div>
 
                 <div class="row g-2 bg-light rounded-2 p-2 my-2 text-center" style="font-size: 0.8rem;">
-                    <div class="col-6">
+                    <div class="col-4">
                         <div class="text-muted small">Subtotal</div>
-                        <div class="fw-bold text-dark font-monospace">Rs. {{ number_format($gross_subtotal, 2) }}</div>
+                        <div class="fw-bold text-dark font-monospace" style="font-size: 0.75rem;">Rs. {{ number_format($gross_subtotal, 2) }}</div>
                     </div>
-                    <div class="col-6">
+                    <div class="col-4">
                         <div class="text-muted small">Net Total</div>
-                        <div class="fw-bold text-success font-monospace">Rs. {{ number_format($sale->total_net, 2) }}</div>
+                        <div class="fw-bold text-success font-monospace" style="font-size: 0.75rem;">Rs. {{ number_format($sale->total_net, 2) }}</div>
+                    </div>
+                    <div class="col-4">
+                        <div class="text-muted small">Balance</div>
+                        @if ($balanceIsDue)
+                            <div class="fw-bold font-monospace" style="color: #dc2626; font-size: 0.75rem;">{{ $balanceDisplayVal }}</div>
+                        @elseif ($balanceDisplayVal === '-')
+                            <div class="text-muted fw-bold font-monospace" style="font-size: 0.75rem;">-</div>
+                        @else
+                            <div class="fw-bold text-success font-monospace" style="font-size: 0.75rem;">{{ $balanceDisplayVal }}</div>
+                        @endif
+                        {!! $balanceBadgeHtml !!}
                     </div>
                 </div>
 

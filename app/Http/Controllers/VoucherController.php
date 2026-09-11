@@ -396,16 +396,42 @@ class VoucherController extends Controller
         }
     }
 
+    /**
+     * AJAX: Get all outstanding (Due) invoices for a customer
+     * Used in Receipt Voucher form for invoice-linking
+     */
+    public function getCustomerDueInvoices($id)
+    {
+        $sales = \App\Models\Sale::where('customer_id', $id)
+            ->where('sale_status', 'posted')
+            ->orderBy('created_at', 'asc') // oldest first (FIFO)
+            ->get(['id', 'invoice_no', 'total_net', 'cash', 'created_at']);
+
+        $due = [];
+        foreach ($sales as $sale) {
+            $paid    = (float) $sale->cash;
+            $net     = (float) $sale->total_net;
+            $remaining = round($net - $paid, 2);
+            if ($remaining > 0) {
+                $due[] = [
+                    'id'          => $sale->id,
+                    'invoice_no'  => $sale->invoice_no,
+                    'total_net'   => $net,
+                    'paid'        => $paid,
+                    'remaining'   => $remaining,
+                    'date'        => $sale->created_at ? $sale->created_at->format('d M Y') : '-',
+                ];
+            }
+        }
+
+        return response()->json($due);
+    }
+
     public function recepit_vochers()
     {
         $narrations = \App\Models\Narration::where('expense_head', 'Receipts Voucher')
             ->pluck('narration', 'id');
         $AccountHeads = AccountHead::whereRaw('LOWER(TRIM(name)) IN ("cash", "bank")')->get();
-
-        // echo "<pre>";
-        // print_r($AccountHeads) ;
-        // echo "<pre>";
-        // dd();
 
         // Last RVID nikalna
         $lastVoucher = \App\Models\ReceiptsVoucher::latest('id')->first();
@@ -416,6 +442,7 @@ class VoucherController extends Controller
 
         return view('admin_panel.vochers.reciepts_vouchers', compact('narrations', 'AccountHeads', 'nextRvid'));
     }
+
 
     public function store_rec_vochers(Request $request)
     {
@@ -429,118 +456,187 @@ class VoucherController extends Controller
                 $manualType = $request->narration_type_text[$index] ?? 'Manual';
 
                 if (empty($narrId) && ! empty($manualText)) {
-                    // Auto expense_head set based on voucher type
                     $expenseHead = 'Receipts Voucher';
-                    if (stripos($manualType, 'Receipt') !== false || $request->voucher_type == 'receipt') {
-                        $expenseHead = 'Receipts Voucher';
-                    }
-
                     $new = \App\Models\Narration::create([
                         'expense_head' => $expenseHead,
-                        'narration' => $manualText,
+                        'narration'    => $manualText,
                     ]);
-
-                    $narrationIds[] = (string) $new->id; // store as string → ["7"]
+                    $narrationIds[] = (string) $new->id;
                 } else {
-                    $narrationIds[] = (string) $narrId; // force string format
+                    $narrationIds[] = (string) $narrId;
                 }
             }
 
             $voucherData = [
-                'rvid' => $rvid,
-                'receipt_date' => $request->receipt_date,
-                'entry_date' => $request->entry_date,
-                'type' => $request->vendor_type,
-                'party_id' => $request->vendor_id,
-                'tel' => $request->tel,
-                'remarks' => $request->remarks,
-
-                'narration_id' => json_encode($narrationIds),
-                'reference_no' => json_encode($request->reference_no),
+                'rvid'             => $rvid,
+                'receipt_date'     => $request->receipt_date,
+                'entry_date'       => $request->entry_date,
+                'type'             => $request->vendor_type,
+                'party_id'         => $request->vendor_id,
+                'tel'              => $request->tel,
+                'remarks'          => $request->remarks,
+                'narration_id'     => json_encode($narrationIds),
+                'reference_no'     => json_encode($request->reference_no),
                 'row_account_head' => json_encode($request->row_account_head),
-                'row_account_id' => json_encode($request->row_account_id),
-                'discount_value' => json_encode($request->discount_value),
-                // 'kg'               => json_encode($request->kg),
-                'rate' => json_encode($request->rate),
-                'amount' => json_encode($request->amount),
-                'total_amount' => $request->total_amount,
-                'processed' => true,
+                'row_account_id'   => json_encode($request->row_account_id),
+                'discount_value'   => json_encode($request->discount_value),
+                'rate'             => json_encode($request->rate),
+                'amount'           => json_encode($request->amount),
+                'total_amount'     => $request->total_amount,
+                'processed'        => true,
             ];
 
             $rec = ReceiptsVoucher::create($voucherData);
-            // ✅ V2 VOUCHER INTEGRATION (Primary Logic Now)
+
+            // ─────────────────────────────────────────────────────────────
+            // INVOICE SETTLEMENT LOGIC (ERP-style)
+            // ─────────────────────────────────────────────────────────────
+            $vType      = strtolower($request->vendor_type);
+            $customerId = (int) $request->vendor_id;
+            $totalAmt   = (float) $request->total_amount;
+            $settledSaleIds = [];
+
+            if (($vType === 'customer' || $vType === 'walkin') && $customerId > 0 && $totalAmt > 0) {
+
+                $linkedSaleIds     = array_filter((array)($request->input('linked_sale_ids', [])));
+                $linkedSaleAmounts = (array)($request->input('linked_sale_amounts', []));
+
+                if (!empty($linkedSaleIds)) {
+                    // ─── MODE A: User ne manually invoice select ki ───
+                    $remaining = $totalAmt;
+                    foreach ($linkedSaleIds as $idx => $saleId) {
+                        if ($remaining <= 0) break;
+                        $sale = \App\Models\Sale::find($saleId);
+                        if (!$sale || $sale->customer_id != $customerId || $sale->sale_status !== 'posted') continue;
+
+                        $invoiceDue = round((float)$sale->total_net - (float)$sale->cash, 2);
+                        if ($invoiceDue <= 0) continue;
+
+                        // Use the amount user typed for this invoice (if provided), else auto-apply remaining
+                        $applyAmt = isset($linkedSaleAmounts[$idx]) && (float)$linkedSaleAmounts[$idx] > 0
+                            ? min((float)$linkedSaleAmounts[$idx], $invoiceDue, $remaining)
+                            : min($invoiceDue, $remaining);
+
+                        $sale->cash += $applyAmt;
+                        $sale->change = $sale->cash - $sale->total_net;
+                        $sale->save();
+
+                        $remaining -= $applyAmt;
+                        $settledSaleIds[] = ['sale_id' => $sale->id, 'invoice_no' => $sale->invoice_no, 'amount_applied' => $applyAmt];
+                    }
+
+                } else {
+                    // ─── MODE B: Koi invoice select nahi → FIFO auto-allocation ───
+                    // Sabse purani due invoice pehle settle karo
+                    $dueInvoices = \App\Models\Sale::where('customer_id', $customerId)
+                        ->where('sale_status', 'posted')
+                        ->orderBy('created_at', 'asc')
+                        ->get(['id', 'invoice_no', 'total_net', 'cash']);
+
+                    $remaining = $totalAmt;
+                    foreach ($dueInvoices as $sale) {
+                        if ($remaining <= 0) break;
+                        $invoiceDue = round((float)$sale->total_net - (float)$sale->cash, 2);
+                        if ($invoiceDue <= 0) continue;
+
+                        $applyAmt = min($invoiceDue, $remaining);
+                        $sale->cash += $applyAmt;
+                        $sale->change = $sale->cash - $sale->total_net;
+                        $sale->save();
+
+                        $remaining -= $applyAmt;
+                        $settledSaleIds[] = ['sale_id' => $sale->id, 'invoice_no' => $sale->invoice_no, 'amount_applied' => $applyAmt];
+                    }
+                    // ─── MODE C: Jo bacha woh customer ke ledger credit me jaata hai (already handled by ledger below) ───
+                }
+
+                \Log::info('Invoice Settlement Done. Voucher: '.$rvid.', Settled: '.json_encode($settledSaleIds));
+            }
+            // ─────────────────────────────────────────────────────────────
+
+            // ✅ V2 VOUCHER INTEGRATION
             try {
                 \Log::info('V2 Integration Start. Type: '.$request->vendor_type.', ID: '.$request->vendor_id);
 
-                $vType = strtolower($request->vendor_type);
-                $partyType = null;
+                $partyType       = null;
                 $creditAccountId = null;
-                $balanceService = app(\App\Services\BalanceService::class);
+                $balanceService  = app(\App\Services\BalanceService::class);
 
                 if ($vType == 'customer' || $vType == 'walkin') {
-                    $partyType = \App\Models\Customer::class;
+                    $partyType       = \App\Models\Customer::class;
                     $creditAccountId = $balanceService->getAccountsReceivableId();
                 } elseif ($vType == 'vendor') {
-                    $partyType = \App\Models\Vendor::class;
+                    $partyType       = \App\Models\Vendor::class;
                     $creditAccountId = $balanceService->getAccountsPayableId();
                 } else {
-                    $partyType = \App\Models\Account::class;
+                    $partyType       = \App\Models\Account::class;
                     $creditAccountId = $request->vendor_id;
                 }
 
                 if ($creditAccountId) {
                     $v2Lines = [];
-                    // DEBIT SIDE (Cash/Bank) - From Row Inputs
+                    // DEBIT SIDE (Cash/Bank)
                     if ($request->row_account_id && $request->amount) {
                         foreach ($request->row_account_id as $idx => $accId) {
                             $amt = (float) ($request->amount[$idx] ?? 0);
                             if ($amt > 0) {
                                 $v2Lines[] = [
                                     'account_id' => $accId,
-                                    'debit' => $amt,
-                                    'credit' => 0,
-                                    'narration' => $request->narration_text[$idx] ?? 'Receipt',
+                                    'debit'      => $amt,
+                                    'credit'     => 0,
+                                    'narration'  => $request->narration_text[$idx] ?? 'Receipt',
                                 ];
                             }
                         }
                     }
 
-                    // CREDIT SIDE (Customer/AR) - Total Amount
-                    $totalAmt = (float) $request->total_amount;
+                    // CREDIT SIDE (AR)
                     if ($totalAmt > 0) {
                         $v2Lines[] = [
                             'account_id' => $creditAccountId,
-                            'debit' => 0,
-                            'credit' => $totalAmt,
-                            'narration' => 'Receipt from '.$request->vendor_type,
+                            'debit'      => 0,
+                            'credit'     => $totalAmt,
+                            'narration'  => 'Receipt from '.$request->vendor_type,
                         ];
                     }
 
                     if (! empty($v2Lines)) {
+                        // Build remarks with settled invoice info
+                        $remarksNote = $request->remarks . " (Ref: $rvid)";
+                        if (!empty($settledSaleIds)) {
+                            $invoiceNos = implode(', ', array_column($settledSaleIds, 'invoice_no'));
+                            $remarksNote .= " | Invoices: $invoiceNos";
+                        }
+
                         app(\App\Services\VoucherService::class)->createVoucher([
                             'voucher_type' => 'receipt',
-                            'date' => $request->receipt_date,
-                            'status' => 'posted',
-                            'party_type' => $partyType,
-                            'party_id' => $request->vendor_id,
-                            'remarks' => $request->remarks." (Ref: $rvid)",
+                            'date'         => $request->receipt_date,
+                            'status'       => 'posted',
+                            'party_type'   => $partyType,
+                            'party_id'     => $request->vendor_id,
+                            'remarks'      => $remarksNote,
                         ], $v2Lines, auth()->id());
 
                         \Log::info('V2 Voucher Created Successfully.');
 
-                        // ✅ Also update CustomerLedger for correct balance display on form
+                        // ✅ Update CustomerLedger
                         if (($vType == 'customer' || $vType == 'walkin') && $totalAmt > 0) {
                             $latestLedger = CustomerLedger::where('customer_id', $request->vendor_id)->latest()->first();
                             $prevBal = $latestLedger ? $latestLedger->closing_balance : (
                                 \App\Models\Customer::find($request->vendor_id)->opening_balance ?? 0
                             );
+                            $ledgerDesc = 'Receipt Voucher '.$rvid;
+                            if (!empty($settledSaleIds)) {
+                                $invoiceNos = implode(', ', array_column($settledSaleIds, 'invoice_no'));
+                                $ledgerDesc .= ' | ' . $invoiceNos;
+                            }
                             CustomerLedger::create([
                                 'customer_id'      => $request->vendor_id,
                                 'admin_or_user_id' => auth()->id(),
                                 'previous_balance' => $prevBal,
                                 'opening_balance'  => 0,
-                                'closing_balance'  => $prevBal - $totalAmt, // Payment received → balance reduces
-                                'description'      => 'Receipt Voucher '.$rvid,
+                                'closing_balance'  => $prevBal - $totalAmt,
+                                'description'      => $ledgerDesc,
                             ]);
                         }
 
@@ -552,7 +648,6 @@ class VoucherController extends Controller
                 }
             } catch (\Exception $e) {
                 \Log::error('V2 Sync Error: '.$e->getMessage());
-                // Silently fail or return error message if preferred, but usually we log.
             }
 
             DB::commit();

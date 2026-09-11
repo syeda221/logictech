@@ -368,6 +368,32 @@
             background-color: #e2e8f0;
             color: #1e293b;
         }
+
+        /* Account Balance Badge */
+        .account-balance-badge {
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .account-balance-badge.bal-positive {
+            background-color: #ecfdf5 !important;
+            color: #047857 !important;
+            border: 1px solid #a7f3d0 !important;
+        }
+        .account-balance-badge.bal-negative {
+            background-color: #fef2f2 !important;
+            color: #b91c1c !important;
+            border: 1px solid #fecaca !important;
+        }
+        .account-balance-badge.bal-zero {
+            background-color: #f1f5f9 !important;
+            color: #475569 !important;
+            border: 1px solid #cbd5e1 !important;
+        }
     </style>
 
     <div class="container-fluid py-2 px-1">
@@ -564,14 +590,20 @@
                         <div class="card-panel shadow-sm">
                             <div class="section-title mb-3">Payment / Receipt Voucher</div>
                             <div id="paymentWrapper" class="border rounded p-3 bg-light mb-3">
-                                <div class="d-flex gap-2 align-items-center mb-2 payment-row flex-wrap">
-                                    <select class="form-select rv-account" name="payment_account_id[]"
-                                        style="max-width: 300px; flex-grow: 1;">
-                                        <option value="" selected disabled>Select Account</option>
-                                        @foreach ($accounts as $acc)
-                                            <option value="{{ $acc->id }}">{{ $acc->title }}</option>
-                                        @endforeach
-                                    </select>
+                                <div class="d-flex gap-2 align-items-start mb-2 payment-row flex-wrap">
+                                    <div style="max-width: 300px; flex-grow: 1;">
+                                        <select class="form-select rv-account" name="payment_account_id[]">
+                                            <option value="" selected disabled>Select Account</option>
+                                            @foreach ($accounts as $acc)
+                                                <option value="{{ $acc->id }}" data-balance="{{ $acc->current_balance ?? 0 }}">{{ $acc->title }}</option>
+                                            @endforeach
+                                        </select>
+                                        <div class="account-balance-badge-wrap mt-1" style="display: none;">
+                                            <span class="account-balance-badge bal-zero">
+                                                <i class="bi bi-wallet2"></i> Balance: Rs. <span class="bal-val">0.00</span> <span class="bal-type"></span>
+                                            </span>
+                                        </div>
+                                    </div>
                                     <input type="number" class="form-control text-end payment-amount"
                                         name="payment_amount[]" placeholder="Amount" style="width:140px">
                                     <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddPayment">
@@ -788,16 +820,63 @@
                 normalizeDiscountInput();
             });
 
+            // --- Account Balance Badge Logic ---
+            function updateAccountBalanceBadge($select) {
+                const $row = $select.closest('.payment-row');
+                const $wrap = $row.find('.account-balance-badge-wrap');
+                const $badge = $row.find('.account-balance-badge');
+                const $balVal = $row.find('.bal-val');
+                const $balType = $row.find('.bal-type');
+                const optBal = $select.find('option:selected').data('balance');
+
+                if ($select.val() && optBal !== undefined && optBal !== null && optBal !== '') {
+                    const bal = parseFloat(optBal) || 0;
+                    const absBal = Math.abs(bal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    $balVal.text(absBal);
+
+                    $badge.removeClass('bal-positive bal-negative bal-zero');
+                    if (bal > 0) {
+                        $badge.addClass('bal-positive');
+                        $balType.text('Dr');
+                    } else if (bal < 0) {
+                        $badge.addClass('bal-negative');
+                        $balType.text('Cr');
+                    } else {
+                        $badge.addClass('bal-zero');
+                        $balType.text('');
+                    }
+                    $wrap.show();
+                } else {
+                    $wrap.hide();
+                }
+            }
+
+            $(document).on('change', '.rv-account', function() {
+                updateAccountBalanceBadge($(this));
+            });
+
+            // Initialize on page load for any already selected
+            $('.rv-account').each(function() {
+                updateAccountBalanceBadge($(this));
+            });
+
             // Payment Row Add
             $('#btnAddPayment').click(function() {
                 const html = `
-                    <div class="d-flex gap-2 align-items-center mb-2 payment-row flex-wrap">
-                        <select class="form-select rv-account" name="payment_account_id[]" style="max-width: 300px; flex-grow: 1;">
-                            <option value="" selected disabled>Select Account</option>
-                            @foreach ($accounts as $acc)
-                                <option value="{{ $acc->id }}">{{ $acc->title }}</option>
-                            @endforeach
-                        </select>
+                    <div class="d-flex gap-2 align-items-start mb-2 payment-row flex-wrap">
+                        <div style="max-width: 300px; flex-grow: 1;">
+                            <select class="form-select rv-account" name="payment_account_id[]">
+                                <option value="" selected disabled>Select Account</option>
+                                @foreach ($accounts as $acc)
+                                    <option value="{{ $acc->id }}" data-balance="{{ $acc->current_balance ?? 0 }}">{{ $acc->title }}</option>
+                                @endforeach
+                            </select>
+                            <div class="account-balance-badge-wrap mt-1" style="display: none;">
+                                <span class="account-balance-badge bal-zero">
+                                    <i class="bi bi-wallet2"></i> Balance: Rs. <span class="bal-val">0.00</span> <span class="bal-type"></span>
+                                </span>
+                            </div>
+                        </div>
                         <input type="number" class="form-control text-end payment-amount" name="payment_amount[]" placeholder="Amount" style="width:140px">
                         <button type="button" class="btn btn-sm btn-outline-danger remove-payment">
                             <i class="bi bi-trash"></i>

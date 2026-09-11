@@ -924,6 +924,8 @@
                                                         <li><a href="{{ url('sale') }}"><i class="fas fa-receipt"></i>
                                                                 Sales</a></li>
                                                     @endcan
+                                                    <li><a href="{{ route('repair.index') }}"><i class="fas fa-tools text-primary"></i>
+                                                            Repairing & Services</a></li>
                                                     @can('pos.view')
                                                         <li><a href="{{ route('pos.index') }}"><i class="fas fa-cash-register"></i>
                                                                 POS System</a></li>

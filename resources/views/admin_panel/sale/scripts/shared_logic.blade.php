@@ -329,9 +329,9 @@
             // Fill Item Code
             $row.find('.item-code-display').val(pRes.item_code || '');
 
-            // Auto-fill Model / Specs if empty
-            if (!$row.find('.model-input').val()) {
-                $row.find('.model-input').val(pRes.model || pRes.brand || '');
+            // Auto-fill Model / Specs
+            if (pRes.model || pRes.brand) {
+                $row.find('.model-input').val(pRes.model || pRes.brand);
             }
 
             if (pRes.unit_name) {
@@ -660,6 +660,14 @@
         $('#summaryGstRate').text(displayRate);
         $('#summaryGstAmount').text(gstAmount.toFixed(2));
         $('#summaryGstRow').removeClass('d-none');
+
+        if (!isGstActive && gstAmount <= 0 && maxRowTaxPercent <= 0) {
+            $('#gstPercentInput').prop('disabled', true).val(0);
+            $('#taxAmountInput').prop('disabled', true).val('0.00');
+        } else {
+            $('#gstPercentInput').prop('disabled', false);
+            $('#taxAmountInput').prop('disabled', false);
+        }
 
         if (gstAmount > 0 || displayRate > 0) {
             $('#bottomGstVal').text(gstAmount.toFixed(2));
@@ -1173,8 +1181,8 @@
             
             // Set properties directly
             $row.find('.item-code-display').val(data.sku || '');
-            if (!$row.find('.model-input').val()) {
-                $row.find('.model-input').val(data.model || data.brand || '');
+            if (data.model || data.brand) {
+                $row.find('.model-input').val(data.model || data.brand);
             }
 
             if (data.unit_name) {
@@ -1555,10 +1563,12 @@
             const $gstRow = $('#gstFooterRow');
             if (newRate > 0) {
                 $gstRow.removeClass('d-none');
-                $('#gstPercentInput').val(newRate);
+                $('#gstPercentInput').prop('disabled', false).val(newRate);
+                $('#taxAmountInput').prop('disabled', false);
             } else {
                 $gstRow.addClass('d-none');
-                $('#gstPercentInput').val(0);
+                $('#gstPercentInput').prop('disabled', true).val(0);
+                $('#taxAmountInput').prop('disabled', true).val('0.00');
             }
             updateGrandTotals();
         });
@@ -1574,7 +1584,8 @@
                 calculateLine($(this));
             });
             $('#gstFooterRow').addClass('d-none');
-            $('#gstPercentInput').val(0);
+            $('#gstPercentInput').prop('disabled', true).val(0);
+            $('#taxAmountInput').prop('disabled', true).val('0.00');
             updateGrandTotals();
         });
 

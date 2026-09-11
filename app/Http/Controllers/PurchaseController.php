@@ -1802,8 +1802,28 @@ class PurchaseController extends Controller
              return redirect()->route('purchase.return.index')->with('error', 'This purchase has clearly been fully returned already.');
         }
 
-        return view('admin_panel.purchase.purchase_return.create', compact('purchase', 'accounts', 'purchaseItems'));
+        // Financial tracking of the Purchase Invoice
+        $purchaseTotalNet = (float) $purchase->net_amount;
+        $vendorPaid = (float) $purchase->paid_amount;
+        $pastReturns = PurchaseReturn::where('purchase_id', $purchase->id)->get();
+        $pastReturnedTotal = (float) $pastReturns->sum('net_amount');
+        $pastRefundPaid = (float) $pastReturns->sum('paid');
+        $originalInvoiceDue = max(0, $purchaseTotalNet - $vendorPaid);
+        $pastDueAdjusted = min(max(0, $pastReturnedTotal - $pastRefundPaid), $originalInvoiceDue);
+        $remainingInvoiceDue = max(0, $originalInvoiceDue - $pastDueAdjusted);
+        $remainingPaidRefundable = max(0, $vendorPaid - $pastRefundPaid);
+
+        return view('admin_panel.purchase.purchase_return.create', compact(
+            'purchase',
+            'accounts',
+            'purchaseItems',
+            'purchaseTotalNet',
+            'vendorPaid',
+            'remainingInvoiceDue',
+            'remainingPaidRefundable'
+        ));
     }
+
 
     // store return
     public function storeReturn(Request $request)
@@ -1981,8 +2001,42 @@ class PurchaseController extends Controller
 
             $netAmount = ($subtotal - $totalItemDiscount) - ($request->extra_discount ?? 0);
 
+            // Calculate debt offset vs eligible cash refund
+            $dueAdjusted = 0;
+            $refundableAmount = $netAmount;
+            if ($purchase) {
+                $purchaseTotalNet = (float) $purchase->net_amount;
+                $vendorPaid = (float) $purchase->paid_amount;
+                $originalInvoiceDue = max(0, $purchaseTotalNet - $vendorPaid);
+                $pastReturns = PurchaseReturn::where('purchase_id', $purchase->id)->get();
+                $pastReturnedTotal = (float) $pastReturns->sum('net_amount');
+                $pastRefundPaid = (float) $pastReturns->sum('paid');
+                $pastDueAdjusted = min(max(0, $pastReturnedTotal - $pastRefundPaid), $originalInvoiceDue);
+                $remainingInvoiceDue = max(0, $originalInvoiceDue - $pastDueAdjusted);
+                $remainingPaidRefundable = max(0, $vendorPaid - $pastRefundPaid);
+
+                // Return amount first clears any unpaid bill balance
+                $dueAdjusted = min($netAmount, $remainingInvoiceDue);
+                // Cash refund cannot exceed actual paid advance
+                $refundableAmount = min(max(0, $netAmount - $dueAdjusted), $remainingPaidRefundable);
+            }
+
             // 4. Handle Refund Payment
             $totalPaid = 0;
+            $submittedPaid = 0;
+            if (! empty($request->payment_account_id)) {
+                foreach ($request->payment_account_id as $idx => $accId) {
+                    $amt = (float) ($request->payment_amount[$idx] ?? 0);
+                    if ($accId && $amt > 0) {
+                        $submittedPaid += $amt;
+                    }
+                }
+            }
+
+            if ($purchase && $submittedPaid > ($refundableAmount + 0.05)) {
+                throw new \Exception("Cash refund of Rs. " . number_format($submittedPaid, 2) . " exceeds the eligible cash refund amount of Rs. " . number_format($refundableAmount, 2) . ". The remaining Rs. " . number_format($dueAdjusted, 2) . " settles the unpaid purchase invoice balance.");
+            }
+
             if (! empty($request->payment_account_id)) {
                 $voucherService = app(\App\Services\VoucherService::class);
                 $apId = app(\App\Services\BalanceService::class)->getAccountsPayableId();
@@ -2030,17 +2084,25 @@ class PurchaseController extends Controller
                 'balance' => $netAmount - $totalPaid,
             ]);
 
-            // Update Purchase Status (only if full return)
+            // Update Purchase Status & Due Amount
             if ($purchase) {
                 $totalBought = $purchase->items->sum('qty');
                 $totalReturned = \App\Models\PurchaseReturnItem::join('purchase_returns', 'purchase_returns.id', '=', 'purchase_return_items.purchase_return_id')
                     ->where('purchase_returns.purchase_id', $purchase->id)
                     ->sum('purchase_return_items.qty');
                 
+                $updateData = [];
+                if ($dueAdjusted > 0) {
+                    $updateData['due_amount'] = max(0, (float)$purchase->due_amount - $dueAdjusted);
+                }
                 if ($totalReturned >= $totalBought) {
-                    $purchase->update(['status_purchase' => 'Returned']);
+                    $updateData['status_purchase'] = 'Returned';
+                }
+                if (!empty($updateData)) {
+                    $purchase->update($updateData);
                 }
             }
+
 
             // 5. Update Vendor Ledger & Accounting
             // A. Create General Ledger Voucher for Return (Debit Vendor, Credit Purchase Return)

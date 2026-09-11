@@ -664,12 +664,15 @@ body{
                 <th style="width:7%">Qty.</th>
                 <th style="width:10%">Unit-<br>Price</th>
                 <th style="width:10%">Amount</th>
-                <th style="width:6%">GS<br>T%</th>
+                <th style="width:6%">GST<br>%</th>
                 <th style="width:10%">GST<br>Amount</th>
                 <th style="width:15%">Total Amount</th>
             </tr>
         </thead>
         <tbody>
+            @php
+                $totalTableTax = 0;
+            @endphp
             @foreach($saleItems as $item)
             @php
                 $tp  = (int)($item['total_pieces']??0);
@@ -698,7 +701,7 @@ body{
                 if(!empty($item['model']))     $specs[]=['Model',$item['model']];
                 if(!empty($item['serial_no'])) $specs[]=['Serial No',$item['serial_no']];
                 if(!empty($item['brand']))     $specs[]=['Brand',$item['brand']];
-                if(!empty($item['item_code'])) $specs[]=['Item Code',$item['item_code']];
+                // Item Code hidden from invoice (user request)
                 if(!empty($item['technical_name']))    $specs[]=['Tech Name',$item['technical_name']];
                 if(!empty($item['technical_specs']))   $specs[]=['Specifications',$item['technical_specs']];
                 if(!empty($item['technical_remarks'])) $specs[]=['QC Remarks',$item['technical_remarks']];
@@ -708,12 +711,30 @@ body{
                 if($sm=='by_size'&&$h2>0&&$w2>0) $specs[]=['Dimensions',number_format($w2,0).'×'.number_format($h2,0).' mm'];
                 if($wg>0) $specs[]=['Weight',($wg==(int)$wg?(int)$wg:$wg).'g'];
                 if($disc>0) $specs[]=['Discount',($discP>0?number_format($discP,1).'% — ':'').number_format($disc,2).' '.$currency];
+
+                $globalTaxPct = (float)($sale->tax_percent ?? 0);
+                $globalTaxAmt = (float)($sale->tax_amount ?? 0);
+
                 $itemTaxPct = (float)($item['tax_percent'] ?? 0);
                 $itemTaxAmt = (float)($item['tax_amount'] ?? 0);
-                if ($itemTaxPct > 0 && $itemTaxAmt <= 0) {
-                    $itemTaxAmt = round(($net * $itemTaxPct) / 100, 2);
+
+                if ($itemTaxPct <= 0 && $globalTaxPct > 0) {
+                    $itemTaxPct = $globalTaxPct;
                 }
+
+                if ($itemTaxAmt <= 0) {
+                    if ($itemTaxPct > 0) {
+                        $itemTaxAmt = round(($net * $itemTaxPct) / 100, 2);
+                    } elseif ($globalTaxAmt > 0 && $subTotal > 0) {
+                        $itemTaxAmt = round(($net / $subTotal) * $globalTaxAmt, 2);
+                        if ($itemTaxPct <= 0) {
+                            $itemTaxPct = round(($globalTaxAmt / $subTotal) * 100, 2);
+                        }
+                    }
+                }
+
                 $itemTotalWithTax = $net + $itemTaxAmt;
+                $totalTableTax += $itemTaxAmt;
             @endphp
             <tr>
                 <td class="sn">{{ $loop->iteration }}</td>
@@ -730,7 +751,7 @@ body{
                 <td class="tr">{{ number_format($item['price'],2) }}</td>
                 <td class="tr">{{ number_format($gross,2) }}</td>
                 <td class="tc">{{ $itemTaxPct > 0 ? (float)$itemTaxPct.'%' : '0%' }}</td>
-                <td class="tr">{{ $itemTaxAmt > 0 ? number_format($itemTaxAmt,2) : '—' }}</td>
+                <td class="tr">{{ $itemTaxAmt > 0 ? number_format($itemTaxAmt,2) : '0.00' }}</td>
                 <td class="tr" style="font-weight:700;">{{ $currency }} {{ number_format($itemTotalWithTax,0) }}</td>
             </tr>
             @endforeach
@@ -751,10 +772,14 @@ body{
             @endif
 
             {{-- Grand Total --}}
+            @php
+                $displayGrandTaxAmt = ($sale->tax_amount ?? 0) > 0 ? (float)$sale->tax_amount : $totalTableTax;
+                $displayGrandTaxPct = ($sale->tax_percent ?? 0) > 0 ? (float)$sale->tax_percent : ($displayGrandTaxAmt > 0 && $subTotal > 0 ? round(($displayGrandTaxAmt / $subTotal) * 100, 2) : 0);
+            @endphp
             <tr class="gt-row">
                 <td colspan="5" class="gt-lbl">Grand Total &nbsp;&nbsp; ({{ $currency }})</td>
-                <td class="tc" style="font-weight:700">*****</td>
-                <td class="tc">—</td>
+                <td class="tc" style="font-weight:700">{{ $displayGrandTaxPct > 0 ? (float)$displayGrandTaxPct.'%' : '0%' }}</td>
+                <td class="tr" style="font-weight:700">{{ $displayGrandTaxAmt > 0 ? number_format($displayGrandTaxAmt,2) : '0.00' }}</td>
                 <td class="gt-val">{{ number_format($finalPayable>0?$finalPayable:$netPayable,0) }}</td>
             </tr>
         </tbody>

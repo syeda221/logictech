@@ -302,12 +302,17 @@
         border: 1.5px solid #dbeafe;
         border-radius: 12px;
         box-shadow: 0 1px 4px rgba(37, 99, 235, 0.04);
-        overflow: hidden;
+        overflow: visible !important;
     }
     .erp-table-responsive {
         border-radius: 8px;
         width: 100%;
         overflow-x: auto;
+        min-height: 420px;
+        padding-bottom: 140px;
+    }
+    .erp-table-responsive .dropdown-menu {
+        z-index: 1060 !important;
     }
     .erp-table {
         width: 100% !important;
@@ -377,7 +382,7 @@
         border-radius: 10px !important;
         box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.05) !important;
         padding: 6px 0 !important;
-        z-index: 1050 !important;
+        z-index: 1060 !important;
     }
     .dropdown-item {
         font-size: 0.78rem !important;
@@ -474,6 +479,20 @@
         z-index: 99999999 !important;
         border-color: #cbd5e1 !important;
         box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    /* Prevent dropdown clipping in table rows */
+    .erp-table td .dropdown {
+        position: relative;
+    }
+    .erp-table td .dropdown-menu {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        left: auto;
+        margin-top: 4px;
+        min-width: 175px;
+        z-index: 9999 !important;
     }
 </style>
 

@@ -1379,12 +1379,14 @@ class SaleController extends Controller
 
             // Update Sale Totals (Extra discount cannot exceed total bill)
             $taxPercent = max(0, (float)($request->tax_percent ?? 0));
-            $taxAmount = (float)($request->tax_amount ?? 0);
+            $taxAmount = max(0, (float)($request->tax_amount ?? 0));
             if (!empty($total_item_tax) && $total_item_tax > 0) {
                 $taxAmount = $total_item_tax;
                 $taxPercent = $total_bill > 0 ? round(($taxAmount / $total_bill) * 100, 2) : 0;
             } elseif ($taxPercent > 0 && $taxAmount <= 0) {
                 $taxAmount = round(($total_bill * $taxPercent) / 100, 2);
+            } elseif ($taxPercent <= 0) {
+                $taxAmount = 0;
             }
 
             $sale->tax_percent = $taxPercent;

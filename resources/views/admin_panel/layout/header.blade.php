@@ -338,6 +338,10 @@
                                                             class="menu_icon fa-solid fa-boxes-packing text-primary"></i><span>Material Usage</span></a>
                                                 </li>
                                             @endcan
+                                            <li class="nav-item"><a class="nav-link"
+                                                    href="{{ route('repair.index') }}"><i
+                                                        class="menu_icon fas fa-tools text-primary"></i><span>Repairing</span></a>
+                                            </li>
                                         </ul>
                                     </div>
                                 </div>
