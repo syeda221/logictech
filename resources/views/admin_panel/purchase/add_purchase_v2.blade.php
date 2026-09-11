@@ -507,8 +507,12 @@
                     </div>
 
                     {{-- Default Warehouse & Hidden Branch --}}
-                    <input type="hidden" name="warehouse_id" id="warehouseSelect" value="{{ optional($Warehouse->first())->id ?? 1 }}">
-                    <input type="hidden" name="branch_id" value="{{ auth()->user()->branch_id ?? 1 }}">
+                    @php
+                        $defaultWarehouseId = optional($Warehouse->first())->id ?? optional(\App\Models\Warehouse::first())->id ?? 1;
+                        $defaultBranchId = auth()->user()->branch_id ?? optional(\App\Models\Branch::first())->id ?? 1;
+                    @endphp
+                    <input type="hidden" name="warehouse_id" id="warehouseSelect" value="{{ $defaultWarehouseId }}">
+                    <input type="hidden" name="branch_id" value="{{ $defaultBranchId }}">
                 </div>
 
                 {{-- PURCHASE ITEMS (FULL WIDTH) --}}
