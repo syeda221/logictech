@@ -18,6 +18,24 @@ class VendorController extends Controller
         return view('admin_panel.vendors.index', compact('vendors'));
     }
 
+    /**
+     * AJAX: Get all vendors for dynamic dropdowns
+     */
+    public function ajaxList(Request $request)
+    {
+        $term = $request->get('q') ?? $request->get('term') ?? '';
+        $query = Vendor::orderBy('name');
+        if (!empty($term)) {
+            $query->where('name', 'like', "%{$term}%")
+                  ->orWhere('phone', 'like', "%{$term}%");
+        }
+        $vendors = $query->get(['id', 'name', 'phone']);
+        return response()->json([
+            'status'  => 'success',
+            'vendors' => $vendors
+        ]);
+    }
+
     // Store or update vendor information
     public function store(Request $request)
     {

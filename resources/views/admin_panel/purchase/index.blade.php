@@ -465,6 +465,16 @@
             justify-content: center;
         }
     }
+
+    /* Modal Select2 Styling Fix */
+    .select2-container--open {
+        z-index: 99999999 !important;
+    }
+    .select2-dropdown {
+        z-index: 99999999 !important;
+        border-color: #cbd5e1 !important;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+    }
 </style>
 
 <div class="main-content">
@@ -734,12 +744,19 @@
                             <label class="form-label fw-bold small text-dark mb-1">
                                 <i class="fas fa-truck text-primary me-1"></i> Vendor Name <span class="text-danger">*</span>
                             </label>
-                            <select name="vendor_id" id="cp_vendor_id" class="form-control form-select form-select-sm" style="width: 100%; height: 38px;" required>
-                                <option value="">-- Select Vendor --</option>
-                                @foreach ($vendors as $v)
-                                    <option value="{{ $v->id }}">{{ $v->name }}</option>
-                                @endforeach
-                            </select>
+                            <div class="d-flex align-items-center gap-1">
+                                <div class="flex-grow-1">
+                                    <select name="vendor_id" id="cp_vendor_id" class="form-control form-select form-select-sm select2" style="width: 100%; height: 38px;" required>
+                                        <option value="">-- Select Vendor --</option>
+                                        @foreach ($vendors as $v)
+                                            <option value="{{ $v->id }}">{{ $v->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <button type="button" class="btn btn-primary shadow-sm" id="btnOpenAddVendorFromCP" style="height: 38px; padding: 0 12px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center;" title="Quick Add New Vendor">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
                         </div>
 
                         {{-- Purchase Date --}}
@@ -796,6 +813,45 @@
                     <button type="submit" id="btnSaveCreditPurchase" class="btn btn-sm btn-primary px-4 fw-bold save-btn shadow-sm" style="background-color: #2563eb; border-color: #1d4ed8; height: 38px; border-radius: 6px;">
                         <i class="fas fa-check-circle me-1"></i> Save &amp; Post to Ledger
                     </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Add Vendor Modal -->
+<div class="modal fade" id="addVendorModal" tabindex="-1" aria-labelledby="addVendorModalLabel" aria-hidden="true" style="z-index: 1070;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+            <div class="modal-header bg-light border-bottom-0 pb-2">
+                <h5 class="modal-title fw-bold" id="addVendorModalLabel"><i class="fas fa-user-plus text-primary me-2"></i>Add New Vendor</h5>
+                <button type="button" class="btn-close close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="quickAddVendorForm">
+                @csrf
+                <div class="modal-body pt-2">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">Vendor Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="name" required placeholder="Enter vendor name">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold small text-muted">Phone Number</label>
+                            <input type="text" class="form-control" name="phone" placeholder="Optional">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold small text-muted">Opening Balance</label>
+                            <input type="number" step="0.01" class="form-control" name="opening_balance" value="0" placeholder="0.00">
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label fw-bold small text-muted">Address</label>
+                        <textarea class="form-control" name="address" rows="2" placeholder="Optional"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 pt-0">
+                    <button type="button" class="btn btn-light" data-dismiss="modal" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary px-4 fw-bold" id="btnQuickSaveVendor">Save Vendor</button>
                 </div>
             </form>
         </div>
@@ -1080,14 +1136,56 @@
             });
         });
 
+        // Dynamic Vendor Loader Helper
+        function refreshVendorDropdowns(selectedVendorId = null) {
+            $.ajax({
+                url: "{{ route('vendors.ajax-list') }}",
+                method: "GET",
+                dataType: "json",
+                success: function(res) {
+                    if (res && res.vendors) {
+                        // 1. Update Modal Vendor Select
+                        let $cpSelect = $('#cp_vendor_id');
+                        let currentCpVal = selectedVendorId || $cpSelect.val();
+                        $cpSelect.empty().append('<option value="">-- Select Vendor --</option>');
+                        
+                        // 2. Update Filter Vendor Select
+                        let $filterSelect = $('#filter_vendor_id');
+                        let currentFilterVal = $filterSelect.val();
+                        $filterSelect.empty().append('<option value="">All Vendors</option>');
+
+                        res.vendors.forEach(function(v) {
+                            $cpSelect.append(new Option(v.name, v.id, false, false));
+                            $filterSelect.append(new Option(v.name, v.id, false, false));
+                        });
+
+                        if (currentCpVal) {
+                            $cpSelect.val(currentCpVal);
+                        }
+                        if (currentFilterVal) {
+                            $filterSelect.val(currentFilterVal);
+                        }
+
+                        if ($.fn.select2) {
+                            $cpSelect.trigger('change.select2');
+                            $filterSelect.trigger('change.select2');
+                        }
+                    }
+                }
+            });
+        }
+
         // Show Credit Purchase Modal
         $(document).on('click', '#btnCreditPurchaseModal, .btn-open-credit-purchase', function(e) {
             e.preventDefault();
             $('#creditPurchaseModal').modal('show');
         });
 
-        // Initialize Select2 inside Credit Purchase modal when shown
+        // Initialize Select2 & refresh vendors when Credit Purchase modal opens
         $('#creditPurchaseModal').on('shown.bs.modal', function () {
+            // Re-fetch latest vendors in case new ones were added
+            refreshVendorDropdowns();
+
             if ($.fn.select2) {
                 $('#cp_vendor_id').select2({
                     dropdownParent: $('#creditPurchaseModal'),
@@ -1097,6 +1195,73 @@
                 });
             }
             $('#cp_m_bill').trigger('focus');
+        });
+
+        // Open Quick Add Vendor Modal from inside Credit Purchase Modal
+        $(document).on('click', '#btnOpenAddVendorFromCP', function(e) {
+            e.preventDefault();
+            $('#addVendorModal').modal('show');
+        });
+
+        // Handle Quick Add Vendor Form Submission
+        $('#quickAddVendorForm').on('submit', function(e) {
+            e.preventDefault();
+            let $btn = $('#btnQuickSaveVendor');
+            let originalText = $btn.text();
+            $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Saving...');
+
+            $.ajax({
+                url: "{{ route('vendors.store.ajax') }}",
+                method: "POST",
+                data: $(this).serialize(),
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    $btn.prop('disabled', false).text(originalText);
+                    
+                    let vendorId = null;
+                    let vendorName = $('#quickAddVendorForm input[name="name"]').val();
+                    
+                    if (response.vendor && response.vendor.id) {
+                        vendorId = response.vendor.id;
+                        vendorName = response.vendor.name;
+                    }
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Vendor Added',
+                        text: 'Vendor created successfully!',
+                        timer: 1500,
+                        showConfirmButton: false
+                    }).then(() => {
+                        $('#addVendorModal').modal('hide');
+                        $('#quickAddVendorForm')[0].reset();
+                        
+                        // Immediately refresh both dropdowns and select the newly created vendor
+                        refreshVendorDropdowns(vendorId);
+                        if (vendorId) {
+                            setTimeout(function() {
+                                $('#cp_vendor_id').val(vendorId).trigger('change');
+                            }, 300);
+                        }
+                    });
+                },
+                error: function(xhr) {
+                    $btn.prop('disabled', false).text(originalText);
+                    let msg = 'Error adding vendor.';
+                    if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors) {
+                        msg = Object.values(xhr.responseJSON.errors).flat().join('<br>');
+                    } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                        msg = xhr.responseJSON.message;
+                    }
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        html: msg
+                    });
+                }
+            });
         });
 
         // Credit Purchase Form Submit via standard myAjax

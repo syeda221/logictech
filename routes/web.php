@@ -231,6 +231,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/vendor/{vendor}/ledger', [VendorController::class, 'ledger'])->middleware('permission:vendors.view')->name('vendor.ledger');
     Route::get('/vendor/{vendor}/balance', [VendorController::class, 'getVendorBalance'])->name('vendor.balance');
     Route::get('/vendor/{vendor}/ledger-json', [VendorController::class, 'getVendorLedgerJson'])->name('vendor.ledger.json');
+    Route::get('/vendors/ajax-list', [VendorController::class, 'ajaxList'])->name('vendors.ajax-list');
 
     // Warehouse Routes
     // ///
