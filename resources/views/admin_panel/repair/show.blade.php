@@ -275,56 +275,77 @@
                         </div>
 
                         {{-- 2. Device Specifications Itemized Table --}}
+                        @php
+                            $itemsData = json_decode($repair->problem_description, true);
+                            if (!is_array($itemsData)) {
+                                $itemsData = [
+                                    [
+                                        'sn' => 1,
+                                        'item_name' => $repair->item_name,
+                                        'brand_model' => $repair->brand_model,
+                                        'serial_no' => $repair->serial_no,
+                                        'problem_description' => $repair->problem_description,
+                                        'estimated_cost' => $repair->estimated_cost,
+                                    ]
+                                ];
+                            }
+                        @endphp
                         <div class="mb-4">
                             <h6 class="fw-bold text-dark mb-2 d-flex align-items-center gap-1.5" style="font-size: 0.88rem;">
-                                <i class="fas fa-microchip text-primary"></i> Device &amp; Product Specifications
+                                <i class="fas fa-microchip text-primary"></i> Itemized Repair Specifications &amp; Quotation
                             </h6>
                             <div class="table-responsive">
                                 <table class="doc-table">
                                     <thead>
                                         <tr>
-                                            <th style="width: 25%;">Device / Product Name</th>
-                                            <th style="width: 20%;">Brand &amp; Model</th>
-                                            <th style="width: 20%;">Serial / Machine #</th>
-                                            <th style="width: 35%;">Physical Condition &amp; Visual Inspection</th>
+                                            <th style="width: 5%; text-align: center;">S/N</th>
+                                            <th style="width: 25%;">Item Description</th>
+                                            <th style="width: 18%;">Brand / Model</th>
+                                            <th style="width: 17%;">Serial No</th>
+                                            <th style="width: 22%;">Reported Fault</th>
+                                            <th style="width: 13%; text-align: right;">Amount (Rs.)</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr>
-                                            <td class="fw-bold text-dark" style="font-size: 0.86rem;">
-                                                <i class="fas fa-laptop text-primary me-1"></i> {{ $repair->item_name }}
-                                            </td>
-                                            <td>
-                                                {{ $repair->brand_model ?: '—' }}
-                                            </td>
-                                            <td class="font-monospace fw-bold">
-                                                {{ $repair->serial_no ?: 'No Serial' }}
-                                            </td>
-                                            <td>
-                                                {{ $repair->physical_condition ?: 'Standard condition' }}
+                                        @foreach($itemsData as $idx => $it)
+                                            <tr>
+                                                <td class="text-center font-monospace fw-bold text-muted">{{ $it['sn'] ?? ($idx + 1) }}</td>
+                                                <td class="fw-bold text-dark" style="font-size: 0.84rem;">
+                                                    <i class="fas fa-tools text-primary me-1"></i> {{ $it['item_name'] ?? $repair->item_name }}
+                                                </td>
+                                                <td>{{ $it['brand_model'] ?? '—' }}</td>
+                                                <td class="font-monospace fw-bold">{{ $it['serial_no'] ?? 'No Serial' }}</td>
+                                                <td>{{ $it['problem_description'] ?? '—' }}</td>
+                                                <td class="text-end font-monospace fw-bold text-dark">
+                                                    Rs. {{ number_format((float)($it['estimated_cost'] ?? 0), 2) }}
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                    <tfoot>
+                                        <tr style="background: #f8fafc;">
+                                            <td colspan="5" class="text-end fw-bold">Total Estimated Quote:</td>
+                                            <td class="text-end font-monospace fw-bold text-primary fs-6">
+                                                Rs. {{ number_format((float)$repair->estimated_cost, 2) }}
                                             </td>
                                         </tr>
-                                    </tbody>
+                                    </tfoot>
                                 </table>
                             </div>
 
-                            @if($repair->accessories_received)
-                                <div class="p-2.5 rounded-3 bg-light border d-flex align-items-center gap-2 mb-3" style="font-size: 0.82rem;">
-                                    <span class="fw-bold text-secondary"><i class="fas fa-box text-primary me-1"></i> Accessories Received With Item:</span>
-                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 fw-bold">
-                                        {{ $repair->accessories_received }}
-                                    </span>
+                            @if($repair->physical_condition)
+                                <div class="p-2.5 rounded-3 bg-light border d-flex align-items-center gap-2 mb-2" style="font-size: 0.82rem;">
+                                    <span class="fw-bold text-secondary"><i class="fas fa-eye text-primary me-1"></i> Physical Condition:</span>
+                                    <span class="text-dark">{{ $repair->physical_condition }}</span>
                                 </div>
                             @endif
 
-                            @if($repair->problem_description && $repair->problem_description !== 'Repair Service Order' && $repair->problem_description !== 'Repair / Service Order')
-                                <div class="p-3 rounded-3 mb-3" style="background-color: #fff5f5; border: 1.5px solid #fecaca;">
-                                    <div class="fw-bold text-danger mb-1" style="font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.3px;">
-                                        <i class="fas fa-exclamation-circle me-1"></i> Problem / Fault Notes:
-                                    </div>
-                                    <div style="font-size: 0.84rem; color: #1f2937;">
-                                        {{ $repair->problem_description }}
-                                    </div>
+                            @if($repair->accessories_received)
+                                <div class="p-2.5 rounded-3 bg-light border d-flex align-items-center gap-2 mb-3" style="font-size: 0.82rem;">
+                                    <span class="fw-bold text-secondary"><i class="fas fa-box text-primary me-1"></i> Accessories Received With Items:</span>
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 fw-bold">
+                                        {{ $repair->accessories_received }}
+                                    </span>
                                 </div>
                             @endif
 

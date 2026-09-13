@@ -1,395 +1,614 @@
+@php
+    /* ── Company Settings ── */
+    $coName    = \App\Models\Setting::get('company_name', 'LOGIC TECH ENGINEERING');
+    $coAddr    = \App\Models\Setting::get('company_address', 'Hno 2/11B near bight future high school husri distric hyderabad');
+    $coEmail   = \App\Models\Setting::get('company_email', 'info@logictech.com.pk');
+    $coPhone   = \App\Models\Setting::get('company_phone', '0300-9464887, 0321-9596972');
+    $coLogo    = \App\Models\Setting::getLogoUrl();
+
+    /* ── Financial Calculations ── */
+    $serviceCharges = (float)($repair->service_charges > 0 ? $repair->service_charges : $repair->estimated_cost);
+    $partsCharges   = (float)($repair->parts_charges ?? 0);
+    $totalBill      = (float)($repair->total_charges > 0 ? $repair->total_charges : ($serviceCharges + $partsCharges));
+    $advancePaid    = (float)($repair->advance_paid ?? 0);
+    $finalPaid      = (float)($repair->final_paid ?? 0);
+    $totalPaid      = $advancePaid + $finalPaid;
+    $dueAmount      = max(0, $totalBill - $totalPaid);
+@endphp
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Job Sheet #{{ $repair->repair_no }} - {{ $repair->item_name }}</title>
-    <style>
-        @page {
-            size: A4 portrait;
-            margin: 10mm 12mm;
-        }
-        @media print {
-            body {
-                background: #fff !important;
-                margin: 0 !important;
-                padding: 0 !important;
-            }
-            .no-print {
-                display: none !important;
-            }
-            .slip-block {
-                box-shadow: none !important;
-                border: 1px solid #94a3b8 !important;
-            }
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background: #f8fafc;
-            color: #0f172a;
-            margin: 0;
-            padding: 20px;
-            font-size: 11.5px;
-            line-height: 1.35;
-        }
-        .container {
-            max-width: 210mm;
-            margin: 0 auto;
-        }
-        .slip-block {
-            background: #fff;
-            border: 1.5px solid #cbd5e1;
-            border-radius: 6px;
-            padding: 14px 18px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            box-sizing: border-box;
-        }
-        .cut-line {
-            text-align: center;
-            border-top: 1.5px dashed #94a3b8;
-            margin: 16px 0;
-            position: relative;
-        }
-        .cut-line span {
-            background: #f8fafc;
-            padding: 0 12px;
-            position: relative;
-            top: -9px;
-            font-size: 10px;
-            color: #64748b;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-        }
-        @media print {
-            .cut-line span {
-                background: #fff;
-            }
-        }
-        .header-table {
-            width: 100%;
-            border-bottom: 2px solid #2563eb;
-            padding-bottom: 8px;
-            margin-bottom: 10px;
-        }
-        .header-table td {
-            vertical-align: middle;
-        }
-        .company-name {
-            font-size: 16px;
-            font-weight: 800;
-            color: #1e3a8a;
-            text-transform: uppercase;
-            letter-spacing: -0.2px;
-            margin: 0;
-        }
-        .company-meta {
-            font-size: 10px;
-            color: #475569;
-        }
-        .slip-title-badge {
-            display: inline-block;
-            background: #eff6ff;
-            border: 1px solid #bfdbfe;
-            color: #1d4ed8;
-            font-weight: 700;
-            font-size: 11px;
-            padding: 3px 8px;
-            border-radius: 4px;
-            text-transform: uppercase;
-        }
-        .ticket-no-lg {
-            font-size: 16px;
-            font-weight: 900;
-            font-family: monospace;
-            color: #0f172a;
-            letter-spacing: 1px;
-        }
-        .info-grid {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 10px;
-        }
-        .info-grid th, .info-grid td {
-            border: 1px solid #e2e8f0;
-            padding: 5px 8px;
-            vertical-align: top;
-        }
-        .info-grid th {
-            background: #f8fafc;
-            color: #334155;
-            font-weight: 600;
-            width: 22%;
-            font-size: 10.5px;
-        }
-        .info-grid td {
-            font-size: 11px;
-        }
-        .fault-box {
-            border: 1px solid #fecaca;
-            background: #fff5f5;
-            border-radius: 4px;
-            padding: 8px 10px;
-            margin-bottom: 10px;
-        }
-        .fault-box-title {
-            font-weight: 700;
-            color: #b91c1c;
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.4px;
-            margin-bottom: 2px;
-        }
-        .fin-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 10px;
-        }
-        .fin-table th, .fin-table td {
-            border: 1px solid #cbd5e1;
-            padding: 4px 8px;
-            text-align: right;
-            font-size: 10.5px;
-        }
-        .fin-table th {
-            background: #f1f5f9;
-            color: #334155;
-            font-weight: 700;
-            text-align: center;
-        }
-        .terms-text {
-            font-size: 9px;
-            color: #64748b;
-            line-height: 1.25;
-            border-top: 1px solid #e2e8f0;
-            padding-top: 5px;
-        }
-        .sig-grid {
-            width: 100%;
-            margin-top: 25px;
-        }
-        .sig-grid td {
-            width: 50%;
-            text-align: center;
-            vertical-align: bottom;
-        }
-        .sig-line {
-            width: 75%;
-            margin: 0 auto;
-            border-top: 1px solid #475569;
-            padding-top: 3px;
-            font-size: 10px;
-            font-weight: 600;
-            color: #334155;
-        }
-        .btn-toolbar {
-            max-width: 210mm;
-            margin: 0 auto 12px auto;
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-        .btn-action {
-            background: #2563eb;
-            color: #fff;
-            padding: 7px 16px;
-            border-radius: 6px;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 12px;
-            border: none;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .btn-action.btn-secondary {
-            background: #64748b;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invoice #{{ $repair->repair_no }} - LOGICTECH</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 11px;
+    color: #000;
+    background: #cbd5e1;
+    padding: 15px 0;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .no-print {
+    position: fixed; top: 12px; right: 20px; z-index: 9999; display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+  }
+  .no-print button, .no-print a {
+    padding: 7px 16px; font-size: 12px; font-weight: 700; border-radius: 6px; cursor: pointer; border: none; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-family: sans-serif;
+  }
+  .no-print button.btn-print { background: #dc2626; color: #fff; box-shadow: 0 4px 10px rgba(220,38,38,0.3); }
+  .no-print button.btn-add   { background: #2563eb; color: #fff; }
+  .no-print button.btn-del   { background: #d97706; color: #fff; }
+  .no-print button.btn-gst   { background: #059669; color: #fff; box-shadow: 0 4px 10px rgba(5,150,105,0.3); }
+  .no-print a.btn-back       { background: #475569; color: #fff; }
+  .no-print .edit-hint       { background: #1e293b; color: #f8fafc; padding: 7px 14px; border-radius: 6px; font-size: 11.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+
+  .page-pad {
+    width: 210mm;
+    min-height: auto;
+    margin: 0 auto;
+    background: #ffffff;
+    padding: 10mm 12mm 10mm 12mm;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+    position: relative;
+  }
+
+  /* Editable helper styles */
+  [contenteditable="true"] {
+    outline: none;
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+    border-radius: 2px;
+  }
+  [contenteditable="true"]:hover {
+    background: #f0f9ff !important;
+    outline: 1px dashed #0284c7 !important;
+    cursor: text;
+  }
+  [contenteditable="true"]:focus {
+    background: #e0f2fe !important;
+    outline: 2px solid #0284c7 !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2) !important;
+  }
+
+  /* Header Layout */
+  .pad-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 6px;
+  }
+  .logo-block {
+    display: flex;
+    flex-direction: column;
+  }
+  .logo-main {
+    font-family: 'Outfit', sans-serif;
+    font-size: 32px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+    color: #000;
+    line-height: 0.95;
+  }
+  .logo-main span.red-o { color: #dc2626; }
+  .logo-sub {
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: #000;
+    letter-spacing: 0.5px;
+    margin-top: 3px;
+  }
+
+  .deals-block {
+    text-align: right;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #000;
+    line-height: 1.35;
+    max-width: 330px;
+  }
+
+  /* Quotation / Invoice Checkboxes */
+  .doc-type-bar {
+    text-align: center;
+    margin-bottom: 10px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 1px;
+  }
+  .checkbox-box {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 1.5px solid #000;
+    margin-left: 4px;
+    vertical-align: middle;
+    text-align: center;
+    line-height: 12px;
+    font-size: 11px;
+    font-weight: 900;
+    cursor: pointer;
+  }
+
+  /* Meta Info Lines: Sr., Date, M/s. */
+  .meta-lines {
+    margin-bottom: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #000;
+  }
+  .meta-line-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 8px;
+  }
+  .line-field {
+    border-bottom: 1.5px solid #000;
+    padding-bottom: 1px;
+    display: inline-block;
+  }
+
+  /* Table Grid */
+  .table-wrap {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .pad-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 2px solid #000;
+  }
+  .pad-table th {
+    padding: 6px 4px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 10.5px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: #ffffff;
+    border: 1.5px solid #000;
+  }
+  .pad-table th.th-red {
+    background-color: #d92525 !important;
+    text-align: center;
+  }
+  .pad-table th.th-dark {
+    background-color: #262626 !important;
+  }
+  .pad-table td {
+    border-right: 1.5px solid #000;
+    border-left: 1.5px solid #000;
+    border-bottom: 1px solid #52525b;
+    padding: 5px 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #000;
+    height: 30px;
+    vertical-align: middle;
+  }
+  .pad-table td.td-center { text-align: center; }
+  .pad-table td.td-right  { text-align: right; }
+
+  /* Summary Box inside Table Footer */
+  .sum-cell-lbl {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 11px;
+    text-align: right;
+    padding-right: 10px;
+    border-top: 1.5px solid #000 !important;
+    border-right: 1.5px solid #000 !important;
+    background: #f8fafc;
+  }
+  .sum-cell-val {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 800;
+    font-size: 11.5px;
+    text-align: right;
+    padding-right: 6px;
+    border-top: 1.5px solid #000 !important;
+    background: #ffffff;
+  }
+
+  /* Footer Section */
+  .pad-footer {
+    margin-top: 18px;
+    border-top: 2px solid #000;
+    padding-top: 8px;
+  }
+  .footer-row-1 {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'Outfit', sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    color: #000;
+    margin-bottom: 4px;
+  }
+  .footer-row-2 {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #000;
+  }
+
+  @media print {
+    @page { size: A4 portrait; margin: 4mm; }
+    body { background: #fff; padding: 0; }
+    .no-print { display: none !important; }
+    .page-pad { width: 100%; min-height: auto; box-shadow: none; padding: 4mm; margin: 0; }
+    [contenteditable="true"] { background: transparent !important; outline: none !important; box-shadow: none !important; }
+    .pad-table th.th-red { background-color: #d92525 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .pad-table th.th-dark { background-color: #262626 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
 </head>
 <body>
 
-    <div class="btn-toolbar no-print">
-        <button class="btn-action" onclick="window.print()">
-            🖨️ Print Full A4 Job Sheet
-        </button>
-        <a href="{{ route('repair.print.thermal', $repair->id) }}" target="_blank" class="btn-action" style="background: #059669;">
-            🧾 Open 80mm Thermal Receipt
-        </a>
-        <a href="{{ route('repair.show', $repair->id) }}" class="btn-action btn-secondary">
-            ⬅ Back to Job Console
-        </a>
-    </div>
+<div class="no-print">
+    <button onclick="window.print()" class="btn-print">🖨️ Print Invoice</button>
+    <button onclick="addNewRow()" class="btn-add">➕ Add Item Row</button>
+    <button onclick="removeLastRow()" class="btn-del">🗑️ Remove Last Row</button>
+    <button onclick="toggleGstAll()" class="btn-gst" id="btnGstToggle">⚡ Apply 18% GST</button>
+    <span class="edit-hint">✏️ Click any cell to edit Description, QTY, Rate, Gross, GST %, GST Amt or Totals!</span>
+    <a href="{{ route('repair.show', $repair->id) }}" class="btn-back">← Back to Repair Details</a>
+</div>
 
-    <div class="container">
-
-        {{-- =========================================================================
-             SECTION 1: CUSTOMER RECEIVING COPY (TOP HALF)
-             ========================================================================= --}}
-        <div class="slip-block">
-            <table class="header-table">
-                <tr>
-                    <td style="width: 65%;">
-                        <h1 class="company-name">{{ \App\Models\Setting::get('company_name', 'LOGIC TECH ENGINEERING') }}</h1>
-                        <div class="company-meta">
-                            Industrial Heating &amp; Cooling Solutions, Power Electronics, Spare Parts<br>
-                            Address: {{ \App\Models\Setting::get('company_address', 'Hyderabad, Pakistan') }} | Phone: {{ \App\Models\Setting::get('company_phone', '0300-5308035') }}
-                        </div>
-                    </td>
-                    <td style="width: 35%; text-align: right;">
-                        <span class="slip-title-badge">Customer Intake Receipt</span>
-                        <div class="ticket-no-lg mt-1">{{ $repair->repair_no }}</div>
-                        <div style="font-size: 10px; color: #64748b;">Date: <strong>{{ $repair->received_date ? $repair->received_date->format('d-M-Y') : date('d-M-Y') }}</strong></div>
-                    </td>
-                </tr>
-            </table>
-
-            <table class="info-grid">
-                <tr>
-                    <th>Customer Name:</th>
-                    <td><strong>{{ $repair->customer_display_name }}</strong></td>
-                    <th>Contact / Phone:</th>
-                    <td><strong>{{ $repair->customer_display_phone }}</strong></td>
-                </tr>
-                <tr>
-                    <th>Device / Item:</th>
-                    <td><strong>{{ $repair->item_name }}</strong></td>
-                    <th>Brand &amp; Model:</th>
-                    <td>{{ $repair->brand_model ?: 'N/A' }}</td>
-                </tr>
-                <tr>
-                    <th>Serial / Batch #:</th>
-                    <td><span style="font-family: monospace; font-weight: bold;">{{ $repair->serial_no ?: 'N/A' }}</span></td>
-                    <th>Promised Delivery:</th>
-                    <td><strong>{{ $repair->expected_delivery_date ? $repair->expected_delivery_date->format('d-M-Y') : 'Subject to diagnosis' }}</strong></td>
-                </tr>
-                <tr>
-                    <th>Accessories Received:</th>
-                    <td>{{ $repair->accessories_received ?: 'None (Body only)' }}</td>
-                    <th>Physical Condition:</th>
-                    <td>{{ $repair->physical_condition ?: 'Standard used' }}</td>
-                </tr>
-            </table>
-
-            <div class="fault-box">
-                <div class="fault-box-title">Reported Defect / Customer Problem:</div>
-                <div style="font-size: 11px;">{{ $repair->problem_description }}</div>
+<div class="page-pad">
+    <div class="table-wrap">
+        {{-- Header --}}
+        <div class="pad-header">
+            <div class="logo-block">
+                @if(!empty($coLogo))
+                    <img src="{{ $coLogo }}" alt="LOGICTECH" style="max-height: 55px; width: auto; object-fit: contain;">
+                @else
+                    <div class="logo-main">L<span class="red-o">Ó</span>GICTECH</div>
+                    <div class="logo-sub">induction Heating Solutions</div>
+                @endif
             </div>
-
-            <table class="fin-table">
-                <thead>
-                    <tr>
-                        <th style="text-align: left;">Estimated Charges</th>
-                        <th>Advance Received</th>
-                        <th>Account Deposited</th>
-                        <th style="color: #dc2626;">Estimated Balance Due at Pickup</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td style="text-align: left; font-weight: bold;">Rs. {{ number_format($repair->estimated_cost, 2) }}</td>
-                        <td style="font-weight: bold; color: #059669;">Rs. {{ number_format($repair->advance_paid, 2) }}</td>
-                        <td>{{ $repair->advanceAccount->title ?? 'None / Cash' }}</td>
-                        <td style="font-weight: bold; font-size: 12px; color: #dc2626;">Rs. {{ number_format($repair->due_amount, 2) }}</td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <div class="terms-text">
-                <strong>TERMS &amp; CONDITIONS:</strong>
-                1. Original receipt must be produced at the time of delivery. 
-                2. Goods not collected within 30 days from promised date will incur storage charges of Rs. 50/day and may be disposed of to recover costs.
-                3. Repair carries 7 days testing warranty on replaced components only; warranty does not cover burnt coils or physical/water damage.
-                4. Inspection/diagnostic fee will be charged if the quotation is declined after diagnosis.
+            <div class="deals-block" contenteditable="true">
+                <strong>Deals In:</strong> All kinds of Induction Heater,<br>
+                Induction Melting Furnace,<br>
+                Industrial Automation,<br>
+                Programing &amp; Repairing
             </div>
-
-            <table class="sig-grid">
-                <tr>
-                    <td>
-                        <div class="sig-line">Customer Signature / Acknowledgment</div>
-                    </td>
-                    <td>
-                        <div class="sig-line">Authorized Technician / Receiver ({{ $repair->receiver->name ?? 'Admin' }})</div>
-                    </td>
-                </tr>
-            </table>
         </div>
 
-        {{-- Perforated Cut Line --}}
-        <div class="cut-line">
-            <span>✂ CUT HERE — DETACH CUSTOMER COPY ABOVE / ATTACH SHOP COPY BELOW TO UNIT ✂</span>
+        {{-- Type Checkboxes --}}
+        <div class="doc-type-bar">
+            QUOTATION <span class="checkbox-box" id="chkQuotation" onclick="toggleDocType('quotation')"></span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            INVOICE <span class="checkbox-box" id="chkInvoice" onclick="toggleDocType('invoice')">&#10004;</span>
         </div>
 
-        {{-- =========================================================================
-             SECTION 2: WORKSHOP / INTERNAL JOB CARD (BOTTOM HALF)
-             ========================================================================= --}}
-        <div class="slip-block">
-            <table class="header-table" style="border-bottom-color: #d97706;">
-                <tr>
-                    <td style="width: 65%;">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="background: #fffbeb; border: 1.5px solid #f59e0b; color: #b45309; font-weight: 800; font-size: 11px; padding: 2px 7px; border-radius: 4px;">WORKSHOP / SHOP COPY</span>
-                            <span style="font-weight: bold; font-size: 13px; color: #334155;">{{ \App\Models\Setting::get('company_name', 'LOGIC TECH') }}</span>
-                        </div>
-                        <div style="font-size: 10px; color: #64748b; margin-top: 2px;">
-                            Priority: <strong style="text-transform: uppercase; color: {{ $repair->priority === 'urgent' ? '#dc2626' : ($repair->priority === 'high' ? '#d97706' : '#2563eb') }}">{{ $repair->priority }}</strong> | Received By: <strong>{{ $repair->receiver->name ?? 'Staff' }}</strong>
-                        </div>
-                    </td>
-                    <td style="width: 35%; text-align: right;">
-                        <div class="ticket-no-lg" style="color: #b45309;">{{ $repair->repair_no }}</div>
-                        <div style="font-size: 10px; color: #64748b;">Target Delivery: <strong>{{ $repair->expected_delivery_date ? $repair->expected_delivery_date->format('d-M-Y') : 'ASAP' }}</strong></div>
-                    </td>
-                </tr>
-            </table>
-
-            <table class="info-grid">
-                <tr>
-                    <th>Customer:</th>
-                    <td>{{ $repair->customer_display_name }} ({{ $repair->customer_display_phone }})</td>
-                    <th>Device/Machine:</th>
-                    <td><strong>{{ $repair->item_name }}</strong></td>
-                </tr>
-                <tr>
-                    <th>Model &amp; Serial:</th>
-                    <td>{{ $repair->brand_model ?: 'Model N/A' }} | SN: <strong>{{ $repair->serial_no ?: 'N/A' }}</strong></td>
-                    <th>Condition / Mark:</th>
-                    <td>{{ $repair->physical_condition ?: 'Normal' }}</td>
-                </tr>
-                <tr>
-                    <th>Accessories Held:</th>
-                    <td>{{ $repair->accessories_received ?: 'Unit only' }}</td>
-                    <th>Advance Paid:</th>
-                    <td><strong style="color: #059669;">Rs. {{ number_format($repair->advance_paid, 2) }}</strong> ({{ $repair->advanceAccount->title ?? 'None' }})</td>
-                </tr>
-            </table>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px;">
-                <div style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px 8px; background: #f8fafc;">
-                    <div style="font-weight: 700; font-size: 10px; color: #1e40af; text-transform: uppercase;">Customer Fault Statement:</div>
-                    <div style="font-size: 10.5px; margin-top: 2px;">{{ $repair->problem_description }}</div>
+        {{-- Meta Information Lines --}}
+        <div class="meta-lines">
+            <div class="meta-line-row">
+                <div>
+                    Sr. <span class="line-field" contenteditable="true" style="min-width: 160px; font-weight: 800; font-family: monospace;">{{ $repair->repair_no }}</span>
                 </div>
-
-                <div style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px 8px; background: #fff;">
-                    <div style="font-weight: 700; font-size: 10px; color: #475569; text-transform: uppercase;">Technician Diagnostic &amp; Parts Notes:</div>
-                    <div style="font-size: 10.5px; margin-top: 2px; min-height: 28px; color: #334155;">
-                        {{ $repair->technician_notes ?: '________________________________________________' }}
-                    </div>
+                <div>
+                    Date. <span class="line-field" contenteditable="true" style="min-width: 140px;">{{ date('d-M-Y', strtotime($repair->received_date ?? now())) }}</span>
                 </div>
             </div>
-
-            <table class="sig-grid" style="margin-top: 15px;">
-                <tr>
-                    <td>
-                        <div class="sig-line">Bench Technician Assigned</div>
-                    </td>
-                    <td>
-                        <div class="sig-line">Quality Check &amp; Ready for Delivery</div>
-                    </td>
-                </tr>
-            </table>
+            <div>
+                M/s. <span class="line-field" contenteditable="true" style="width: calc(100% - 45px); font-weight: 800;">
+                    {{ $repair->customer_display_name }} @if($repair->customer_display_phone) ({{ $repair->customer_display_phone }}) @endif @if($repair->customer_display_address) - {{ $repair->customer_display_address }} @endif
+                </span>
+            </div>
         </div>
 
+        {{-- Main Invoice Grid Table Matching Uploaded Column Specs --}}
+        <table class="pad-table" id="invoiceGridTable">
+            <thead>
+                <tr>
+                    <th class="th-red" style="width: 4%;">No.</th>
+                    <th class="th-dark" style="width: 33%; text-align: left;">DESCRIPTION</th>
+                    <th class="th-red" style="width: 6%;">QTY</th>
+                    <th class="th-dark" style="width: 11%; text-align: right;">RATE</th>
+                    <th class="th-red" style="width: 14%; text-align: right;">GROSS AMOUNT</th>
+                    <th class="th-dark" style="width: 6%;">GST %</th>
+                    <th class="th-red" style="width: 11%; text-align: right;">GST AMOUNT</th>
+                    <th class="th-dark" style="width: 15%; text-align: right;">TOTAL AMOUNT</th>
+                </tr>
+            </thead>
+            <tbody id="invoiceTableBody">
+                @php
+                    $itemsData = json_decode($repair->problem_description, true);
+                    $rows = [];
+
+                    if (is_array($itemsData) && count($itemsData) > 0) {
+                        foreach($itemsData as $idx => $it) {
+                            $rate = (float)($it['estimated_cost'] ?? 0);
+                            $rows[] = [
+                                'no' => $it['sn'] ?? ($idx + 1),
+                                'desc' => $it['item_name'] . ($it['brand_model'] ? ' ('.$it['brand_model'].')' : '') . ($it['serial_no'] ? ' [SN: '.$it['serial_no'].']' : '') . ($it['problem_description'] ? ' - '.$it['problem_description'] : ''),
+                                'qty' => 1,
+                                'rate' => $rate,
+                                'gross' => $rate,
+                                'gst_pct' => 0,
+                                'gst_amt' => 0,
+                                'total' => $rate,
+                            ];
+                        }
+                    } else {
+                        // Single Repair Item Format
+                        $serviceCharges = (float)($repair->service_charges > 0 ? $repair->service_charges : $repair->estimated_cost);
+                        $partsCharges   = (float)($repair->parts_charges ?? 0);
+
+                        $rows[] = [
+                            'no' => 1,
+                            'desc' => "Repair & Servicing: " . $repair->item_name . ($repair->brand_model ? ' ('.$repair->brand_model.')' : '') . ($repair->serial_no ? ' [S/N: '.$repair->serial_no.']' : ''),
+                            'qty' => 1,
+                            'rate' => $serviceCharges,
+                            'gross' => $serviceCharges,
+                            'gst_pct' => 0,
+                            'gst_amt' => 0,
+                            'total' => $serviceCharges,
+                        ];
+
+                        if ($partsCharges > 0) {
+                            $rows[] = [
+                                'no' => 2,
+                                'desc' => "Replacement Spare Parts / Components Charges",
+                                'qty' => 1,
+                                'rate' => $partsCharges,
+                                'gross' => $partsCharges,
+                                'gst_pct' => 0,
+                                'gst_amt' => 0,
+                                'total' => $partsCharges,
+                            ];
+                        }
+                    }
+
+                    // Total initial rows in pad grid: 10 rows
+                    $totalRowsToFill = 10;
+                    $actualCount = count($rows);
+                @endphp
+
+                @foreach($rows as $r)
+                    <tr class="item-grid-row">
+                        <td class="td-center row-sn-cell" contenteditable="true">{{ $r['no'] }}</td>
+                        <td class="row-desc-cell" contenteditable="true">{{ $r['desc'] }}</td>
+                        <td class="td-center row-qty-cell" contenteditable="true" oninput="recalculateTotals()">{{ $r['qty'] }}</td>
+                        <td class="td-right row-rate-cell" contenteditable="true" oninput="recalculateTotals()">{{ number_format($r['rate'], 2, '.', '') }}</td>
+                        <td class="td-right row-gross-cell" contenteditable="true" style="font-weight: 700;" oninput="recalculateTotals()">{{ number_format($r['gross'], 2, '.', '') }}</td>
+                        <td class="td-center row-gstpct-cell" contenteditable="true" oninput="recalculateTotals()">{{ $r['gst_pct'] }}</td>
+                        <td class="td-right row-gstamt-cell" contenteditable="true" style="color: #047857;" oninput="recalculateTotals()">{{ number_format($r['gst_amt'], 2, '.', '') }}</td>
+                        <td class="td-right row-total-cell" contenteditable="true" style="font-weight: 800;" oninput="recalculateTotals()">{{ number_format($r['total'], 2, '.', '') }}</td>
+                    </tr>
+                @endforeach
+
+                @for($i = $actualCount + 1; $i <= $totalRowsToFill; $i++)
+                    <tr class="item-grid-row">
+                        <td class="td-center row-sn-cell" contenteditable="true"></td>
+                        <td class="row-desc-cell" contenteditable="true"></td>
+                        <td class="td-center row-qty-cell" contenteditable="true" oninput="recalculateTotals()"></td>
+                        <td class="td-right row-rate-cell" contenteditable="true" oninput="recalculateTotals()"></td>
+                        <td class="td-right row-gross-cell" contenteditable="true" style="font-weight: 700;" oninput="recalculateTotals()"></td>
+                        <td class="td-center row-gstpct-cell" contenteditable="true" oninput="recalculateTotals()"></td>
+                        <td class="td-right row-gstamt-cell" contenteditable="true" style="color: #047857;" oninput="recalculateTotals()"></td>
+                        <td class="td-right row-total-cell" contenteditable="true" style="font-weight: 800;" oninput="recalculateTotals()"></td>
+                    </tr>
+                @endfor
+            </tbody>
+            <tfoot>
+                <tr id="grandTotalRow">
+                    <td colspan="4" class="sum-cell-lbl" style="font-size: 12px; font-weight: 900; text-align: right; padding-right: 12px;">Grand Total (PKR)</td>
+                    <td class="sum-cell-val" id="totalGrossVal" contenteditable="true" style="font-weight: 800; text-align: right;" oninput="manualTotalChange()">Rs. {{ number_format($totalBill, 2) }}</td>
+                    <td class="sum-cell-val td-center" style="font-weight: 700; text-align: center;">-</td>
+                    <td class="sum-cell-val" id="totalGstVal" contenteditable="true" style="font-weight: 800; color: #047857; text-align: right;" oninput="manualTotalChange()">Rs. 0.00</td>
+                    <td class="sum-cell-val" id="grandTotalVal" contenteditable="true" style="font-size: 13px; font-weight: 900; color: #000; text-align: right;" oninput="manualTotalChange()">Rs. {{ number_format($totalBill, 2) }}</td>
+                </tr>
+                <tr>
+                    <td colspan="2" class="sum-cell-lbl" style="font-weight: 800; text-align: left; padding-left: 8px;">Amount in words</td>
+                    <td colspan="6" class="sum-cell-val" id="amountInWordsVal" contenteditable="true" style="font-weight: 700; text-align: center; font-style: italic; background: #f8fafc;">** Forty Thousand Rupees Only **</td>
+                </tr>
+                <tr>
+                    <td colspan="7" class="sum-cell-lbl">Advance</td>
+                    <td class="sum-cell-val" id="advanceVal" contenteditable="true" oninput="manualTotalChange()">Rs. {{ number_format($advancePaid, 2) }}</td>
+                </tr>
+                <tr>
+                    <td colspan="7" class="sum-cell-lbl" style="font-weight: 900; color: #dc2626;">Balance Due</td>
+                    <td class="sum-cell-val" id="balanceVal" contenteditable="true" style="color: #dc2626; font-size: 13px; font-weight: 900;">Rs. {{ number_format($dueAmount, 2) }}</td>
+                </tr>
+            </tfoot>
+        </table>
     </div>
 
+    {{-- Footer --}}
+    <div class="pad-footer">
+        <div class="footer-row-1">
+            <div contenteditable="true">SHEIKHUPURA PUNJAB PAKISTAN</div>
+            <div contenteditable="true">www.inductionheats.com</div>
+        </div>
+        <div class="footer-row-2">
+            <div contenteditable="true">
+                Cell: 0300-9464887, 0321-9596972 &nbsp;&nbsp;&nbsp;&nbsp; info@logictech.com.pk
+            </div>
+            <div style="font-weight: 800;" contenteditable="true">
+                Signature. ___________________________
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let globalGstState = false;
+
+    function parseNum(val) {
+        if (!val) return 0;
+        let cleaned = val.toString().replace(/[^0-9.-]+/g, "");
+        return parseFloat(cleaned) || 0;
+    }
+
+    function formatRs(num) {
+        return 'Rs. ' + num.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+
+    function numberToWords(num) {
+        if (num === 0) return '** Zero Rupees Only **';
+        const a = ['','One ','Two ','Three ','Four ','Five ','Six ','Seven ','Eight ','Nine ','Ten ','Eleven ','Twelve ','Thirteen ','Fourteen ','Fifteen ','Sixteen ','Seventeen ','Eighteen ','Nineteen '];
+        const b = ['', '', 'Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+        
+        function inWords (n) {
+            if ((n = n.toString()).length > 9) return '';
+            let n_arr = ('000000000' + n).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+            if (!n_arr) return '';
+            let str = '';
+            str += (n_arr[1] != 0) ? (a[Number(n_arr[1])] || b[n_arr[1][0]] + ' ' + a[n_arr[1][1]]) + 'Crore ' : '';
+            str += (n_arr[2] != 0) ? (a[Number(n_arr[2])] || b[n_arr[2][0]] + ' ' + a[n_arr[2][1]]) + 'Lakh ' : '';
+            str += (n_arr[3] != 0) ? (a[Number(n_arr[3])] || b[n_arr[3][0]] + ' ' + a[n_arr[3][1]]) + 'Thousand ' : '';
+            str += (n_arr[4] != 0) ? (a[Number(n_arr[4])] || b[n_arr[4][0]] + ' ' + a[n_arr[4][1]]) + 'Hundred ' : '';
+            str += (n_arr[5] != 0) ? ((str != '') ? 'and ' : '') + (a[Number(n_arr[5])] || b[n_arr[5][0]] + ' ' + a[n_arr[5][1]]) : '';
+            return str;
+        }
+        let whole = Math.floor(num);
+        let words = inWords(whole).trim();
+        return '** ' + (words ? words + ' Rupees Only' : '') + ' **';
+    }
+
+    function toggleGstAll() {
+        globalGstState = !globalGstState;
+        const btn = document.getElementById('btnGstToggle');
+        const rows = document.querySelectorAll('#invoiceTableBody tr.item-grid-row');
+        
+        rows.forEach(row => {
+            const qtyCell = row.querySelector('.row-qty-cell');
+            const gstPctCell = row.querySelector('.row-gstpct-cell');
+            if (qtyCell && parseNum(qtyCell.innerText) > 0 && gstPctCell) {
+                gstPctCell.innerText = globalGstState ? '18' : '0';
+            }
+        });
+
+        if (btn) {
+            btn.innerText = globalGstState ? '✔ 18% GST Applied' : '⚡ Apply 18% GST';
+            btn.style.background = globalGstState ? '#047857' : '#059669';
+        }
+        recalculateTotals();
+    }
+
+    function recalculateTotals() {
+        let sumGross = 0;
+        let sumGst = 0;
+        let sumGrandTotal = 0;
+
+        const rows = document.querySelectorAll('#invoiceTableBody tr.item-grid-row');
+        rows.forEach(row => {
+            const qtyCell    = row.querySelector('.row-qty-cell');
+            const rateCell   = row.querySelector('.row-rate-cell');
+            const grossCell  = row.querySelector('.row-gross-cell');
+            const gstPctCell = row.querySelector('.row-gstpct-cell');
+            const gstAmtCell = row.querySelector('.row-gstamt-cell');
+            const totalCell  = row.querySelector('.row-total-cell');
+
+            const qty    = parseNum(qtyCell ? qtyCell.innerText : 0);
+            const rate   = parseNum(rateCell ? rateCell.innerText : 0);
+            const gstPct = parseNum(gstPctCell ? gstPctCell.innerText : 0);
+
+            if (qty > 0 && rate > 0) {
+                const grossAmt = qty * rate;
+                if (grossCell) grossCell.innerText = grossAmt.toFixed(2);
+                sumGross += grossAmt;
+
+                const gstAmt = grossAmt * (gstPct / 100);
+                if (gstAmtCell) gstAmtCell.innerText = gstAmt.toFixed(2);
+                sumGst += gstAmt;
+
+                const rowTotal = grossAmt + gstAmt;
+                if (totalCell) totalCell.innerText = rowTotal.toFixed(2);
+                sumGrandTotal += rowTotal;
+            } else if (totalCell && totalCell.innerText.trim() !== '') {
+                const manualTotal = parseNum(totalCell.innerText);
+                sumGrandTotal += manualTotal;
+                sumGross += parseNum(grossCell ? grossCell.innerText : manualTotal);
+                sumGst += parseNum(gstAmtCell ? gstAmtCell.innerText : 0);
+            }
+        });
+
+        if (document.getElementById('totalGrossVal')) {
+            document.getElementById('totalGrossVal').innerText = formatRs(sumGross);
+        }
+        if (document.getElementById('totalGstVal')) {
+            document.getElementById('totalGstVal').innerText = formatRs(sumGst);
+        }
+        if (document.getElementById('grandTotalVal')) {
+            document.getElementById('grandTotalVal').innerText = formatRs(sumGrandTotal);
+        }
+
+        // Amount in words update
+        if (document.getElementById('amountInWordsVal')) {
+            document.getElementById('amountInWordsVal').innerText = numberToWords(sumGrandTotal);
+        }
+
+        const advance = parseNum(document.getElementById('advanceVal') ? document.getElementById('advanceVal').innerText : 0);
+        const balance = Math.max(0, sumGrandTotal - advance);
+        if (document.getElementById('balanceVal')) {
+            document.getElementById('balanceVal').innerText = formatRs(balance);
+        }
+    }
+
+    function manualTotalChange() {
+        const grandTotal = parseNum(document.getElementById('grandTotalVal') ? document.getElementById('grandTotalVal').innerText : 0);
+        const advance = parseNum(document.getElementById('advanceVal') ? document.getElementById('advanceVal').innerText : 0);
+
+        const balance = Math.max(0, grandTotal - advance);
+        if (document.getElementById('balanceVal')) {
+            document.getElementById('balanceVal').innerText = formatRs(balance);
+        }
+    }
+
+    function addNewRow() {
+        const tbody = document.getElementById('invoiceTableBody');
+        const rows = tbody.querySelectorAll('tr.item-grid-row');
+        const nextSn = rows.length + 1;
+
+        const tr = document.createElement('tr');
+        tr.className = 'item-grid-row';
+        tr.innerHTML = `
+            <td class="td-center row-sn-cell" contenteditable="true">${nextSn}</td>
+            <td class="row-desc-cell" contenteditable="true">Enter description...</td>
+            <td class="td-center row-qty-cell" contenteditable="true" oninput="recalculateTotals()">1</td>
+            <td class="td-right row-rate-cell" contenteditable="true" oninput="recalculateTotals()">0.00</td>
+            <td class="td-right row-gross-cell" contenteditable="true" style="font-weight: 700;" oninput="recalculateTotals()">0.00</td>
+            <td class="td-center row-gstpct-cell" contenteditable="true" oninput="recalculateTotals()">${globalGstState ? '18' : '0'}</td>
+            <td class="td-right row-gstamt-cell" contenteditable="true" style="color: #047857;" oninput="recalculateTotals()">0.00</td>
+            <td class="td-right row-total-cell" contenteditable="true" style="font-weight: 800;" oninput="recalculateTotals()">0.00</td>
+        `;
+        tbody.appendChild(tr);
+        recalculateTotals();
+    }
+
+    function removeLastRow() {
+        const tbody = document.getElementById('invoiceTableBody');
+        const rows = tbody.querySelectorAll('tr.item-grid-row');
+        if (rows.length > 1) {
+            rows[rows.length - 1].remove();
+            recalculateTotals();
+        }
+    }
+
+    function toggleDocType(type) {
+        const qBox = document.getElementById('chkQuotation');
+        const iBox = document.getElementById('chkInvoice');
+        if (type === 'quotation') {
+            qBox.innerHTML = '&#10004;';
+            iBox.innerHTML = '';
+        } else {
+            qBox.innerHTML = '';
+            iBox.innerHTML = '&#10004;';
+        }
+    }
+</script>
 </body>
 </html>

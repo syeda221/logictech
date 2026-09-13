@@ -637,38 +637,38 @@
                                                 </span>
                                             </td>
 
-                                             {{-- Actions --}}
-                                             <td class="text-center">
-                                                 <div class="d-flex align-items-center justify-content-center gap-1">
-                                                     {{-- View Details & Audit --}}
-                                                     <a href="{{ route('repair.show', $repair->id) }}" class="btn-erp-table-action" title="View Job Card & Audit Trail">
-                                                         <i class="fas fa-eye"></i>
-                                                     </a>
-                                                     {{-- Print 80mm Slip --}}
-                                                     <a href="{{ route('repair.print.thermal', $repair->id) }}" target="_blank" class="btn-erp-table-action text-dark" title="Print 80mm Thermal Slip">
-                                                         <i class="fas fa-receipt"></i>
-                                                     </a>
-                                                     {{-- Print A4 Job Sheet --}}
-                                                     <a href="{{ route('repair.print.a4', $repair->id) }}" target="_blank" class="btn-erp-table-action text-primary" title="Print A4 Job Sheet">
-                                                         <i class="fas fa-print"></i>
-                                                     </a>
+                                                     {{-- Actions --}}
+                                                     <td class="text-center">
+                                                         <div class="d-flex align-items-center justify-content-center gap-1">
+                                                             {{-- View Details & Audit --}}
+                                                             <a href="{{ route('repair.show', $repair->id) }}" class="btn-erp-table-action" title="View Job Card & Audit Trail">
+                                                                 <i class="fas fa-eye"></i>
+                                                             </a>
+                                                             {{-- Print A4 Invoice --}}
+                                                             <a href="{{ route('repair.print.a4', $repair->id) }}" target="_blank" class="btn-erp-table-action text-danger fw-bold bg-light" title="Print LOGICTECH Invoice">
+                                                                 <i class="fas fa-file-invoice-dollar me-1"></i> Invoice
+                                                             </a>
+                                                             {{-- Print 80mm Thermal Slip --}}
+                                                             <a href="{{ route('repair.print.thermal', $repair->id) }}" target="_blank" class="btn-erp-table-action text-dark" title="Print 80mm Thermal Slip">
+                                                                 <i class="fas fa-receipt"></i>
+                                                             </a>
 
-                                                     {{-- Status Modal Trigger --}}
-                                                     @if($repair->status !== 'delivered' && $repair->status !== 'cancelled')
-                                                         <button type="button" class="btn-erp-table-action text-warning border-warning-subtle" 
-                                                                 data-bs-toggle="modal" data-bs-target="#statusModal{{ $repair->id }}"
-                                                                 data-toggle="modal" data-target="#statusModal{{ $repair->id }}" title="Update Status">
-                                                             <i class="fas fa-tasks"></i>
-                                                         </button>
+                                                             {{-- Status Modal Trigger --}}
+                                                             @if($repair->status !== 'delivered' && $repair->status !== 'cancelled')
+                                                                 <button type="button" class="btn-erp-table-action text-warning border-warning-subtle" 
+                                                                         data-bs-toggle="modal" data-bs-target="#statusModal{{ $repair->id }}"
+                                                                         data-toggle="modal" data-target="#statusModal{{ $repair->id }}" title="Update Status">
+                                                                     <i class="fas fa-tasks"></i> Status
+                                                                 </button>
 
-                                                         <button type="button" class="btn-erp-table-action text-success border-success-subtle" 
-                                                                 data-bs-toggle="modal" data-bs-target="#deliverModal{{ $repair->id }}"
-                                                                 data-toggle="modal" data-target="#deliverModal{{ $repair->id }}" title="Deliver to Customer & Final Payment">
-                                                             <i class="fas fa-truck-loading"></i>
-                                                         </button>
-                                                     @endif
-                                                 </div>
-                                             </td>
+                                                                 <button type="button" class="btn-erp-table-action text-success border-success-subtle" 
+                                                                         data-bs-toggle="modal" data-bs-target="#deliverModal{{ $repair->id }}"
+                                                                         data-toggle="modal" data-target="#deliverModal{{ $repair->id }}" title="Deliver to Customer & Final Payment">
+                                                                     <i class="fas fa-truck-loading"></i> Deliver
+                                                                 </button>
+                                                             @endif
+                                                         </div>
+                                                     </td>
                                          </tr>
                                      @endforeach
                                  </tbody>

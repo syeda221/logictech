@@ -134,14 +134,14 @@ class RepairController extends Controller
             'customer_phone' => 'required|string|max:50',
             'customer_address' => 'nullable|string|max:255',
             'product_id' => 'nullable|exists:products,id',
-            'item_name' => 'required|string|max:200',
-            'brand_model' => 'nullable|string|max:100',
-            'serial_no' => 'nullable|string|max:100',
+            'item_name' => 'nullable',
+            'brand_model' => 'nullable',
+            'serial_no' => 'nullable',
             'accessories_received' => 'nullable',
-            'problem_description' => 'nullable|string',
+            'problem_description' => 'nullable',
             'physical_condition' => 'nullable|string',
             'technician_notes' => 'nullable|string',
-            'estimated_cost' => 'nullable|numeric|min:0',
+            'estimated_cost' => 'nullable',
             'advance_paid' => 'nullable|numeric|min:0',
             'advance_account_id' => 'nullable|exists:accounts,id',
             'priority' => 'required|in:normal,urgent,high',
@@ -158,6 +158,54 @@ class RepairController extends Controller
             return back()->withInput()->with('error', 'Please select an account for the advance payment.');
         }
 
+        // Process itemized array inputs
+        $itemsData = [];
+        $totalEstimatedCost = 0;
+        $allItemNames = [];
+        $allBrands = [];
+        $allSerials = [];
+        $allFaults = [];
+
+        $itemNames   = is_array($request->item_name) ? $request->item_name : [$request->item_name];
+        $brandModels = is_array($request->brand_model) ? $request->brand_model : [$request->brand_model];
+        $serialNos   = is_array($request->serial_no) ? $request->serial_no : [$request->serial_no];
+        $faults      = is_array($request->problem_description) ? $request->problem_description : [$request->problem_description];
+        $costs       = is_array($request->estimated_cost) ? $request->estimated_cost : [$request->estimated_cost];
+
+        foreach ($itemNames as $idx => $rawName) {
+            $name = trim((string)$rawName);
+            if ($name === '') continue;
+            
+            $brand  = trim((string)($brandModels[$idx] ?? ''));
+            $serial = trim((string)($serialNos[$idx] ?? ''));
+            $fault  = trim((string)($faults[$idx] ?? ''));
+            $cost   = (float)($costs[$idx] ?? 0);
+
+            $totalEstimatedCost += $cost;
+            $allItemNames[] = $name;
+            if ($brand !== '') $allBrands[] = $brand;
+            if ($serial !== '') $allSerials[] = $serial;
+            if ($fault !== '') $allFaults[] = $fault;
+
+            $itemsData[] = [
+                'sn' => count($itemsData) + 1,
+                'item_name' => $name,
+                'brand_model' => $brand,
+                'serial_no' => $serial,
+                'problem_description' => $fault,
+                'estimated_cost' => $cost,
+            ];
+        }
+
+        if (empty($itemsData)) {
+            return back()->withInput()->with('error', 'Please enter at least one repair item.');
+        }
+
+        $primaryItemName  = implode(', ', $allItemNames);
+        $primaryBrand     = !empty($allBrands) ? implode(', ', array_unique($allBrands)) : null;
+        $primarySerial    = !empty($allSerials) ? implode(', ', array_unique($allSerials)) : null;
+        $problemPayload   = json_encode($itemsData);
+
         try {
             DB::beginTransaction();
 
@@ -170,8 +218,7 @@ class RepairController extends Controller
                 $accessories = implode(', ', array_filter($accessories));
             }
 
-            $estimatedCost = (float) ($validated['estimated_cost'] ?? 0);
-            $dueAmount = max(0, $estimatedCost - $advancePaid);
+            $dueAmount = max(0, $totalEstimatedCost - $advancePaid);
 
             // Create Repair Order
             $repair = RepairOrder::create([
@@ -181,17 +228,17 @@ class RepairController extends Controller
                 'customer_phone' => $validated['customer_phone'],
                 'customer_address' => $validated['customer_address'] ?? null,
                 'product_id' => $validated['product_id'] ?? null,
-                'item_name' => $validated['item_name'],
-                'brand_model' => $validated['brand_model'] ?? null,
-                'serial_no' => $validated['serial_no'] ?? null,
+                'item_name' => $primaryItemName,
+                'brand_model' => $primaryBrand,
+                'serial_no' => $primarySerial,
                 'accessories_received' => $accessories,
-                'problem_description' => $validated['problem_description'] ?? 'Repair Service Order',
+                'problem_description' => $problemPayload,
                 'physical_condition' => $validated['physical_condition'] ?? null,
                 'technician_notes' => $validated['technician_notes'] ?? null,
-                'estimated_cost' => $estimatedCost,
+                'estimated_cost' => $totalEstimatedCost,
                 'service_charges' => 0,
                 'parts_charges' => 0,
-                'total_charges' => $estimatedCost,
+                'total_charges' => $totalEstimatedCost,
                 'advance_paid' => $advancePaid,
                 'advance_account_id' => $advancePaid > 0 ? $validated['advance_account_id'] : null,
                 'due_amount' => $dueAmount,
@@ -227,7 +274,7 @@ class RepairController extends Controller
             DB::commit();
 
             return redirect()->route('repair.show', $repair->id)
-                ->with('success', "Repair Ticket #{$repair->repair_no} created successfully! Customer receipt is ready to print.");
+                ->with('success', "Repair Ticket #{$repair->repair_no} created successfully! Customer receipt & invoice is ready.");
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -289,6 +336,11 @@ class RepairController extends Controller
             'to_status' => $repair->status,
             'notes' => $validated['log_note'] ?? "Status changed from {$prevStatus} to {$repair->status}",
         ]);
+
+        if ($validated['status'] === 'completed' || $validated['status'] === 'delivered') {
+            return redirect()->route('repair.print.a4', $repair->id)
+                ->with('success', "Order marked as Completed! Printable Invoice generated.");
+        }
 
         return back()->with('success', "Status updated to " . $repair->status_label);
     }
@@ -362,7 +414,8 @@ class RepairController extends Controller
 
             DB::commit();
 
-            return back()->with('success', "Item delivered successfully! Final payment recorded.");
+            return redirect()->route('repair.print.a4', $repair->id)
+                ->with('success', "Item delivered successfully! Final payment recorded. Invoice generated.");
 
         } catch (\Exception $e) {
             DB::rollBack();

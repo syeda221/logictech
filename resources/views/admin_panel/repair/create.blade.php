@@ -91,39 +91,6 @@
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
         }
 
-        /* Account Balance Badge */
-        .account-balance-badge-wrap {
-            display: inline-block;
-            margin-top: 4px;
-        }
-        .account-balance-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 0.72rem;
-            font-weight: 700;
-            padding: 3px 8px;
-            border-radius: 6px;
-            background: #eff6ff;
-            color: #1d4ed8;
-            border: 1px solid #bfdbfe;
-        }
-        .account-balance-badge.bal-positive {
-            background: #ecfdf5;
-            color: #047857;
-            border-color: #a7f3d0;
-        }
-        .account-balance-badge.bal-negative {
-            background: #fef2f2;
-            color: #b91c1c;
-            border-color: #fecaca;
-        }
-        .account-balance-badge.bal-zero {
-            background: #f8fafc;
-            color: #64748b;
-            border-color: #cbd5e1;
-        }
-
         /* Priority Options */
         .priority-group {
             display: flex;
@@ -160,57 +127,6 @@
             background: #fef2f2;
             color: #b91c1c;
             font-weight: 700;
-        }
-
-        /* Accessory Pills Checkboxes */
-        .accessory-pill-wrap {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-        }
-        .accessory-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            padding: 5px 10px;
-            border-radius: 20px;
-            border: 1px solid #cbd5e1;
-            background: #f8fafc;
-            font-size: 0.74rem;
-            color: #334155;
-            cursor: pointer;
-            transition: all 0.15s ease;
-            user-select: none;
-        }
-        .accessory-pill input[type="checkbox"] {
-            margin: 0;
-            accent-color: #2563eb;
-            cursor: pointer;
-        }
-        .accessory-pill:has(input:checked) {
-            border-color: #2563eb;
-            background: #eff6ff;
-            color: #1d4ed8;
-            font-weight: 600;
-        }
-
-        /* Summary Settlement Strip */
-        .summary-tile {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 10px 14px;
-            margin-bottom: 10px;
-        }
-        .summary-tile-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.80rem;
-            margin-bottom: 6px;
-        }
-        .summary-tile-row:last-child {
-            margin-bottom: 0;
         }
 
         .select2-container--default .select2-selection--single {
@@ -391,19 +307,32 @@
                                         </div>
                                     </div>
 
+                                    <div class="row g-2 mb-3">
+                                        <div class="col-md-8">
+                                            <label class="form-label required">Reported Fault / Problem Description</label>
+                                            <input type="text" name="problem_description" id="problemDescription" class="form-control"
+                                                value="{{ old('problem_description') }}" placeholder="e.g. Overheating, no display output, main PCB blown" required>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Estimated Repair Charges (Rs.)</label>
+                                            <input type="number" step="0.01" min="0" name="estimated_cost" id="estimatedCost" class="form-control font-monospace fw-bold"
+                                                value="{{ old('estimated_cost') }}" placeholder="0.00">
+                                        </div>
+                                    </div>
+
                                     <div class="row g-2">
                                         {{-- Physical Condition --}}
                                         <div class="col-md-6">
-                                            <label class="form-label">Physical Condition & Visual Inspection</label>
+                                            <label class="form-label">Physical Condition &amp; Visual Inspection</label>
                                             <textarea name="physical_condition" id="physicalCondition" rows="2" class="form-control"
-                                                placeholder="Enter physical condition & visual inspection notes manually (e.g. Outer casing scratched, power cord clipped, front knob missing...)">{{ old('physical_condition') }}</textarea>
+                                                placeholder="e.g. Outer casing scratched, power cord clipped, front knob missing...">{{ old('physical_condition') }}</textarea>
                                         </div>
 
                                         {{-- Accessories Received --}}
                                         <div class="col-md-6">
                                             <label class="form-label">Accessories Received With Item</label>
                                             <textarea name="accessories_received" id="accessoriesReceived" rows="2" class="form-control"
-                                                placeholder="Enter accessories received with item manually (e.g. Power Cable, Remote, Connecting pipes, manual, extra fuses...)">{{ is_array(old('accessories_received')) ? implode(', ', old('accessories_received')) : old('accessories_received') }}</textarea>
+                                                placeholder="e.g. Power Cable, Remote, Connecting pipes, manual, extra fuses...">{{ is_array(old('accessories_received')) ? implode(', ', old('accessories_received')) : old('accessories_received') }}</textarea>
                                         </div>
                                     </div>
                                 </div>
@@ -414,11 +343,11 @@
                         {{-- RIGHT COLUMN: Schedule, Priority & Actions (col-lg-4) --}}
                         <div class="col-lg-4">
 
-                            {{-- 4. Dates & Priority Card --}}
+                            {{-- 3. Dates & Priority Card --}}
                             <div class="card-panel">
                                 <div class="card-panel-header">
                                     <h6 class="card-panel-title">
-                                        <i class="fas fa-calendar-alt text-primary"></i> Schedule & Priority
+                                        <i class="fas fa-calendar-alt text-primary"></i> Schedule &amp; Priority
                                     </h6>
                                 </div>
                                 <div class="card-panel-body">
@@ -455,7 +384,35 @@
                                 </div>
                             </div>
 
-                            {{-- 6. Form Submission Buttons --}}
+                            {{-- 4. Advance Payment Card --}}
+                            <div class="card-panel">
+                                <div class="card-panel-header">
+                                    <h6 class="card-panel-title">
+                                        <i class="fas fa-wallet text-success"></i> Advance Payment Collected
+                                    </h6>
+                                </div>
+                                <div class="card-panel-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Advance Amount (Rs.)</label>
+                                        <input type="number" step="0.01" min="0" name="advance_paid" id="advancePaidInput" class="form-control font-monospace fw-bold text-success"
+                                            value="{{ old('advance_paid', '0.00') }}" placeholder="0.00">
+                                    </div>
+
+                                    <div>
+                                        <label class="form-label">Deposit Account</label>
+                                        <select name="advance_account_id" class="form-select">
+                                            <option value="">-- Choose Cash / Bank Account --</option>
+                                            @foreach($accounts as $acc)
+                                                <option value="{{ $acc->id }}" {{ old('advance_account_id') == $acc->id ? 'selected' : '' }}>
+                                                    {{ $acc->title }} ({{ $acc->account_code }})
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- 5. Form Submission Buttons --}}
                             <div class="card-panel p-3">
                                 <button type="submit" class="btn btn-primary w-100 py-2.5 fw-bold d-flex align-items-center justify-content-center gap-2" style="border-radius: 8px; font-size: 0.85rem; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);">
                                     <i class="fas fa-save"></i> Receive Device &amp; Generate Job Card
@@ -550,3 +507,4 @@
         });
     </script>
 @endsection
+
