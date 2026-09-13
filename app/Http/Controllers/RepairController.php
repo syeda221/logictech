@@ -54,6 +54,12 @@ class RepairController extends Controller
             });
         }
 
+        // Filter by Ticket #
+        if ($request->filled('ticket_no')) {
+            $ticketNo = trim($request->ticket_no);
+            $query->where('repair_no', 'like', "%{$ticketNo}%");
+        }
+
         // Filter by Customer
         if ($request->filled('customer_id')) {
             $query->where('customer_id', $request->customer_id);
@@ -132,7 +138,7 @@ class RepairController extends Controller
             'brand_model' => 'nullable|string|max:100',
             'serial_no' => 'nullable|string|max:100',
             'accessories_received' => 'nullable',
-            'problem_description' => 'required|string',
+            'problem_description' => 'nullable|string',
             'physical_condition' => 'nullable|string',
             'technician_notes' => 'nullable|string',
             'estimated_cost' => 'nullable|numeric|min:0',
@@ -179,7 +185,7 @@ class RepairController extends Controller
                 'brand_model' => $validated['brand_model'] ?? null,
                 'serial_no' => $validated['serial_no'] ?? null,
                 'accessories_received' => $accessories,
-                'problem_description' => $validated['problem_description'],
+                'problem_description' => $validated['problem_description'] ?? 'Repair Service Order',
                 'physical_condition' => $validated['physical_condition'] ?? null,
                 'technician_notes' => $validated['technician_notes'] ?? null,
                 'estimated_cost' => $estimatedCost,

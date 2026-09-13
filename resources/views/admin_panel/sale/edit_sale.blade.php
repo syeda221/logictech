@@ -625,24 +625,26 @@
                 <!-- TOP INFORMATION PANEL (PILL TOOLBAR LAYOUT) -->
                 <div class="card-panel mb-2">
                     <div class="d-flex flex-wrap align-items-end gap-2 w-100">
-                        <!-- Customer & Walk-in Toggle (WIDE & PROMINENT) -->
-                        <div style="flex: 2 1 280px; min-width: 230px;">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <label class="form-label mb-0"><i class="fas fa-user text-primary me-1"></i>Customer</label>
-                                <div class="form-check form-switch mb-0 d-flex align-items-center p-0">
-                                    <input class="form-check-input ms-0 me-1" type="checkbox" role="switch" id="walkinToggle" name="is_walkin" value="1" {{ !isset($sale) || $sale->walkin_name ? 'checked' : '' }} style="cursor: pointer; width: 28px; height: 14px;">
-                                    <label class="form-check-label fw-bold" for="walkinToggle" style="color: #2563eb; font-size: 0.70rem; cursor: pointer;">Walk-in</label>
+                        <!-- Customer & Add Customer Button (WIDE & PROMINENT) -->
+                        <div style="flex: 2.5 1 320px; min-width: 260px;">
+                            <label class="form-label mb-1"><i class="fas fa-user text-primary me-1"></i>Customer</label>
+                            <div id="customerInputWrapper" class="d-flex align-items-center gap-1.5">
+                                <div class="flex-grow-1" style="min-width: 0;">
+                                    <input type="text" class="form-control fw-bold {{ (!isset($sale) || $sale->walkin_name) ? '' : 'd-none' }}" name="walkin_name" id="walkinNameInput" value="{{ $sale->walkin_name ?? '' }}" placeholder="Enter Customer Name...">
+                                    <select class="form-select {{ (!isset($sale) || $sale->walkin_name) ? 'd-none' : '' }}" id="customerSelect" name="customer" style="width:100%">
+                                        @if (isset($sale) && $sale->customer_relation)
+                                            <option value="{{ $sale->customer_id }}" selected>
+                                                {{ $sale->customer_relation->customer_id }} — {{ $sale->customer_relation->customer_name }}
+                                            </option>
+                                        @elseif(isset($sale) && $sale->walkin_name)
+                                            <option value="" selected>{{ $sale->walkin_name }}</option>
+                                        @endif
+                                    </select>
                                 </div>
-                            </div>
-                            <div id="customerInputWrapper">
-                                <input type="text" class="form-control fw-bold {{ (!isset($sale) || $sale->walkin_name) ? '' : 'd-none' }}" name="walkin_name" id="walkinNameInput" value="{{ $sale->walkin_name ?? 'Walk-in Customer' }}" placeholder="Enter Customer Name...">
-                                <select class="form-select {{ (!isset($sale) || $sale->walkin_name) ? 'd-none' : '' }}" id="customerSelect" name="customer" style="width:100%">
-                                    @if (isset($sale) && $sale->customer_relation)
-                                        <option value="{{ $sale->customer_id }}" selected>
-                                            {{ $sale->customer_relation->customer_id }} — {{ $sale->customer_relation->customer_name }}
-                                        </option>
-                                    @endif
-                                </select>
+                                <button type="button" class="btn btn-erp-pill-primary flex-shrink-0" id="btnHeaderAddCustomer" data-bs-toggle="modal" data-bs-target="#addCustomerModal" data-toggle="modal" data-target="#addCustomerModal" title="Add New Customer">
+                                    <i class="fas fa-plus-circle"></i> <span>Add Customer</span>
+                                </button>
+                                <input type="hidden" id="walkinToggle" name="is_walkin" value="{{ (!isset($sale) || $sale->walkin_name) ? '1' : '0' }}">
                             </div>
                         </div>
                         <input type="hidden" name="Invoice_no" value="{{ $nextInvoiceNumber ?? ($sale->invoice_no ?? '') }}">
@@ -676,9 +678,9 @@
                         <input type="hidden" name="order_status" id="orderStatusSelect" value="{{ $sale->order_status ?? 'pending' }}">
                         <input type="hidden" name="delivery_date" id="actualDeliveryDateInput" value="{{ isset($sale->delivery_date) ? \Carbon\Carbon::parse($sale->delivery_date)->format('Y-m-d') : '' }}">
 
-                        <!-- Remarks (User Choice: WIDE & PROMINENT) -->
+                        <!-- Remarks / Subject (User Choice: WIDE & PROMINENT) -->
                         <div style="flex: 1.5 1 180px; min-width: 150px;">
-                            <label class="form-label"><i class="fas fa-comment-dots text-primary me-1"></i>Remarks</label>
+                            <label class="form-label"><i class="fas fa-file-alt text-primary me-1"></i>Subject / Remarks</label>
                             <input type="text" class="form-control" name="reference" id="remarks" value="{{ $sale->reference ?? '' }}" placeholder="e.g. Self Collected">
                         </div>
 
@@ -705,8 +707,14 @@
                             <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
                                 <div class="d-flex align-items-center gap-2">
                                     <div class="section-title mb-0" style="font-size:0.78rem;">Order Items (<span id="itemsRowCount">{{ isset($sale->items) ? count($sale->items) : 0 }}</span>)</div>
+                                    <button type="button" class="btn btn-erp-pill-outline py-0 px-2 fw-bold" id="btnOpenQuickProducts" data-bs-toggle="offcanvas" data-bs-target="#quickProductsOffcanvas" data-toggle="offcanvas" data-target="#quickProductsOffcanvas" style="height: 28px; font-size:0.72rem;">
+                                        <i class="fas fa-th me-1"></i>Quick Products Panel
+                                    </button>
                                 </div>
-                                <div class="d-flex gap-1">
+                                <div class="d-flex gap-1 align-items-center">
+                                    <button type="button" class="btn btn-erp-pill-outline py-1 px-3 fw-bold" id="btnOpenCreateProduct" data-bs-toggle="modal" data-bs-target="#quickAddProductModal" data-toggle="modal" data-target="#quickAddProductModal" style="height: 30px; font-size:0.75rem;">
+                                        <i class="fas fa-bolt text-warning me-1"></i>Create Product
+                                    </button>
                                     <button type="button" class="btn btn-erp-pill-primary py-1 px-3 fw-bold" id="btnAdd" style="height: 30px; font-size:0.75rem;">
                                         <i class="fas fa-plus me-1"></i>Add Row
                                     </button>
@@ -718,13 +726,14 @@
                                     <thead>
                                         <tr>
                                             <th style="width:25px;" class="text-center">#</th>
-                                            <th class="col-product" style="min-width: 160px;">PRODUCT / SPECIFICATIONS</th>
-                                            <th class="col-model" style="width: 95px;">MODEL</th>
-                                            <th class="col-stock" style="width: 55px;">STOCK</th>
-                                            <th class="col-qty" style="width: 85px;">QTY</th>
-                                            <th class="col-pieces" style="width: 50px;">UNIT</th>
+                                            <th class="col-product" style="min-width: 140px; width: 220px;">PRODUCT / SPECIFICATIONS</th>
+                                            <th class="col-model" style="width: 85px;">MODEL</th>
+                                            <th class="col-stock d-none" style="width: 55px;">STOCK</th>
+                                            <th class="col-qty" style="width: 55px;">QTY</th>
+                                            <th class="col-pieces" style="width: 45px;">UNIT</th>
                                             <th class="col-price-p" style="width: 85px;">PRICE</th>
                                             <th class="col-disc" style="width: 75px;">DISCOUNT</th>
+                                            <th class="col-tax" style="width: 110px;">GST %</th>
                                             <th class="col-amount" style="width: 90px;">AMOUNT</th>
                                             <th class="col-action" style="width: 30px;">×</th>
                                         </tr>
@@ -786,6 +795,12 @@
                                                         <input type="hidden" class="size-w" value="{{ $prod->width ?? '-' }}">
                                                         <input type="hidden" class="size-mode-text" value="{{ $sizeMode }}">
                                                         <input type="hidden" class="serial-no-input" name="serial_no[]" value="{{ $item->serial_no ?? '' }}">
+                                                        <div class="mt-1 d-flex align-items-center gap-1">
+                                                            <button type="button" class="btn btn-sm btn-outline-primary py-0 px-1.5 btn-toggle-specs" style="font-size: 0.68rem; height: 20px; border-radius: 4px;" title="Enter Specifications & Details Manually">
+                                                                <i class="fas fa-sliders-h me-1"></i>+ Specs / Details <i class="fas fa-chevron-down ms-0.5 arrow-icon"></i>
+                                                            </button>
+                                                            <span class="badge bg-light text-primary border specs-filled-badge {{ ($item->technical_name || $item->technical_specs || $item->technical_remarks) ? '' : 'd-none' }}" style="font-size: 0.65rem;">Specs Added</span>
+                                                        </div>
                                                     </td>
 
                                                     <!-- MODEL -->
@@ -793,17 +808,17 @@
                                                         <input type="text" class="form-control model-input text-center fw-semibold" name="model[]" value="{{ $item->model ?? ($prod->model ?? '') }}" placeholder="e.g. LTZ-35KW">
                                                     </td>
 
-                                                    <!-- STOCK -->
-                                                    <td class="col-stock">
+                                                    <!-- STOCK (HIDDEN) -->
+                                                    <td class="col-stock d-none">
                                                         <input type="text" class="form-control stock text-center input-readonly" readonly value="{{ $selStockDisp }}" tabindex="-1">
                                                         <input type="hidden" class="warehouse" name="warehouse_id[]" value="{{ $item->warehouse_id ?? (auth()->user()->warehouse_id ?? 1) }}">
                                                         <input type="hidden" class="variant-stock-value">
                                                     </td>
 
                                                     <!-- QTY -->
-                                                    <td style="width:85px;min-width:85px;" class="col-qty-wrapper">
+                                                    <td style="width:55px;min-width:55px;" class="col-qty-wrapper">
                                                         <div class="d-flex align-items-center gap-1">
-                                                            <input type="number" step="any" class="form-control carton-qty text-center fw-bold" name="carton_qty[]" value="{{ $item->total_pieces > 0 ? $item->total_pieces : ($item->qty ?? 1) }}" min="0" style="flex: 1; min-width: 0; height: 26px; font-size: 0.85rem; padding: 1px 4px;">
+                                                            <input type="number" step="any" class="form-control carton-qty text-center fw-bold" name="carton_qty[]" value="{{ (float)($item->total_pieces > 0 ? $item->total_pieces : ($item->qty ?? 1)) }}" min="0" style="flex: 1; min-width: 0; height: 26px; font-size: 0.85rem; padding: 1px 4px;">
                                                             <button type="button" class="btn btn-sm btn-outline-primary qty-unit-toggle px-1 py-0 d-none" 
                                                                     data-unit-mode="main" title="Toggle Unit" style="font-size: 0.65rem; height: 26px; min-width: 28px; font-weight: 700; border-radius: 4px; flex-shrink: 0;">
                                                                 Kg
@@ -820,8 +835,8 @@
                                                     <!-- UNIT (Display - readonly) -->
                                                     <td class="col-pieces">
                                                         <input type="text" class="form-control unit-display text-center input-readonly" readonly tabindex="-1" placeholder="Pcs" value="Pcs">
-                                                        <input type="hidden" class="total-pieces" name="total_pieces[]" value="{{ $item->total_pieces ?? 1 }}">
-                                                        <input type="hidden" class="sales-qty" name="qty[]" value="{{ $item->total_pieces ?? 1 }}">
+                                                        <input type="hidden" class="total-pieces" name="total_pieces[]" value="{{ (float)($item->total_pieces ?? 1) }}">
+                                                        <input type="hidden" class="sales-qty" name="qty[]" value="{{ (float)($item->total_pieces ?? 1) }}">
                                                         <input type="hidden" class="pack-qty" name="pack_qty[]" value="{{ $ppb }}">
                                                     </td>
                                                  
@@ -856,6 +871,26 @@
                                                         <input type="hidden" class="discount-amount" value="{{ $item->discount_amount ?? 0 }}">
                                                     </td>
 
+                                                    <!-- GST % -->
+                                                    <td class="col-tax" style="width: 110px; min-width: 110px;">
+                                                        <div class="d-flex align-items-center gap-1 px-1">
+                                                            <input type="number"
+                                                                   step="any"
+                                                                   min="0"
+                                                                   max="100"
+                                                                   class="form-control item-tax-percent text-end font-monospace fw-bold"
+                                                                   name="item_tax_percent[]"
+                                                                   placeholder="0"
+                                                                   value="{{ $item->tax_percent ?? 0 }}"
+                                                                   style="flex: 1; min-width: 45px; height: 26px; font-size: 0.85rem; padding: 1px 4px;">
+                                                            <button type="button"
+                                                                   class="btn btn-sm btn-outline-success btn-row-gst px-1 py-0 fw-bold"
+                                                                   title="Toggle 18% GST on this item"
+                                                                   style="font-size: 0.68rem; height: 26px; min-width: 26px; border-radius: 4px; flex-shrink: 0;">%</button>
+                                                        </div>
+                                                        <input type="hidden" class="item-tax-amount" name="item_tax_amount[]" value="{{ $item->tax_amount ?? 0 }}">
+                                                    </td>
+
                                                     <!-- AMOUNT -->
                                                     <td class="col-amount">
                                                         <input type="text" class="form-control sales-amount text-end input-readonly fw-bold text-dark font-monospace" name="total[]" value="{{ $item->total ?? 0 }}" readonly tabindex="-1">
@@ -865,6 +900,37 @@
                                                     <!-- ACTION -->
                                                     <td class="col-action text-center">
                                                         <button type="button" class="btn btn-sm btn-outline-danger del-row" tabindex="-1">&times;</button>
+                                                    </td>
+                                                </tr>
+                                                <!-- EXPANDABLE SPECIFICATIONS SUB-ROW -->
+                                                <tr class="specs-subrow bg-light {{ ($item->technical_name || $item->technical_specs || $item->technical_remarks) ? '' : 'd-none' }}" style="border-top: 1px dashed #cbd5e1;">
+                                                    <td colspan="11" class="p-2 bg-light">
+                                                        <div class="p-2.5 bg-white rounded-3 border shadow-sm" style="border-color: #cbd5e1 !important; border-left: 3px solid #2563eb !important;">
+                                                            <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom" style="border-color: #f1f5f9 !important;">
+                                                                <div class="d-flex align-items-center gap-2">
+                                                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-0.5 rounded" style="font-size: 0.7rem; font-weight: 700;">
+                                                                        <i class="fas fa-sliders-h me-1"></i>SPECIFICATIONS (Item #<span class="specs-row-num">{{ $loop->iteration }}</span>)
+                                                                    </span>
+                                                                    <span class="text-secondary fw-semibold" style="font-size: 0.72rem;">Manual Specifications &amp; Technical Details</span>
+                                                                </div>
+                                                                <span class="text-muted" style="font-size: 0.68rem;"><i class="fas fa-file-contract me-1 text-primary"></i>Will appear in Technical Document &amp; Specifications</span>
+                                                            </div>
+                                                            <div class="row g-2">
+                                                                <div class="col-md-5">
+                                                                    <label class="form-label mb-1 fw-bold text-dark text-uppercase" style="font-size: 0.68rem; letter-spacing: 0.02em;">
+                                                                        <i class="fas fa-tag me-1 text-primary"></i>Equipment / Technical Title
+                                                                    </label>
+                                                                    <input type="text" class="form-control form-control-sm item-tech-name" name="technical_name[]" value="{{ $item->technical_name ?? '' }}" placeholder="e.g. Induction Heater 60 KW Forging Machine" style="border: 1px solid #cbd5e1 !important; border-radius: 5px !important; background-color: #ffffff !important; font-size: 0.76rem !important; height: 32px !important; text-align: left !important; padding: 4px 10px !important;">
+                                                                </div>
+                                                                <div class="col-md-7">
+                                                                    <label class="form-label mb-1 fw-bold text-dark text-uppercase" style="font-size: 0.68rem; letter-spacing: 0.02em;">
+                                                                        <i class="fas fa-list-check me-1 text-primary"></i>Technical Specifications &amp; Parameters
+                                                                    </label>
+                                                                    <input type="text" class="form-control form-control-sm item-tech-specs" name="technical_specs[]" value="{{ $item->technical_specs ?? '' }}" placeholder="e.g. Power: 60KW, Frequency: 10-30kHz, Coil Size: 150mm..." style="border: 1px solid #cbd5e1 !important; border-radius: 5px !important; background-color: #ffffff !important; font-size: 0.76rem !important; height: 32px !important; text-align: left !important; padding: 4px 10px !important;">
+                                                                    <input type="hidden" class="item-tech-remarks" name="technical_remarks[]" value="{{ $item->technical_remarks ?? '' }}">
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             @endforeach
@@ -883,7 +949,7 @@
                                             </td>
                                         </tr>
                                         <tr>
-                                            <td colspan="8" class="text-end fw-bold text-uppercase" style="font-size:0.78rem; color: #1e40af;">Invoice Total:</td>
+                                            <td colspan="9" class="text-end fw-bold text-uppercase" style="font-size:0.78rem; color: #1e40af;">Invoice Total:</td>
                                             <td class="text-end fw-bold fs-6" style="color: #059669;"><span id="totalAmount">0.00</span></td>
                                             <td></td>
                                         </tr>
@@ -1012,40 +1078,45 @@
                 <!-- BOTTOM SUMMARY STRIP -->
                 <div class="bottom-summary-strip">
                     <div class="d-flex align-items-center gap-2">
-                        <span class="text-muted fw-semibold" style="font-size:0.8rem;">Invoice Total:</span>
-                        <span class="fs-6 fw-bold text-dark font-monospace" id="bottomInvoiceTotal">0.00</span>
+                        <span class="summary-strip-label">Invoice Total:</span>
+                        <span class="fs-6 fw-bold font-monospace text-white" id="bottomSubTotal">0.00</span>
                     </div>
 
                     <div class="d-flex align-items-center gap-2">
-                        <span class="text-muted fw-semibold" style="font-size:0.8rem;">Discount:</span>
-                        <span class="fs-6 fw-bold text-danger font-monospace" id="bottomTotalDiscount">0.00</span>
+                        <span class="summary-strip-label">Discount:</span>
+                        <span class="fs-6 fw-bold font-monospace text-warning" id="bottomTotalDiscount">0.00</span>
+                    </div>
+
+                    <!-- Extra Disc Input -->
+                    <div class="d-flex align-items-center gap-1">
+                        <span class="summary-strip-label">Extra Disc:</span>
+                        <input type="number" step="any" min="0" class="form-control form-control-sm text-center fw-bold bg-white text-dark" id="walkinDiscountRs" name="total_extra_cost" value="{{ $sale->total_extra_cost ?? ($sale->total_extradiscount ?? 0) }}" placeholder="0" style="width: 75px; height: 26px; font-size: 0.78rem; border-radius: 4px;">
+                        <span class="summary-strip-label">Rs</span>
+                    </div>
+
+                    <!-- GST Strip -->
+                    <div class="d-flex align-items-center gap-2 d-none" id="bottomGstStrip">
+                        <span class="summary-strip-label">GST:</span>
+                        <span class="fs-6 fw-bold text-info font-monospace" id="bottomGstVal">0.00</span>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 px-2.5 py-1 rounded-3" style="background: rgba(59, 130, 246, 0.18); border: 1px solid rgba(59, 130, 246, 0.35);">
+                        <span class="summary-strip-label" style="color: #93c5fd !important;">Net Total:</span>
+                        <span class="fs-5 fw-bold text-info font-monospace" id="walkinNetTotal">0.00</span>
                     </div>
 
                     <div class="d-flex align-items-center gap-2">
-                        <span class="text-muted fw-semibold" style="font-size:0.8rem;">Extra Disc:</span>
-                        <div class="input-group input-group-sm" style="width: 120px;">
-                            <input type="number" class="form-control text-end fw-bold text-danger font-monospace" id="walkinDiscountRs" value="{{ isset($sale) && $sale->is_walkin ? $sale->total_extradiscount : '0' }}" placeholder="0">
-                            <span class="input-group-text bg-light text-muted px-1">Rs</span>
-                        </div>
+                        <span class="summary-strip-label">Advance Paid:</span>
+                        <span class="fs-6 fw-bold font-monospace text-emerald" id="bottomPaymentsTotal">0.00</span>
                     </div>
 
                     <div class="d-flex align-items-center gap-2">
-                        <span class="text-muted fw-semibold" style="font-size:0.8rem;">Net Total:</span>
-                        <span class="fs-5 fw-bold text-primary font-monospace" id="walkinNetTotal">0.00</span>
+                        <span class="summary-strip-label">Balance:</span>
+                        <span class="fs-6 fw-bold text-coral font-monospace" id="bottomChangeVal">0.00</span>
                     </div>
 
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="text-muted fw-semibold" style="font-size:0.8rem;">Advance Paid:</span>
-                        <span class="fs-6 fw-bold font-monospace" style="color: #059669;" id="bottomPaymentsTotal">0.00</span>
-                    </div>
-
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="text-muted fw-semibold" style="font-size:0.8rem;">Balance:</span>
-                        <span class="fs-6 fw-bold text-danger font-monospace" id="bottomChangeVal">0.00</span>
-                    </div>
-
-                    <button type="button" class="btn btn-save-complete" id="btnSaveAndComplete2">
-                        <i class="fas fa-bookmark me-2"></i>Book Order (F9)
+                    <button type="button" class="btn btn-save-complete px-4 py-2" id="btnSaveAndComplete2">
+                        <i class="fas fa-bookmark me-1.5"></i>Book Order (F9)
                     </button>
                 </div>
 

@@ -698,15 +698,14 @@ body{
                 $net   = (float)$item['total'];
 
                 $specs=[];
-                if(!empty($item['model']))     $specs[]=['Model',$item['model']];
-                if(!empty($item['serial_no'])) $specs[]=['Serial No',$item['serial_no']];
-                if(!empty($item['brand']))     $specs[]=['Brand',$item['brand']];
-                // Item Code hidden from invoice (user request)
-                if(!empty($item['technical_name']))    $specs[]=['Tech Name',$item['technical_name']];
-                if(!empty($item['technical_specs']))   $specs[]=['Specifications',$item['technical_specs']];
-                if(!empty($item['technical_remarks'])) $specs[]=['QC Remarks',$item['technical_remarks']];
-                if(!empty($item['color_val'])&&$item['color_val']!=='-') $specs[]=['Specification',$item['color_val']];
-                if(!empty($item['size_val']) &&$item['size_val']!=='-')  $specs[]=['Size',$item['size_val']];
+                if(!empty($item['technical_name']))    $specs[]=['Equipment Title',$item['technical_name']];
+                if(!empty($item['technical_specs']))   $specs[]=['Specifications & Parameters',$item['technical_specs']];
+                if(!empty($item['brand']))             $specs[]=['Input Power / Brand',$item['brand']];
+                if(!empty($item['size_val']) &&$item['size_val']!=='-')  $specs[]=['Duty Cycle / Rating',$item['size_val']];
+                if(!empty($item['color_val'])&&$item['color_val']!=='-') $specs[]=['Cooling Type / Model',$item['color_val']];
+                if(!empty($item['model']) && (empty($item['color_val']) || $item['color_val']==='-')) $specs[]=['Cooling Type / Model',$item['model']];
+                if(!empty($item['serial_no']))         $specs[]=['Serial No',$item['serial_no']];
+                if(!empty($item['technical_remarks'])) $specs[]=['Remarks',$item['technical_remarks']];
                 $h2=(float)($item['height']??0);$w2=(float)($item['width']??0);
                 if($sm=='by_size'&&$h2>0&&$w2>0) $specs[]=['Dimensions',number_format($w2,0).'×'.number_format($h2,0).' mm'];
                 if($wg>0) $specs[]=['Weight',($wg==(int)$wg?(int)$wg:$wg).'g'];
@@ -739,12 +738,21 @@ body{
             <tr>
                 <td class="sn">{{ $loop->iteration }}</td>
                 <td>
-                    <div class="iname">{{ $item['item_name'] }}</div>
+                    <div class="iname" style="font-weight: 700; font-size: 11px; color: #0f172a;">{{ $item['item_name'] }}</div>
                     @if(count($specs)>0)
-                    <div class="ispec-lbl">Specifications</div>
-                    <ul class="ispec-ul">
-                        @foreach($specs as [$l,$v])<li><strong>{{ $l }}:</strong> {{ $v }}</li>@endforeach
-                    </ul>
+                    <div class="ispec-box" style="margin-top: 3px; padding: 4px 6px; background: #f8fafc; border-left: 2.5px solid #2d6385; border-radius: 3px; font-size: 9px;">
+                        <div class="ispec-lbl" style="font-family:'Outfit', sans-serif; font-size: 8.5px; font-weight: 800; color: #1e3a8a; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 2px;">
+                            Specifications &amp; Details:
+                        </div>
+                        <ul class="ispec-ul" style="list-style: none; padding: 0; margin: 0; font-size: 9px; color: #334155; line-height: 1.45;">
+                            @foreach($specs as [$l, $v])
+                                <li style="margin-bottom: 1.5px; padding-left: 0;">
+                                    <strong style="color: #1e3a8a; font-weight: 700;">{{ $l }}:</strong> 
+                                    <span style="color: #1e293b;">{{ $v }}</span>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
                     @endif
                 </td>
                 <td class="tc">{{ $qd }}</td>

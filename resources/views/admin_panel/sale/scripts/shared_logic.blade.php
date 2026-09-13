@@ -797,7 +797,7 @@
 
     function canPost() {
         let ok = false;
-        $('#salesTableBody tr').each(function() {
+        $('#salesTableBody tr:not(.specs-subrow)').each(function() {
             const pid = $(this).find('.product-id-hidden').val();
             const cartons = parseInt($(this).find('.carton-qty').val()) || 0;
             const loose   = parseInt($(this).find('.loose-pcs-input').val()) || 0;
@@ -931,7 +931,7 @@
     }
 
     function cleanupEmptyRows() {
-        $('#salesTableBody tr').each(function() {
+        $('#salesTableBody tr:not(.specs-subrow)').each(function() {
             const $r = $(this);
             const prod = $r.find('.product-id-hidden').val();
             const wh = $r.find('.warehouse').val();
@@ -939,7 +939,8 @@
             const loose   = parseInt($r.find('.loose-pcs-input').val()) || 0;
             const qty = cartons + loose;
             if ((qty <= 0) || ((!prod || prod === '') && (!wh || wh === ''))) {
-                if ($('#salesTableBody tr').length > 1) {
+                if ($('#salesTableBody tr:not(.specs-subrow)').length > 1) {
+                    $r.next('.specs-subrow').remove();
                     $r.remove();
                 } else {
                     // clear last row if needed
@@ -949,10 +950,11 @@
                     $r.find('.loose-pcs-input').val(0);
                     $r.find('.stock').val('');
                     $r.find('.sales-amount').val('0');
+                    $r.next('.specs-subrow').find('input').val('');
                 }
             }
         });
-        if ($('#salesTableBody tr').length === 0) addNewRow();
+        if ($('#salesTableBody tr:not(.specs-subrow)').length === 0) addNewRow();
     }
 
     function validateHeader() {
@@ -996,7 +998,7 @@
         let firstMessage = null;
         let firstEl = null;
 
-        $('#salesTableBody tr').each(function(rowIndex) {
+        $('#salesTableBody tr:not(.specs-subrow)').each(function(rowIndex) {
             const $row = $(this);
             const $wh = $row.find('.warehouse');
             const $prod = $row.find('.product');
@@ -1012,7 +1014,8 @@
             // If this row has no product selected:
             if (!prodVal && !hiddenPid) {
                 // If there are other items in the table, remove this unselected row automatically
-                if ($('#salesTableBody tr').length > 1) {
+                if ($('#salesTableBody tr:not(.specs-subrow)').length > 1) {
+                    $row.next('.specs-subrow').remove();
                     $row.remove();
                     return;
                 }

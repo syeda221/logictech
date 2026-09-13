@@ -56,6 +56,15 @@ class SaleController extends Controller
             });
         }
 
+        // Apply Serial No Filter
+        if ($request->filled('serial_no')) {
+            $query->whereHas('items', function ($q) use ($request) {
+                $q->where('serial_no', 'like', "%{$request->serial_no}%")
+                  ->orWhere('model', 'like', "%{$request->serial_no}%")
+                  ->orWhere('product_name', 'like', "%{$request->serial_no}%");
+            });
+        }
+
         // Apply M.Bill # (Reference) Filter
         if ($request->filled('reference')) {
             $query->where('reference', 'like', "%{$request->reference}%");

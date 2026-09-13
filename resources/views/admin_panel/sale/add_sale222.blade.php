@@ -563,11 +563,39 @@
         }
 
         /* Summary & Side Panels */
+        .erp-icon-badge {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-size: 1rem;
+            box-shadow: 0 3px 8px rgba(37, 99, 235, 0.28);
+            flex-shrink: 0;
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); opacity: 0.9; }
+            50% { transform: scale(1.3); opacity: 0.4; }
+            100% { transform: scale(0.95); opacity: 0.9; }
+        }
+        .pulse-dot {
+            width: 7px;
+            height: 7px;
+            background-color: #2563eb;
+            border-radius: 50%;
+            display: inline-block;
+            animation: pulse-ring 2s infinite ease-in-out;
+        }
+
         .summary-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 6px 0;
+            padding: 7px 0;
             border-bottom: 1px dashed #dbeafe;
             font-size: 0.80rem;
         }
@@ -577,7 +605,7 @@
         .summary-val-net {
             font-weight: 800;
             color: #2563eb;
-            font-size: 1.1rem;
+            font-size: 1.15rem;
             font-family: monospace;
         }
         .summary-val-change {
@@ -592,17 +620,33 @@
         }
 
         .bottom-summary-strip {
-            background: #ffffff;
-            border: 1.5px solid #dbeafe;
-            border-radius: 10px;
-            padding: 10px 16px;
-            margin-top: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 12px;
-            box-shadow: 0 1px 4px rgba(37, 99, 235, 0.04);
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+            border: 1px solid #334155 !important;
+            border-radius: 12px !important;
+            padding: 10px 18px !important;
+            margin-top: 12px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            flex-wrap: wrap !important;
+            gap: 12px !important;
+            box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.25) !important;
+            color: #f8fafc !important;
+        }
+
+        .summary-strip-label {
+            font-size: 0.74rem !important;
+            font-weight: 700 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.04em !important;
+            color: #94a3b8 !important;
+        }
+
+        .text-emerald {
+            color: #34d399 !important;
+        }
+        .text-coral {
+            color: #f87171 !important;
         }
 
         .btn-save-complete {
@@ -613,14 +657,14 @@
             padding: 8px 20px !important;
             font-size: 0.88rem !important;
             border: none !important;
-            box-shadow: 0 3px 10px rgba(16, 185, 129, 0.25) !important;
+            box-shadow: 0 3px 10px rgba(16, 185, 129, 0.3) !important;
             transition: all 0.2s ease !important;
             cursor: pointer;
         }
         .btn-save-complete:hover {
-            background: #059669 !important;
+            background: linear-gradient(135deg, #047857 0%, #059669 100%) !important;
             transform: translateY(-1px);
-            box-shadow: 0 5px 14px rgba(16, 185, 129, 0.35) !important;
+            box-shadow: 0 5px 14px rgba(16, 185, 129, 0.45) !important;
             color: #ffffff !important;
         }
 
@@ -707,6 +751,16 @@
         }
 
         /* Customer input select2 alignment - Pill Style */
+        #customerInputWrapper {
+            display: flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+            width: 100% !important;
+        }
+        #customerInputWrapper .select2-container {
+            width: 100% !important;
+            flex-grow: 1 !important;
+        }
         #customerInputWrapper .select2-container--default .select2-selection--single {
             height: 34px !important;
             min-height: 34px !important;
@@ -740,6 +794,18 @@
             top: 0 !important;
             right: 8px !important;
         }
+        #btnHeaderAddCustomer {
+            height: 34px !important;
+            border-radius: 50px !important;
+            padding: 0 14px !important;
+            font-size: 0.76rem !important;
+            font-weight: 600 !important;
+            white-space: nowrap !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 6px !important;
+        }
     </style>
 
     <div class="container-fluid py-2 px-2">
@@ -754,15 +820,20 @@
 
                 {{-- TOP HEADER BAR --}}
                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 erp-page-header">
-                    <div class="d-flex align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-2.5">
                         <a href="{{ route('sale.index') }}" class="btn btn-erp-pill-outline" title="Back to Sales">
                             <i class="fas fa-arrow-left"></i> <span>Back</span>
                         </a>
-                        <div>
-                            <h4 class="erp-title">
-                                <i class="fas fa-shopping-cart text-primary"></i> <span id="pageMainHeading">New Sale / Booking</span>
-                            </h4>
-                            <p class="erp-subtitle">Executive order generation, instant booking ledger, and multi-format dispatch invoicing</p>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="erp-icon-badge">
+                                <i class="fas fa-shopping-cart"></i>
+                            </div>
+                            <div>
+                                <h4 class="erp-title mb-0">
+                                    <span id="pageMainHeading">New Sale / Booking</span>
+                                </h4>
+                                <p class="erp-subtitle">Executive order generation, instant booking ledger, and multi-format dispatch invoicing</p>
+                            </div>
                         </div>
                     </div>
                     <div class="d-flex align-items-center gap-2">
@@ -823,19 +894,19 @@
                 <div class="card-panel mb-2">
                     <div class="d-flex flex-wrap align-items-end gap-3 w-100">
                         <!-- Customer & Add Customer Button (WIDE & PROMINENT) -->
-                        <div style="flex: 2 1 280px; min-width: 230px;">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <label class="form-label mb-0"><i class="fas fa-user text-primary me-1"></i>Customer</label>
-                                <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 fw-bold d-flex align-items-center gap-1" id="btnHeaderAddCustomer" data-bs-toggle="modal" data-bs-target="#addCustomerModal" data-toggle="modal" data-target="#addCustomerModal" style="font-size: 0.70rem; height: 22px; border-radius: 4px;">
-                                    <i class="fas fa-plus"></i> Add Customer
+                        <div style="flex: 2.5 1 320px; min-width: 260px;">
+                            <label class="form-label mb-1"><i class="fas fa-user text-primary me-1"></i>Customer</label>
+                            <div id="customerInputWrapper">
+                                <div class="flex-grow-1" style="min-width: 0;">
+                                    <input type="text" class="form-control fw-bold d-none" name="walkin_name" id="walkinNameInput" placeholder="Enter Customer Name...">
+                                    <select class="form-select" id="customerSelect" name="customer" style="width:100%">
+                                        <option value=""></option>
+                                    </select>
+                                </div>
+                                <button type="button" class="btn btn-erp-pill-primary flex-shrink-0" id="btnHeaderAddCustomer" data-bs-toggle="modal" data-bs-target="#addCustomerModal" data-toggle="modal" data-target="#addCustomerModal" title="Add New Customer">
+                                    <i class="fas fa-plus-circle"></i> <span>Add Customer</span>
                                 </button>
                                 <input type="hidden" id="walkinToggle" name="is_walkin" value="0">
-                            </div>
-                            <div id="customerInputWrapper">
-                                <input type="text" class="form-control fw-bold d-none" name="walkin_name" id="walkinNameInput" placeholder="Enter Customer Name...">
-                                <select class="form-select" id="customerSelect" name="customer" style="width:100%">
-                                    <option value=""></option>
-                                </select>
                             </div>
                         </div>
 
@@ -1143,8 +1214,10 @@
                             <!-- Executive Summary Card (Excel Orders Sheet Flow) -->
                             <div class="card-panel p-3 bg-white" style="border-radius:10px;">
                                 <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom" style="border-color: #dbeafe !important;">
-                                    <span class="fw-bold text-dark" style="font-size:0.85rem;"><i class="fas fa-calculator text-primary me-1"></i>Summary</span>
-                                    <span class="badge rounded-pill px-2 py-1" style="background-color: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; font-size:0.7rem;">Live</span>
+                                    <span class="fw-bold text-dark" style="font-size:0.85rem;"><i class="fas fa-calculator text-primary me-1"></i>Order Summary</span>
+                                    <span class="badge rounded-pill px-2.5 py-1 d-inline-flex align-items-center gap-1" style="background-color: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; font-size:0.7rem;">
+                                        <span class="pulse-dot"></span> Live
+                                    </span>
                                 </div>
                                 
                                 <div class="summary-row">
@@ -1159,10 +1232,12 @@
                                     <span class="text-muted fw-semibold">GST / Tax (<span id="summaryGstRate">0</span>%)</span>
                                     <span class="fw-bold font-monospace text-success" id="summaryGstAmount">0.00</span>
                                 </div>
-                                <div class="summary-row">
-                                    <span class="fw-bold text-dark">Net Total</span>
-                                    <span class="summary-val-net font-monospace" id="tSub">0.00</span>
+
+                                <div class="summary-row my-1 p-2 rounded" style="background-color: #eff6ff; border: 1px solid #bfdbfe;">
+                                    <span class="fw-bold text-dark" style="font-size: 0.82rem;">Net Total</span>
+                                    <span class="summary-val-net font-monospace text-primary" id="tSub">0.00</span>
                                 </div>
+
                                 <div class="summary-row">
                                     <span class="text-muted fw-semibold">Advance Payment</span>
                                     <span class="fw-bold font-monospace" style="color: #059669;" id="receiptsTotalBadge">0.00</span>
@@ -1217,13 +1292,13 @@
                 <!-- BOTTOM SUMMARY STRIP -->
                 <div class="bottom-summary-strip">
                     <div class="d-flex align-items-center gap-2">
-                        <span class="text-muted fw-semibold" style="font-size:0.8rem;">Invoice Total:</span>
-                        <span class="fs-6 fw-bold text-dark font-monospace" id="bottomInvoiceTotal">0.00</span>
+                        <span class="summary-strip-label">Invoice Total:</span>
+                        <span class="fs-6 fw-bold text-white font-monospace" id="bottomInvoiceTotal">0.00</span>
                     </div>
 
                     <div class="d-flex align-items-center gap-2">
-                        <span class="text-muted fw-semibold" style="font-size:0.8rem;">Discount:</span>
-                        <span class="fs-6 fw-bold text-danger font-monospace" id="bottomTotalDiscount">0.00</span>
+                        <span class="summary-strip-label">Discount:</span>
+                        <span class="fs-6 fw-bold font-monospace text-warning" id="bottomTotalDiscount">0.00</span>
                     </div>
 
                     <!-- Hidden Extra Disc input to keep calculations safe without UI clutter -->
@@ -1231,27 +1306,27 @@
 
                     <!-- GST Strip -->
                     <div class="d-flex align-items-center gap-2 d-none" id="bottomGstStrip">
-                        <span class="text-muted fw-semibold" style="font-size:0.8rem;">GST:</span>
-                        <span class="fs-6 fw-bold text-success font-monospace" id="bottomGstVal">0.00</span>
+                        <span class="summary-strip-label">GST:</span>
+                        <span class="fs-6 fw-bold text-info font-monospace" id="bottomGstVal">0.00</span>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 px-2.5 py-1 rounded-3" style="background: rgba(59, 130, 246, 0.18); border: 1px solid rgba(59, 130, 246, 0.35);">
+                        <span class="summary-strip-label" style="color: #93c5fd !important;">Net Total:</span>
+                        <span class="fs-5 fw-bold text-info font-monospace" id="walkinNetTotal">0.00</span>
                     </div>
 
                     <div class="d-flex align-items-center gap-2">
-                        <span class="text-muted fw-semibold" style="font-size:0.8rem;">Net Total:</span>
-                        <span class="fs-5 fw-bold text-primary font-monospace" id="walkinNetTotal">0.00</span>
+                        <span class="summary-strip-label">Advance Paid:</span>
+                        <span class="fs-6 fw-bold font-monospace text-emerald" id="bottomPaymentsTotal">0.00</span>
                     </div>
 
                     <div class="d-flex align-items-center gap-2">
-                        <span class="text-muted fw-semibold" style="font-size:0.8rem;">Advance Paid:</span>
-                        <span class="fs-6 fw-bold font-monospace" style="color: #059669;" id="bottomPaymentsTotal">0.00</span>
+                        <span class="summary-strip-label">Balance:</span>
+                        <span class="fs-6 fw-bold text-coral font-monospace" id="bottomChangeVal">0.00</span>
                     </div>
 
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="text-muted fw-semibold" style="font-size:0.8rem;">Balance:</span>
-                        <span class="fs-6 fw-bold text-danger font-monospace" id="bottomChangeVal">0.00</span>
-                    </div>
-
-                    <button type="button" class="btn btn-save-complete" id="btnSaveAndComplete2">
-                        <i class="fas fa-bookmark me-2"></i>Book Order (F9)
+                    <button type="button" class="btn btn-save-complete px-4 py-2" id="btnSaveAndComplete2">
+                        <i class="fas fa-bookmark me-1.5"></i>Book Order (F9)
                     </button>
                 </div>
 

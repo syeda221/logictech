@@ -417,7 +417,7 @@
 
                 {{-- Main Data Card --}}
                 <div class="erp-main-card">
-                    <div class="px-4 py-3 bg-white border-bottom d-flex justify-content-between align-items-center" style="border-color: #dbeafe !important;">
+                    <div class="px-4 py-3 bg-white border-bottom d-flex flex-wrap justify-content-between align-items-center gap-3" style="border-color: #dbeafe !important;">
                         <div class="d-flex align-items-center gap-2">
                             <span class="fw-bold text-dark" style="font-size: 0.90rem;">
                                 <i class="fas fa-table text-primary me-1"></i> Repair Jobs Register
@@ -426,6 +426,45 @@
                                 {{ $repairs->count() }} Records
                             </span>
                         </div>
+
+                        {{-- Filter Toolbar: Filter by Ticket # & Filter by Customer --}}
+                        <form action="{{ route('repair.index') }}" method="GET" class="d-flex align-items-center gap-2 flex-wrap mb-0">
+                            @if(request('status'))
+                                <input type="hidden" name="status" value="{{ request('status') }}">
+                            @endif
+
+                            <div class="input-group input-group-sm" style="width: 160px;">
+                                <span class="input-group-text bg-light text-muted border-primary-subtle px-2" style="font-size: 0.75rem;">
+                                    <i class="fas fa-ticket-alt text-primary"></i>
+                                </span>
+                                <input type="text" name="ticket_no" class="form-control form-control-sm border-primary-subtle" 
+                                       placeholder="Ticket #" value="{{ request('ticket_no') }}" style="font-size: 0.78rem;">
+                            </div>
+
+                            <div class="input-group input-group-sm" style="width: 220px;">
+                                <span class="input-group-text bg-light text-muted border-primary-subtle px-2" style="font-size: 0.75rem;">
+                                    <i class="fas fa-user text-primary"></i>
+                                </span>
+                                <select name="customer_id" class="form-select form-select-sm border-primary-subtle" style="font-size: 0.78rem;">
+                                    <option value="">All Customers</option>
+                                    @foreach($customers as $cust)
+                                        <option value="{{ $cust->id }}" {{ request('customer_id') == $cust->id ? 'selected' : '' }}>
+                                            {{ $cust->customer_name }} ({{ $cust->mobile }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <button type="submit" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;">
+                                <i class="fas fa-filter"></i> Filter
+                            </button>
+
+                            @if(request('ticket_no') || request('customer_id') || request('search'))
+                                <a href="{{ route('repair.index', request()->only('status')) }}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;" title="Clear Filters">
+                                    <i class="fas fa-times"></i> Reset
+                                </a>
+                            @endif
+                        </form>
                     </div>
 
                     <div class="p-3">
@@ -438,11 +477,11 @@
                                         <th style="min-width: 140px;">Customer</th>
                                         <th style="min-width: 150px;">Product / Device</th>
                                         <th style="min-width: 160px;">Reported Defect</th>
-                                        <th class="text-center" style="min-width: 90px;">Received</th>
-                                        <th class="text-center" style="min-width: 90px;">Promised</th>
-                                        <th class="text-end" style="min-width: 95px;">Est. Cost</th>
+                                        <th class="text-center" style="min-width: 95px;">RECV. DATE</th>
+                                        <th class="text-center" style="min-width: 105px;">DELIVERY DATE</th>
+                                        <th class="text-end" style="min-width: 100px;">Bill Amount</th>
                                         <th class="text-end text-success" style="min-width: 100px;">Advance</th>
-                                        <th class="text-end text-danger" style="min-width: 95px;">Due</th>
+                                        <th class="text-end text-danger" style="min-width: 105px;">Balance Amount</th>
                                         <th class="text-center" style="min-width: 110px;">Status</th>
                                         <th class="text-center" style="width: 110px;">Actions</th>
                                     </tr>
@@ -511,7 +550,7 @@
                                                 {{ $repair->received_date->format('d/m/Y') }}
                                             </td>
 
-                                            {{-- Promised Date --}}
+                                            {{-- Delivery Date --}}
                                             <td class="text-center font-monospace" data-order="{{ optional($repair->expected_delivery_date)->timestamp ?? 0 }}">
                                                 @if($repair->expected_delivery_date)
                                                     <span class="{{ $repair->expected_delivery_date->isPast() && $repair->status !== 'delivered' ? 'text-danger fw-bold' : 'text-muted' }}">
@@ -522,9 +561,12 @@
                                                 @endif
                                             </td>
 
-                                            {{-- Est. Cost --}}
+                                            {{-- Bill Amount --}}
                                             <td class="text-end font-monospace text-dark fw-semibold">
-                                                {{ number_format($repair->estimated_cost, 2) }}
+                                                @php
+                                                    $billAmt = ($repair->total_charges > 0) ? $repair->total_charges : $repair->estimated_cost;
+                                                @endphp
+                                                {{ number_format($billAmt, 2) }}
                                             </td>
 
                                             {{-- Advance Paid --}}
@@ -537,7 +579,7 @@
                                                 @endif
                                             </td>
 
-                                            {{-- Due --}}
+                                            {{-- Balance Amount --}}
                                             <td class="text-end font-monospace text-danger fw-bold">
                                                 {{ number_format($repair->due_amount, 2) }}
                                             </td>
@@ -560,165 +602,213 @@
                                                 </span>
                                             </td>
 
-                                            {{-- Actions --}}
-                                            <td class="text-center">
-                                                <div class="d-flex align-items-center justify-content-center gap-1">
-                                                    {{-- View Details & Audit --}}
-                                                    <a href="{{ route('repair.show', $repair->id) }}" class="btn-erp-table-action" title="View Job Card & Audit Trail">
-                                                        <i class="fas fa-eye"></i>
-                                                    </a>
-                                                    {{-- Print 80mm Slip --}}
-                                                    <a href="{{ route('repair.print.thermal', $repair->id) }}" target="_blank" class="btn-erp-table-action text-dark" title="Print 80mm Thermal Slip">
-                                                        <i class="fas fa-receipt"></i>
-                                                    </a>
-                                                    {{-- Print A4 Job Sheet --}}
-                                                    <a href="{{ route('repair.print.a4', $repair->id) }}" target="_blank" class="btn-erp-table-action text-primary" title="Print A4 Job Sheet">
-                                                        <i class="fas fa-print"></i>
-                                                    </a>
+                                             {{-- Actions --}}
+                                             <td class="text-center">
+                                                 <div class="d-flex align-items-center justify-content-center gap-1">
+                                                     {{-- View Details & Audit --}}
+                                                     <a href="{{ route('repair.show', $repair->id) }}" class="btn-erp-table-action" title="View Job Card & Audit Trail">
+                                                         <i class="fas fa-eye"></i>
+                                                     </a>
+                                                     {{-- Print 80mm Slip --}}
+                                                     <a href="{{ route('repair.print.thermal', $repair->id) }}" target="_blank" class="btn-erp-table-action text-dark" title="Print 80mm Thermal Slip">
+                                                         <i class="fas fa-receipt"></i>
+                                                     </a>
+                                                     {{-- Print A4 Job Sheet --}}
+                                                     <a href="{{ route('repair.print.a4', $repair->id) }}" target="_blank" class="btn-erp-table-action text-primary" title="Print A4 Job Sheet">
+                                                         <i class="fas fa-print"></i>
+                                                     </a>
 
-                                                    {{-- Status Modal Trigger --}}
-                                                    @if($repair->status !== 'delivered' && $repair->status !== 'cancelled')
-                                                        <button type="button" class="btn-erp-table-action text-warning border-warning-subtle" 
-                                                                data-bs-toggle="modal" data-bs-target="#statusModal{{ $repair->id }}" title="Update Status">
-                                                            <i class="fas fa-tasks"></i>
-                                                        </button>
+                                                     {{-- Status Modal Trigger --}}
+                                                     @if($repair->status !== 'delivered' && $repair->status !== 'cancelled')
+                                                         <button type="button" class="btn-erp-table-action text-warning border-warning-subtle" 
+                                                                 data-bs-toggle="modal" data-bs-target="#statusModal{{ $repair->id }}"
+                                                                 data-toggle="modal" data-target="#statusModal{{ $repair->id }}" title="Update Status">
+                                                             <i class="fas fa-tasks"></i>
+                                                         </button>
 
-                                                        <button type="button" class="btn-erp-table-action text-success border-success-subtle" 
-                                                                data-bs-toggle="modal" data-bs-target="#deliverModal{{ $repair->id }}" title="Deliver to Customer & Final Payment">
-                                                            <i class="fas fa-truck-loading"></i>
-                                                        </button>
-                                                    @endif
-                                                </div>
+                                                         <button type="button" class="btn-erp-table-action text-success border-success-subtle" 
+                                                                 data-bs-toggle="modal" data-bs-target="#deliverModal{{ $repair->id }}"
+                                                                 data-toggle="modal" data-target="#deliverModal{{ $repair->id }}" title="Deliver to Customer & Final Payment">
+                                                             <i class="fas fa-truck-loading"></i>
+                                                         </button>
+                                                     @endif
+                                                 </div>
+                                             </td>
+                                         </tr>
+                                     @endforeach
+                                 </tbody>
+                             </table>
+                         </div>
+                     </div>
+                 </div>
+                 {{-- Modals Container --}}
+                 @foreach ($repairs as $repair)
+                     {{-- Modal: Update Status --}}
+                     @if($repair->status !== 'delivered')
+                     <div class="modal fade" id="statusModal{{ $repair->id }}" tabindex="-1" aria-hidden="true">
+                         <div class="modal-dialog modal-dialog-centered">
+                             <div class="modal-content text-start border-0 shadow-lg" style="border-radius: 14px; overflow: hidden;">
+                                 <form action="{{ route('repair.status.update', $repair->id) }}" method="POST">
+                                     @csrf
+                                     <div class="modal-header text-white py-3 px-4" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
+                                         <div>
+                                             <h6 class="modal-title font-weight-bold mb-0 text-white" style="font-size: 0.95rem; letter-spacing: -0.01em;">
+                                                 <i class="fas fa-tasks text-primary me-2"></i> Update Repair Status
+                                             </h6>
+                                             <small class="text-white-50" style="font-size: 0.72rem;">
+                                                 Ticket #<span class="font-monospace text-warning fw-bold">{{ $repair->repair_no }}</span>
+                                             </small>
+                                         </div>
+                                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" data-dismiss="modal" aria-label="Close"></button>
+                                     </div>
+                                     <div class="modal-body p-4" style="background-color: #f8fafc;">
+                                         
+                                         {{-- Item Summary Info Card --}}
+                                         <div class="p-3 mb-3 bg-white rounded-3 border shadow-sm" style="border-color: #e2e8f0 !important; border-left: 4px solid #2563eb !important;">
+                                             <div class="d-flex justify-content-between align-items-start mb-1">
+                                                 <div class="fw-bold text-dark" style="font-size: 0.88rem;">{{ $repair->item_name }}</div>
+                                                 <span class="erp-badge {{ $repair->status_badge_class }}" style="font-size: 0.65rem;">
+                                                     {{ $repair->status_label }}
+                                                 </span>
+                                             </div>
+                                             <div class="text-muted small mb-1" style="font-size: 0.73rem;">
+                                                 <i class="fas fa-user text-secondary me-1"></i><strong>Customer:</strong> {{ $repair->customer_display_name }} ({{ $repair->customer_display_phone }})
+                                             </div>
+                                             @if($repair->brand_model || $repair->serial_no)
+                                                 <div class="text-secondary small" style="font-size: 0.70rem;">
+                                                     <i class="fas fa-microchip me-1 text-primary"></i>{{ $repair->brand_model }} {{ $repair->serial_no ? '• S/N: '.$repair->serial_no : '' }}
+                                                 </div>
+                                             @endif
+                                         </div>
 
-                                                {{-- Modal: Update Status --}}
-                                                @if($repair->status !== 'delivered')
-                                                <div class="modal fade" id="statusModal{{ $repair->id }}" tabindex="-1" aria-hidden="true">
-                                                    <div class="modal-dialog modal-dialog-centered">
-                                                        <div class="modal-content text-start border-0 shadow">
-                                                            <form action="{{ route('repair.status.update', $repair->id) }}" method="POST">
-                                                                @csrf
-                                                                <div class="modal-header bg-light py-2">
-                                                                    <h6 class="modal-title font-weight-bold text-dark" style="font-size: 0.85rem;">
-                                                                        <i class="fas fa-tasks text-primary me-1"></i> Update Repair Status #{{ $repair->repair_no }}
-                                                                    </h6>
-                                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                                </div>
-                                                                <div class="modal-body p-3">
-                                                                    <div class="mb-2">
-                                                                        <label class="form-label small fw-bold text-muted">Current Item</label>
-                                                                        <div class="p-2 bg-light rounded border small">
-                                                                            <strong>{{ $repair->item_name }}</strong> ({{ $repair->customer_display_name }})
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="mb-2">
-                                                                        <label class="form-label small fw-bold">Select New Status <span class="text-danger">*</span></label>
-                                                                        <select name="status" class="form-select form-select-sm" required>
-                                                                            <option value="received" {{ $repair->status === 'received' ? 'selected' : '' }}>Received (Intake)</option>
-                                                                            <option value="diagnosing" {{ $repair->status === 'diagnosing' ? 'selected' : '' }}>Diagnosing / Inspection</option>
-                                                                            <option value="in_progress" {{ $repair->status === 'in_progress' ? 'selected' : '' }}>In Progress (Under Repair)</option>
-                                                                            <option value="waiting_parts" {{ $repair->status === 'waiting_parts' ? 'selected' : '' }}>Waiting for Parts</option>
-                                                                            <option value="completed" {{ $repair->status === 'completed' ? 'selected' : '' }}>Completed (Ready for Pickup)</option>
-                                                                            <option value="cancelled" {{ $repair->status === 'cancelled' ? 'selected' : '' }}>Cancelled / Cannot Repair</option>
-                                                                        </select>
-                                                                    </div>
-                                                                    <div class="mb-2">
-                                                                        <label class="form-label small fw-bold">Technician Diagnostic Notes</label>
-                                                                        <textarea name="technician_notes" class="form-control form-control-sm" rows="2" placeholder="e.g. Capacitor replaced, tested under 220V load...">{{ $repair->technician_notes }}</textarea>
-                                                                    </div>
-                                                                    <div class="mb-2">
-                                                                        <label class="form-label small fw-bold">Audit Remark / Note</label>
-                                                                        <input type="text" name="log_note" class="form-control form-control-sm" placeholder="e.g. Work started by technician...">
-                                                                    </div>
-                                                                </div>
-                                                                <div class="modal-footer py-2 bg-light">
-                                                                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                                    <button type="submit" class="btn btn-sm btn-primary">Save Status</button>
-                                                                </div>
-                                                            </form>
-                                                        </div>
-                                                    </div>
-                                                </div>
+                                         <div class="mb-3">
+                                             <label class="form-label small fw-bold text-dark">
+                                                 <i class="fas fa-exchange-alt text-primary me-1"></i>Select New Status <span class="text-danger">*</span>
+                                             </label>
+                                             <select name="status" class="form-select form-select-sm border-primary-subtle fw-bold" style="font-size: 0.82rem; height: 38px; border-radius: 8px;" required>
+                                                 <option value="received" {{ $repair->status === 'received' ? 'selected' : '' }}>📥 Received (Product Intake)</option>
+                                                 <option value="diagnosing" {{ $repair->status === 'diagnosing' ? 'selected' : '' }}>🔍 Diagnosing / Technical Inspection</option>
+                                                 <option value="in_progress" {{ $repair->status === 'in_progress' ? 'selected' : '' }}>⚙️ In Progress (Under Repair)</option>
+                                                 <option value="waiting_parts" {{ $repair->status === 'waiting_parts' ? 'selected' : '' }}>⏳ Waiting for Spare Parts</option>
+                                                 <option value="completed" {{ $repair->status === 'completed' ? 'selected' : '' }}>✅ Completed (Ready for Pickup)</option>
+                                                 <option value="cancelled" {{ $repair->status === 'cancelled' ? 'selected' : '' }}>❌ Cancelled / Unrepairable</option>
+                                             </select>
+                                         </div>
 
-                                                {{-- Modal: Deliver & Collect Payment --}}
-                                                <div class="modal fade" id="deliverModal{{ $repair->id }}" tabindex="-1" aria-hidden="true">
-                                                    <div class="modal-dialog modal-dialog-centered">
-                                                        <div class="modal-content text-start border-0 shadow">
-                                                            <form action="{{ route('repair.deliver', $repair->id) }}" method="POST">
-                                                                @csrf
-                                                                <div class="modal-header bg-success text-white py-2">
-                                                                    <h6 class="modal-title font-weight-bold" style="font-size: 0.85rem;">
-                                                                        <i class="fas fa-handshake me-1"></i> Deliver Product &amp; Collect Payment
-                                                                    </h6>
-                                                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                                                                </div>
-                                                                <div class="modal-body p-3">
-                                                                    <div class="alert alert-light border py-2 px-3 mb-2 small">
-                                                                        <div><strong>Ticket:</strong> {{ $repair->repair_no }} — {{ $repair->item_name }}</div>
-                                                                        <div><strong>Customer:</strong> {{ $repair->customer_display_name }} ({{ $repair->customer_display_phone }})</div>
-                                                                        <div><strong>Advance Already Paid:</strong> Rs. {{ number_format($repair->advance_paid, 2) }}</div>
-                                                                    </div>
+                                         <div class="mb-3">
+                                             <label class="form-label small fw-bold text-dark">
+                                                 <i class="fas fa-stethoscope text-primary me-1"></i>Technician Diagnostic Notes
+                                             </label>
+                                             <textarea name="technician_notes" class="form-control form-control-sm border-primary-subtle" rows="3" placeholder="e.g. Main power supply capacitor replaced, circuit re-soldered, load tested under 220V..." style="border-radius: 8px; font-size: 0.78rem;">{{ $repair->technician_notes }}</textarea>
+                                         </div>
 
-                                                                    <div class="row g-2 mb-2">
-                                                                        <div class="col-6">
-                                                                            <label class="form-label small fw-bold">Labor / Service Charges <span class="text-danger">*</span></label>
-                                                                            <input type="number" step="0.01" min="0" name="service_charges" class="form-control form-control-sm font-monospace fw-bold" 
-                                                                                   value="{{ $repair->estimated_cost > 0 ? $repair->estimated_cost : 0 }}" required>
-                                                                        </div>
-                                                                        <div class="col-6">
-                                                                            <label class="form-label small fw-bold">Spare Parts Cost</label>
-                                                                            <input type="number" step="0.01" min="0" name="parts_charges" class="form-control form-control-sm font-monospace" value="0">
-                                                                        </div>
-                                                                    </div>
+                                         <div class="mb-1">
+                                             <label class="form-label small fw-bold text-dark">
+                                                 <i class="fas fa-history text-secondary me-1"></i>Audit Remark / Internal Note
+                                             </label>
+                                             <input type="text" name="log_note" class="form-control form-control-sm border-primary-subtle" placeholder="e.g. Status updated by workshop manager" style="border-radius: 8px; font-size: 0.78rem;">
+                                         </div>
 
-                                                                    <div class="row g-2 mb-2">
-                                                                        <div class="col-6">
-                                                                            <label class="form-label small fw-bold text-success">Final Amount Paid Now</label>
-                                                                            <input type="number" step="0.01" min="0" name="final_paid" class="form-control form-control-sm font-monospace fw-bold text-success" 
-                                                                                   value="{{ max(0, $repair->estimated_cost - $repair->advance_paid) }}">
-                                                                        </div>
-                                                                        <div class="col-6">
-                                                                            <label class="form-label small fw-bold">Deposit Account</label>
-                                                                            <select name="final_account_id" class="form-select form-select-sm">
-                                                                                <option value="">Select Account (Cash/Bank)</option>
-                                                                                @foreach($accounts as $acc)
-                                                                                    <option value="{{ $acc->id }}">{{ $acc->title }} ({{ $acc->account_code }})</option>
-                                                                                @endforeach
-                                                                            </select>
-                                                                        </div>
-                                                                    </div>
+                                     </div>
+                                     <div class="modal-footer py-2.5 px-4 bg-light border-top d-flex justify-content-between align-items-center">
+                                         <button type="button" class="btn btn-sm btn-outline-secondary px-3" data-bs-dismiss="modal" data-dismiss="modal" style="border-radius: 6px; font-size: 0.78rem;">
+                                             Cancel
+                                         </button>
+                                         <button type="submit" class="btn btn-sm btn-primary px-4 fw-bold shadow-sm" style="border-radius: 6px; font-size: 0.78rem;">
+                                             <i class="fas fa-save me-1"></i> Save Status Update
+                                         </button>
+                                     </div>
+                                 </form>
+                             </div>
+                         </div>
+                     </div>
 
-                                                                    <div class="mb-2">
-                                                                        <label class="form-label small fw-bold">Delivery Remarks</label>
-                                                                        <input type="text" name="delivery_notes" class="form-control form-control-sm" placeholder="e.g. Tested in front of customer, all working fine.">
-                                                                    </div>
-                                                                </div>
-                                                                <div class="modal-footer py-2 bg-light">
-                                                                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                                    <button type="submit" class="btn btn-sm btn-success fw-bold">Complete Delivery &amp; Save</button>
-                                                                </div>
-                                                            </form>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                @endif
+                     {{-- Modal: Deliver & Collect Payment --}}
+                     <div class="modal fade" id="deliverModal{{ $repair->id }}" tabindex="-1" aria-hidden="true">
+                         <div class="modal-dialog modal-dialog-centered">
+                             <div class="modal-content text-start border-0 shadow-lg" style="border-radius: 14px; overflow: hidden;">
+                                 <form action="{{ route('repair.deliver', $repair->id) }}" method="POST">
+                                     @csrf
+                                     <div class="modal-header text-white py-3 px-4" style="background: linear-gradient(135deg, #047857 0%, #059669 100%);">
+                                         <div>
+                                             <h6 class="modal-title font-weight-bold mb-0 text-white" style="font-size: 0.95rem;">
+                                                 <i class="fas fa-handshake me-2"></i> Deliver Product &amp; Collect Payment
+                                             </h6>
+                                             <small class="text-white-50" style="font-size: 0.72rem;">
+                                                 Ticket #<span class="font-monospace text-white fw-bold">{{ $repair->repair_no }}</span>
+                                             </small>
+                                         </div>
+                                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" data-dismiss="modal" aria-label="Close"></button>
+                                     </div>
+                                     <div class="modal-body p-4" style="background-color: #f8fafc;">
+                                         
+                                         <div class="alert alert-success border-success-subtle py-2 px-3 mb-3 rounded-3 small" style="background-color: #ecfdf5; font-size: 0.75rem;">
+                                             <div class="fw-bold text-success mb-0.5"><i class="fas fa-check-circle me-1"></i>{{ $repair->item_name }}</div>
+                                             <div class="text-secondary"><strong>Customer:</strong> {{ $repair->customer_display_name }} ({{ $repair->customer_display_phone }})</div>
+                                             <div class="text-dark font-monospace fw-bold mt-1">
+                                                 Advance Paid: <span class="text-success">Rs. {{ number_format($repair->advance_paid, 2) }}</span>
+                                             </div>
+                                         </div>
 
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+                                         <div class="row g-3 mb-3">
+                                             <div class="col-6">
+                                                 <label class="form-label small fw-bold text-dark">Service / Labor Charges <span class="text-danger">*</span></label>
+                                                 <input type="number" step="0.01" min="0" name="service_charges" class="form-control form-control-sm font-monospace fw-bold" 
+                                                        value="{{ $repair->estimated_cost > 0 ? $repair->estimated_cost : 0 }}" style="border-radius: 8px; height: 36px;" required>
+                                             </div>
+                                             <div class="col-6">
+                                                 <label class="form-label small fw-bold text-dark">Spare Parts Charges</label>
+                                                 <input type="number" step="0.01" min="0" name="parts_charges" class="form-control form-control-sm font-monospace" value="0" style="border-radius: 8px; height: 36px;">
+                                             </div>
+                                         </div>
+
+                                         <div class="row g-3 mb-3">
+                                             <div class="col-6">
+                                                 <label class="form-label small fw-bold text-success">Final Amount Paid Now</label>
+                                                 <input type="number" step="0.01" min="0" name="final_paid" class="form-control form-control-sm font-monospace fw-bold text-success" 
+                                                        value="{{ max(0, $repair->estimated_cost - $repair->advance_paid) }}" style="border-radius: 8px; height: 36px;">
+                                             </div>
+                                             <div class="col-6">
+                                                 <label class="form-label small fw-bold text-dark">Deposit Account</label>
+                                                 <select name="final_account_id" class="form-select form-select-sm" style="border-radius: 8px; height: 36px;">
+                                                     <option value="">Select Account (Cash/Bank)</option>
+                                                     @foreach($accounts as $acc)
+                                                         <option value="{{ $acc->id }}">{{ $acc->title }} ({{ $acc->account_code }})</option>
+                                                     @endforeach
+                                                 </select>
+                                             </div>
+                                         </div>
+
+                                         <div class="mb-1">
+                                             <label class="form-label small fw-bold text-dark">Delivery Remarks</label>
+                                             <input type="text" name="delivery_notes" class="form-control form-control-sm" placeholder="e.g. Tested in front of customer, handed over safely" style="border-radius: 8px; font-size: 0.78rem;">
+                                         </div>
+                                     </div>
+                                     <div class="modal-footer py-2.5 px-4 bg-light border-top d-flex justify-content-between align-items-center">
+                                         <button type="button" class="btn btn-sm btn-secondary px-3" data-bs-dismiss="modal" data-dismiss="modal" style="border-radius: 6px; font-size: 0.78rem;">
+                                             Cancel
+                                         </button>
+                                         <button type="submit" class="btn btn-sm btn-success px-4 fw-bold shadow-sm" style="border-radius: 6px; font-size: 0.78rem;">
+                                             <i class="fas fa-check-circle me-1"></i> Complete Delivery &amp; Save
+                                         </button>
+                                     </div>
+                                 </form>
+                             </div>
+                         </div>
+                     </div>
+                     @endif
+                @endforeach
 
                 {{-- DataTables Dependencies --}}
                 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
-                <script src="{{ asset('assets/js/jquery.min.js') }}"></script>
                 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
                 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 
                 <script>
                     $(document).ready(function() {
+                        if ($.fn.DataTable.isDataTable('#repair-table')) {
+                            $('#repair-table').DataTable().destroy();
+                        }
                         $('#repair-table').DataTable({
                             pageLength: 10,
                             lengthMenu: [5, 10, 25, 50, 100],

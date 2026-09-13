@@ -20,7 +20,7 @@
         }
 
         .erp-page-header {
-            margin-bottom: 1.25rem;
+            margin-bottom: 1.5rem;
         }
         .erp-title {
             font-size: 1.35rem;
@@ -32,9 +32,9 @@
             gap: 0.5rem;
         }
         .erp-subtitle {
-            font-size: 0.815rem;
+            font-size: 0.835rem;
             color: #64748b;
-            margin-top: 0.15rem;
+            margin-top: 0.35rem;
             margin-bottom: 0;
         }
 
@@ -229,20 +229,22 @@
             <div class="container-fluid py-4">
 
                 {{-- Page Header --}}
-                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 erp-page-header">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 erp-page-header mb-4">
                     <div>
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="badge bg-primary px-2.5 py-1 font-monospace" style="font-size: 0.75rem;">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="badge bg-primary px-3 py-1.5 font-monospace shadow-sm" style="font-size: 0.80rem; border-radius: 6px; letter-spacing: 0.04em;">
                                 {{ $nextRepairNo }}
                             </span>
                             <h4 class="erp-title mb-0">
                                 <i class="fas fa-tools text-primary"></i> Receive Product for Repair
                             </h4>
                         </div>
-                        <p class="erp-subtitle">Create customer repair job card, record faults, accessories, advance payment and issue intake receipt</p>
+                        <p class="erp-subtitle" style="margin-top: 0.35rem;">
+                            Create customer repair job card, record device specifications, physical condition, accessories and issue intake receipt
+                        </p>
                     </div>
                     <div class="d-flex align-items-center gap-2">
-                        <a href="{{ route('repair.index') }}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1" style="font-weight: 600; border-radius: 7px; padding: 6px 14px;">
+                        <a href="{{ route('repair.index') }}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1.5 shadow-sm" style="font-weight: 600; border-radius: 8px; padding: 7px 16px; font-size: 0.80rem;">
                             <i class="fas fa-arrow-left"></i> Back to Repair List
                         </a>
                     </div>
@@ -289,46 +291,45 @@
                                         <i class="fas fa-user-circle text-primary"></i> Customer Information
                                     </h6>
                                     <div class="d-flex align-items-center gap-2">
-                                        <div class="btn-group btn-group-sm" role="group">
-                                            <input type="radio" class="btn-check" name="cust_type" id="custTypeRegistered" value="registered" checked autocomplete="off">
-                                            <label class="btn btn-outline-primary btn-sm py-1 px-2" for="custTypeRegistered" style="font-size: 0.72rem; font-weight: 600;">Registered Customer</label>
-
-                                            <input type="radio" class="btn-check" name="cust_type" id="custTypeWalkin" value="walkin" autocomplete="off">
-                                            <label class="btn btn-outline-primary btn-sm py-1 px-2" for="custTypeWalkin" style="font-size: 0.72rem; font-weight: 600;">Walk-in / New</label>
-                                        </div>
+                                        <a href="{{ route('customers.create') }}" target="_blank" class="btn btn-sm btn-outline-primary py-1 px-2.5 fw-bold d-inline-flex align-items-center gap-1" style="font-size: 0.74rem; border-radius: 6px;" title="Open Create Customer form in new tab">
+                                            <i class="fas fa-user-plus"></i> + Add Customer
+                                        </a>
                                     </div>
                                 </div>
                                 <div class="card-panel-body">
-                                    {{-- Registered Customer Select --}}
-                                    <div class="mb-3" id="registeredCustGroup">
-                                        <label class="form-label">Select Registered Customer</label>
-                                        <select name="customer_id" id="customerSelect" class="form-select w-100">
-                                            <option value="">-- Choose Existing Customer (Search by Name / Mobile) --</option>
-                                            @foreach ($customers as $c)
-                                                <option value="{{ $c->id }}"
-                                                    data-name="{{ $c->customer_name }}"
-                                                    data-phone="{{ $c->mobile ?? $c->mobile_2 }}"
-                                                    data-address="{{ $c->address }}"
-                                                    data-balance="{{ $c->previous_balance ?? 0 }}"
-                                                    {{ old('customer_id') == $c->id ? 'selected' : '' }}>
-                                                    {{ $c->customer_name }} ({{ $c->mobile ?? 'No phone' }})
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                        <div id="custBalanceBadgeWrap" class="mt-1" style="display: none;">
-                                            <span class="badge bg-light text-dark border px-2 py-1" style="font-size: 0.72rem;">
-                                                <i class="fas fa-balance-scale text-primary me-1"></i> Existing Ledger Balance:
-                                                <span id="custBalanceVal" class="font-monospace fw-bold">0.00</span>
-                                            </span>
-                                        </div>
-                                    </div>
-
                                     <div class="row g-2">
-                                        <div class="col-md-5">
+                                        {{-- 1. Select Registered Customer --}}
+                                        <div class="col-md-3">
+                                            <label class="form-label">Select Registered Customer</label>
+                                            <select name="customer_id" id="customerSelect" class="form-select w-100">
+                                                <option value="">-- Choose Existing Customer --</option>
+                                                @foreach ($customers as $c)
+                                                    <option value="{{ $c->id }}"
+                                                        data-name="{{ $c->customer_name }}"
+                                                        data-phone="{{ $c->mobile ?? $c->mobile_2 }}"
+                                                        data-address="{{ $c->address }}"
+                                                        data-balance="{{ $c->previous_balance ?? 0 }}"
+                                                        {{ old('customer_id') == $c->id ? 'selected' : '' }}>
+                                                        {{ $c->customer_name }} ({{ $c->mobile ?? 'No phone' }})
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                            <div id="custBalanceBadgeWrap" class="mt-1" style="display: none;">
+                                                <span class="badge bg-light text-dark border px-2 py-1" style="font-size: 0.70rem;">
+                                                    <i class="fas fa-balance-scale text-primary me-1"></i> Balance:
+                                                    <span id="custBalanceVal" class="font-monospace fw-bold">0.00</span>
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {{-- 2. Customer Name --}}
+                                        <div class="col-md-3">
                                             <label class="form-label required">Customer / Company Name</label>
                                             <input type="text" name="customer_name" id="customerName" class="form-control"
                                                 value="{{ old('customer_name') }}" placeholder="e.g. Tariq Textiles / Ahmed Khan" required>
                                         </div>
+
+                                        {{-- 3. Mobile / WhatsApp --}}
                                         <div class="col-md-3">
                                             <label class="form-label required">Mobile / WhatsApp #</label>
                                             <div class="input-group">
@@ -337,7 +338,9 @@
                                                     value="{{ old('customer_phone') }}" placeholder="0300-1234567" required>
                                             </div>
                                         </div>
-                                        <div class="col-md-4">
+
+                                        {{-- 4. City / Address --}}
+                                        <div class="col-md-3">
                                             <label class="form-label">City / Address</label>
                                             <input type="text" name="customer_address" id="customerAddress" class="form-control"
                                                 value="{{ old('customer_address') }}" placeholder="e.g. Unit 4, SITE Hyderabad">
@@ -388,73 +391,27 @@
                                         </div>
                                     </div>
 
-                                    {{-- Physical Condition --}}
-                                    <div class="mb-3">
-                                        <label class="form-label">Physical Condition & Visual Inspection</label>
-                                        <input type="text" name="physical_condition" id="physicalCondition" class="form-control"
-                                            value="{{ old('physical_condition') }}" placeholder="e.g. Outer casing scratched, power cord clipped, front knob missing, warranty seal broken">
-                                        <div class="d-flex gap-1 mt-1 flex-wrap">
-                                            <span class="badge bg-light text-muted border quick-condition-tag" style="cursor: pointer; font-size: 0.68rem;" data-tag="Intact & Clean">Intact & Clean</span>
-                                            <span class="badge bg-light text-muted border quick-condition-tag" style="cursor: pointer; font-size: 0.68rem;" data-tag="Scratches & Minor Dents">Scratches & Dents</span>
-                                            <span class="badge bg-light text-muted border quick-condition-tag" style="cursor: pointer; font-size: 0.68rem;" data-tag="Burn Marks on Terminals">Burn Marks</span>
-                                            <span class="badge bg-light text-muted border quick-condition-tag" style="cursor: pointer; font-size: 0.68rem;" data-tag="Missing Screws / Cover">Missing Screws</span>
-                                            <span class="badge bg-light text-muted border quick-condition-tag" style="cursor: pointer; font-size: 0.68rem;" data-tag="Water / Chemical Splash Marks">Water Marks</span>
+                                    <div class="row g-2">
+                                        {{-- Physical Condition --}}
+                                        <div class="col-md-6">
+                                            <label class="form-label">Physical Condition & Visual Inspection</label>
+                                            <textarea name="physical_condition" id="physicalCondition" rows="2" class="form-control"
+                                                placeholder="Enter physical condition & visual inspection notes manually (e.g. Outer casing scratched, power cord clipped, front knob missing...)">{{ old('physical_condition') }}</textarea>
                                         </div>
-                                    </div>
 
-                                    {{-- Accessories Received --}}
-                                    <div>
-                                        <label class="form-label">Accessories Received With Item</label>
-                                        <div class="accessory-pill-wrap mb-2">
-                                            <label class="accessory-pill">
-                                                <input type="checkbox" name="accessories_received[]" value="Power Cable"> Power Cable
-                                            </label>
-                                            <label class="accessory-pill">
-                                                <input type="checkbox" name="accessories_received[]" value="Power Supply / Adapter"> Power Adapter
-                                            </label>
-                                            <label class="accessory-pill">
-                                                <input type="checkbox" name="accessories_received[]" value="Digital Remote / Controller"> Remote / Panel
-                                            </label>
-                                            <label class="accessory-pill">
-                                                <input type="checkbox" name="accessories_received[]" value="Temperature Sensor Probe"> Sensor Probe
-                                            </label>
-                                            <label class="accessory-pill">
-                                                <input type="checkbox" name="accessories_received[]" value="Mounting Brackets"> Mounting Brackets
-                                            </label>
-                                            <label class="accessory-pill">
-                                                <input type="checkbox" name="accessories_received[]" value="Original Box / Packaging"> Original Box
-                                            </label>
+                                        {{-- Accessories Received --}}
+                                        <div class="col-md-6">
+                                            <label class="form-label">Accessories Received With Item</label>
+                                            <textarea name="accessories_received" id="accessoriesReceived" rows="2" class="form-control"
+                                                placeholder="Enter accessories received with item manually (e.g. Power Cable, Remote, Connecting pipes, manual, extra fuses...)">{{ is_array(old('accessories_received')) ? implode(', ', old('accessories_received')) : old('accessories_received') }}</textarea>
                                         </div>
-                                        <input type="text" name="accessories_received[]" class="form-control"
-                                            placeholder="Other accessories (e.g. Connecting pipes, manual, extra fuses)">
-                                    </div>
-                                </div>
-                            </div>
-
-                            {{-- 3. Fault & Problem Reported Card --}}
-                            <div class="card-panel">
-                                <div class="card-panel-header">
-                                    <h6 class="card-panel-title">
-                                        <i class="fas fa-exclamation-circle text-danger"></i> Fault & Diagnostic Notes
-                                    </h6>
-                                </div>
-                                <div class="card-panel-body">
-                                    <div class="mb-3">
-                                        <label class="form-label required">Problem / Fault Reported by Customer</label>
-                                        <textarea name="problem_description" id="problemDescription" rows="3" class="form-control"
-                                            placeholder="Describe defect clearly, e.g. Coil not heating up, tripping breaker on 220V, display shows error E-02 after 5 mins..." required>{{ old('problem_description') }}</textarea>
-                                    </div>
-                                    <div>
-                                        <label class="form-label">Technician Initial Remarks / Internal Notes (Optional)</label>
-                                        <textarea name="technician_notes" id="technicianNotes" rows="2" class="form-control"
-                                            placeholder="Internal inspection notes (visible to workshop staff only)">{{ old('technician_notes') }}</textarea>
                                     </div>
                                 </div>
                             </div>
 
                         </div>
 
-                        {{-- RIGHT COLUMN: Schedule, Advance, Accounts & Actions (col-lg-4) --}}
+                        {{-- RIGHT COLUMN: Schedule, Priority & Actions (col-lg-4) --}}
                         <div class="col-lg-4">
 
                             {{-- 4. Dates & Priority Card --}}
@@ -498,79 +455,6 @@
                                 </div>
                             </div>
 
-                            {{-- 5. Cost Estimation & Advance Payment Card --}}
-                            <div class="card-panel">
-                                <div class="card-panel-header">
-                                    <h6 class="card-panel-title">
-                                        <i class="fas fa-wallet text-success"></i> Estimation & Advance Payment
-                                    </h6>
-                                </div>
-                                <div class="card-panel-body">
-                                    {{-- Estimated Cost --}}
-                                    <div class="mb-3">
-                                        <label class="form-label">Estimated Repair Cost (Rs.)</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text bg-light text-muted fw-bold" style="font-size: 0.75rem;">PKR</span>
-                                            <input type="number" step="0.01" min="0" name="estimated_cost" id="estimatedCost"
-                                                class="form-control text-end fw-bold font-monospace" value="{{ old('estimated_cost', '0') }}">
-                                        </div>
-                                        <small class="text-muted" style="font-size: 0.68rem;">Tentative quote provided to customer</small>
-                                    </div>
-
-                                    {{-- Advance Payment --}}
-                                    <div class="mb-3">
-                                        <label class="form-label">Advance Payment Collected (Rs.)</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text bg-success-subtle text-success fw-bold" style="font-size: 0.75rem;">PKR</span>
-                                            <input type="number" step="0.01" min="0" name="advance_paid" id="advancePaid"
-                                                class="form-control text-end fw-bold font-monospace text-success" value="{{ old('advance_paid', '0') }}">
-                                        </div>
-                                    </div>
-
-                                    {{-- Advance Account Selection with LIVE BALANCE BADGE --}}
-                                    <div class="mb-3" id="advanceAccountGroup">
-                                        <label class="form-label">Deposit In Account (Cash / Bank)</label>
-                                        <select name="advance_account_id" id="advanceAccountSelect" class="form-select">
-                                            <option value="" selected>-- Select Account --</option>
-                                            @foreach ($accounts as $acc)
-                                                <option value="{{ $acc->id }}" data-balance="{{ $acc->current_balance ?? 0 }}"
-                                                    {{ old('advance_account_id') == $acc->id ? 'selected' : '' }}>
-                                                    {{ $acc->title }} ({{ $acc->account_code }})
-                                                </option>
-                                            @endforeach
-                                        </select>
-
-                                        {{-- Dynamic Account Balance Badge --}}
-                                        <div class="account-balance-badge-wrap" id="accBalWrap" style="display: none;">
-                                            <span class="account-balance-badge" id="accBalBadge">
-                                                <i class="fas fa-wallet"></i> Current Bal: Rs. <span id="accBalVal">0.00</span> <span id="accBalType">DR</span>
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {{-- Live Financial Settlement Breakdown --}}
-                                    <div class="summary-tile">
-                                        <div class="summary-tile-row text-muted">
-                                            <span>Estimated Total:</span>
-                                            <span class="font-monospace fw-semibold" id="dispEstTotal">Rs. 0.00</span>
-                                        </div>
-                                        <div class="summary-tile-row text-success">
-                                            <span>Advance Received:</span>
-                                            <span class="font-monospace fw-bold" id="dispAdvance">Rs. 0.00</span>
-                                        </div>
-                                        <hr class="my-1" style="border-color: #cbd5e1;">
-                                        <div class="summary-tile-row text-danger fw-bold" style="font-size: 0.86rem;">
-                                            <span>Estimated Due at Delivery:</span>
-                                            <span class="font-monospace" id="dispDue">Rs. 0.00</span>
-                                        </div>
-                                    </div>
-
-                                    <div class="alert alert-info py-2 px-2.5 mb-0" style="font-size: 0.70rem;">
-                                        <i class="fas fa-info-circle me-1"></i> If advance is collected, a double-entry Receipt Voucher will be created and posted into your ledger automatically.
-                                    </div>
-                                </div>
-                            </div>
-
                             {{-- 6. Form Submission Buttons --}}
                             <div class="card-panel p-3">
                                 <button type="submit" class="btn btn-primary w-100 py-2.5 fw-bold d-flex align-items-center justify-content-center gap-2" style="border-radius: 8px; font-size: 0.85rem; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);">
@@ -602,32 +486,11 @@
                 });
             }
 
-            // Customer Type Toggle (Registered vs Walkin)
-            const custTypeRegistered = document.getElementById('custTypeRegistered');
-            const custTypeWalkin = document.getElementById('custTypeWalkin');
-            const registeredCustGroup = document.getElementById('registeredCustGroup');
             const customerName = document.getElementById('customerName');
             const customerPhone = document.getElementById('customerPhone');
             const customerAddress = document.getElementById('customerAddress');
             const custBalanceBadgeWrap = document.getElementById('custBalanceBadgeWrap');
             const custBalanceVal = document.getElementById('custBalanceVal');
-
-            function handleCustTypeChange() {
-                if (custTypeWalkin.checked) {
-                    registeredCustGroup.style.display = 'none';
-                    if (typeof $ !== 'undefined' && $('#customerSelect').length) {
-                        $('#customerSelect').val('').trigger('change');
-                    }
-                    customerName.value = '';
-                    customerPhone.value = '';
-                    customerAddress.value = '';
-                    custBalanceBadgeWrap.style.display = 'none';
-                } else {
-                    registeredCustGroup.style.display = 'block';
-                }
-            }
-            custTypeRegistered.addEventListener('change', handleCustTypeChange);
-            custTypeWalkin.addEventListener('change', handleCustTypeChange);
 
             // Handle Customer Select Change
             $('#customerSelect').on('change', function() {
@@ -670,19 +533,6 @@
                 });
             }
 
-            // Quick Condition Tags
-            document.querySelectorAll('.quick-condition-tag').forEach(tag => {
-                tag.addEventListener('click', function() {
-                    const tagText = this.getAttribute('data-tag');
-                    const input = document.getElementById('physicalCondition');
-                    if (input.value.trim() === '') {
-                        input.value = tagText;
-                    } else if (!input.value.includes(tagText)) {
-                        input.value += ', ' + tagText;
-                    }
-                });
-            });
-
             // Priority Cards
             const priorityInput = document.getElementById('priorityInput');
             const priorityCards = document.querySelectorAll('.priority-card');
@@ -695,75 +545,6 @@
                     });
                     this.classList.add('active-' + val);
                 });
-            });
-
-            // Live Account Balance Badge Logic
-            const advanceAccountSelect = document.getElementById('advanceAccountSelect');
-            const accBalWrap = document.getElementById('accBalWrap');
-            const accBalBadge = document.getElementById('accBalBadge');
-            const accBalVal = document.getElementById('accBalVal');
-            const accBalType = document.getElementById('accBalType');
-
-            function updateAccountBalanceBadge() {
-                const selected = advanceAccountSelect.options[advanceAccountSelect.selectedIndex];
-                if (!selected || !selected.value) {
-                    accBalWrap.style.display = 'none';
-                    return;
-                }
-
-                const bal = parseFloat(selected.getAttribute('data-balance') || 0);
-                accBalVal.innerText = Math.abs(bal).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-                accBalType.innerText = bal >= 0 ? 'DR' : 'CR';
-
-                accBalBadge.className = 'account-balance-badge';
-                if (bal > 0) {
-                    accBalBadge.classList.add('bal-positive');
-                } else if (bal < 0) {
-                    accBalBadge.classList.add('bal-negative');
-                } else {
-                    accBalBadge.classList.add('bal-zero');
-                }
-                accBalWrap.style.display = 'inline-block';
-            }
-            advanceAccountSelect.addEventListener('change', updateAccountBalanceBadge);
-            updateAccountBalanceBadge(); // Run once on load if pre-selected
-
-            // Cost & Advance Calculation
-            const estimatedCostInput = document.getElementById('estimatedCost');
-            const advancePaidInput = document.getElementById('advancePaid');
-            const dispEstTotal = document.getElementById('dispEstTotal');
-            const dispAdvance = document.getElementById('dispAdvance');
-            const dispDue = document.getElementById('dispDue');
-
-            function calculateSettlement() {
-                const est = parseFloat(estimatedCostInput.value) || 0;
-                const adv = parseFloat(advancePaidInput.value) || 0;
-                const due = Math.max(0, est - adv);
-
-                dispEstTotal.innerText = 'Rs. ' + est.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-                dispAdvance.innerText = 'Rs. ' + adv.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-                dispDue.innerText = 'Rs. ' + due.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-
-                // Enforce account selection if advance > 0
-                if (adv > 0) {
-                    advanceAccountSelect.setAttribute('required', 'required');
-                } else {
-                    advanceAccountSelect.removeAttribute('required');
-                }
-            }
-
-            estimatedCostInput.addEventListener('input', calculateSettlement);
-            advancePaidInput.addEventListener('input', calculateSettlement);
-            calculateSettlement();
-
-            // Form Validation before submit
-            document.getElementById('repairIntakeForm').addEventListener('submit', function(e) {
-                const adv = parseFloat(advancePaidInput.value) || 0;
-                if (adv > 0 && !advanceAccountSelect.value) {
-                    e.preventDefault();
-                    alert('Advance payment received hai! Meherbani farma kar deposit account select karein.');
-                    advanceAccountSelect.focus();
-                }
             });
 
         });

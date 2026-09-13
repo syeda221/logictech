@@ -236,7 +236,7 @@
                                         </div>
 
                                         <div class="col-md-3 col-sm-6">
-                                            <label class="cpm-label">Brand</label>
+                                            <label class="cpm-label" id="cpmBrandLabel">BRAND</label>
                                             <div class="d-flex gap-1">
                                                 <select class="cpm-select form-select" id="cpm_brand_id" name="brand_id" required>
                                                     <option value="">Select...</option>
@@ -298,8 +298,8 @@
                                     <thead>
                                         <tr>
                                             <th style="min-width: 150px;">Variant / Part Name</th>
-                                            <th style="width: 85px;">Rating / Spec</th>
-                                            <th style="width: 85px;">Model / Type</th>
+                                            <th style="width: 85px;" id="cpmThRatingSpec">RATING / SPEC</th>
+                                            <th style="width: 85px;" id="cpmThModelType">MODEL / TYPE</th>
                                             <th style="width: 75px;">Unit</th>
                                             <th style="width: 90px;" class="text-center cpm-stock-col">Initial Stock</th>
                                             <th style="width: 95px;" class="text-center cpm-conv-col">Pcs / Carton</th>
@@ -451,6 +451,9 @@ window.cpmSetItemType = function(type) {
             'background': 'linear-gradient(135deg, #f59e0b, #d97706)',
             'box-shadow': '0 4px 12px rgba(245, 158, 11, 0.35)'
         });
+        $('#cpmBrandLabel').text('BRAND');
+        $('#cpmThRatingSpec').text('RATING / SPEC');
+        $('#cpmThModelType').text('MODEL / TYPE');
         $('.cpm-stock-col').show();
         $('.cpm-alert-col').show();
         $('.cpm-purch-col').show();
@@ -468,6 +471,9 @@ window.cpmSetItemType = function(type) {
             'background': 'linear-gradient(135deg, #10b981, #059669)',
             'box-shadow': '0 4px 12px rgba(16, 185, 129, 0.35)'
         });
+        $('#cpmBrandLabel').text('INPUT POWER');
+        $('#cpmThRatingSpec').text('DUTY CYCLE');
+        $('#cpmThModelType').text('COOLING TYPE');
         $('.cpm-stock-col').hide();
         $('.cpm-alert-col').hide();
         $('.cpm-purch-col').hide();
@@ -525,6 +531,8 @@ $(document).ready(function() {
 
         const isFinishGoods = $('#cpm_item_type').val() === 'finish_goods';
         const colDisplay = isFinishGoods ? 'display:none;' : '';
+        const specPlaceholder = isFinishGoods ? 'Duty Cycle' : 'Spec / Rating';
+        const modelPlaceholder = isFinishGoods ? 'Cooling Type' : 'Model / Type';
 
         const tr = document.createElement('tr');
         tr.dataset.vid = vid;
@@ -533,8 +541,8 @@ $(document).ready(function() {
                 <input type="text" class="cpm-tbl-input cpm-base-name-input fw-bold" name="variant_name[]" value="${prodName}" placeholder="Name" required>
                 <input type="hidden" name="variant_is_base[]" value="1">
             </td>
-            <td class="p-1"><input type="text" class="cpm-tbl-input" name="variant_size[]" placeholder="Spec / Rating"></td>
-            <td class="p-1"><input type="text" class="cpm-tbl-input" name="variant_color[]" placeholder="Model / Type"></td>
+            <td class="p-1"><input type="text" class="cpm-tbl-input" name="variant_size[]" placeholder="${specPlaceholder}"></td>
+            <td class="p-1"><input type="text" class="cpm-tbl-input" name="variant_color[]" placeholder="${modelPlaceholder}"></td>
             <td class="p-1">
                 <select class="cpm-tbl-select form-select fw-bold text-primary px-1" name="variant_unit[]" style="font-size:11px;">
                     <option value="Pcs" ${(!isCarton && (unitVal.includes('Pcs')||unitVal.includes('Pieces')))?'selected':''}>Pcs</option>
@@ -574,6 +582,8 @@ $(document).ready(function() {
         const vid      = 'var_' + Date.now();
         const isFinishGoods = $('#cpm_item_type').val() === 'finish_goods';
         const colDisplay = isFinishGoods ? 'display:none;' : '';
+        const specPlaceholder = isFinishGoods ? 'Duty Cycle' : 'Spec / Rating';
+        const modelPlaceholder = isFinishGoods ? 'Cooling Type' : 'Model / Type';
 
         const tr = document.createElement('tr');
         tr.dataset.vid = vid;
@@ -582,8 +592,8 @@ $(document).ready(function() {
                 <input type="text" class="cpm-tbl-input fw-semibold" name="variant_name[]" value="${prodName}" placeholder="Variant Name" required>
                 <input type="hidden" name="variant_is_base[]" value="0">
             </td>
-            <td class="p-1"><input type="text" class="cpm-tbl-input" name="variant_size[]" placeholder="Spec / Rating"></td>
-            <td class="p-1"><input type="text" class="cpm-tbl-input" name="variant_color[]" placeholder="Model / Type"></td>
+            <td class="p-1"><input type="text" class="cpm-tbl-input" name="variant_size[]" placeholder="${specPlaceholder}"></td>
+            <td class="p-1"><input type="text" class="cpm-tbl-input" name="variant_color[]" placeholder="${modelPlaceholder}"></td>
             <td class="p-1">
                 <select class="cpm-tbl-select form-select fw-bold text-primary px-1" name="variant_unit[]" style="font-size:11px;">
                     <option value="Pcs" ${(!isCarton && (unitVal.includes('Pcs')||unitVal.includes('Pieces')))?'selected':''}>Pcs</option>

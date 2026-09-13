@@ -167,7 +167,7 @@
         }
         .erp-item-quick { flex: 1.1; min-width: 105px; }
         .erp-item-date { flex: 1; min-width: 95px; }
-        .erp-item-bill { flex: 0.9; min-width: 85px; }
+        .erp-item-bill, .erp-item-serial { flex: 0.9; min-width: 95px; }
         .erp-item-status { flex: 1.1; min-width: 105px; }
         .erp-item-customer { flex: 1.3; min-width: 125px; }
         .erp-item-actions {
@@ -709,6 +709,11 @@
                                     <input type="text" class="form-control erp-filter-input" name="bill_no" id="filter_bill_no" placeholder="Bill ID...">
                                 </div>
 
+                                <div class="erp-filter-item erp-item-serial">
+                                    <label class="erp-filter-label"><i class="fas fa-barcode text-primary"></i> Serial No</label>
+                                    <input type="text" class="form-control erp-filter-input" name="serial_no" id="filter_serial_no" placeholder="Serial No...">
+                                </div>
+
                                 <div class="erp-filter-item erp-item-status">
                                     <label class="erp-filter-label"><i class="fas fa-tasks text-primary"></i> Status</label>
                                     <select class="form-select erp-filter-input" name="order_status" id="filter_order_status">
@@ -750,7 +755,7 @@
                                     <tr>
                                         <th class="ps-2 text-center" style="width: 50px;">Bill#</th>
                                         <th style="min-width: 110px;">Customer</th>
-                                        <th style="min-width: 100px;">Unique Serial No</th>
+                                        <th style="min-width: 75px;">Serial No</th>
                                         <th style="min-width: 100px;">Products</th>
                                         <th class="text-center" style="width: 38px;">Qty</th>
                                         <th class="text-end" style="width: 80px;">Gross</th>
@@ -758,8 +763,8 @@
                                         <th class="text-end" style="width: 85px;">Net Total</th>
                                         <th class="text-end" style="width: 85px;">Balance</th>
                                         <th class="text-center" style="width: 70px;">Date</th>
-                                        <th class="text-center" style="width: 72px;">Status</th>
-                                        <th class="text-center" style="width: 72px;">State</th>
+                                        <th class="text-center" style="width: 72px;">Confirmation</th>
+                                        <th class="text-center" style="width: 72px;">Ord. Status</th>
                                         <th class="pe-2 text-center" style="width: 70px;">Action</th>
                                     </tr>
                                 </thead>
