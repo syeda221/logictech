@@ -319,6 +319,46 @@
             border-color: #2563eb !important;
             color: #ffffff !important;
         }
+
+        /* Custom ERP Filter Toolbar Box System */
+        .erp-filter-box {
+            display: inline-flex;
+            align-items: center;
+            background: #ffffff;
+            border: 1.5px solid #bfdbfe;
+            border-radius: 7px;
+            padding: 0 10px;
+            height: 32px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+            transition: all 0.15s ease-in-out;
+        }
+        .erp-filter-box:focus-within {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+        .erp-filter-box i {
+            color: #2563eb;
+            font-size: 0.75rem;
+            margin-right: 6px;
+            flex-shrink: 0;
+        }
+        .erp-filter-box input, 
+        .erp-filter-box select {
+            border: none !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            outline: none !important;
+            font-size: 0.78rem !important;
+            color: #0f172a !important;
+            padding: 0 !important;
+            height: 100% !important;
+            line-height: normal !important;
+            margin: 0 !important;
+        }
+        .erp-filter-box select {
+            cursor: pointer;
+            width: 100%;
+        }
     </style>
 
     <div class="main-content">
@@ -433,35 +473,30 @@
                                 <input type="hidden" name="status" value="{{ request('status') }}">
                             @endif
 
-                            <div class="input-group input-group-sm" style="width: 160px;">
-                                <span class="input-group-text bg-light text-muted border-primary-subtle px-2" style="font-size: 0.75rem;">
-                                    <i class="fas fa-ticket-alt text-primary"></i>
-                                </span>
-                                <input type="text" name="ticket_no" class="form-control form-control-sm border-primary-subtle" 
-                                       placeholder="Ticket #" value="{{ request('ticket_no') }}" style="font-size: 0.78rem;">
+                            <div class="erp-filter-box" style="width: 150px;">
+                                <i class="fas fa-ticket-alt"></i>
+                                <input type="text" name="ticket_no" placeholder="Ticket #" value="{{ request('ticket_no') }}" class="font-monospace fw-semibold">
                             </div>
 
-                            <div class="input-group input-group-sm" style="width: 220px;">
-                                <span class="input-group-text bg-light text-muted border-primary-subtle px-2" style="font-size: 0.75rem;">
-                                    <i class="fas fa-user text-primary"></i>
-                                </span>
-                                <select name="customer_id" class="form-select form-select-sm border-primary-subtle" style="font-size: 0.78rem;">
+                            <div class="erp-filter-box" style="width: 210px;">
+                                <i class="fas fa-user"></i>
+                                <select name="customer_id">
                                     <option value="">All Customers</option>
                                     @foreach($customers as $cust)
                                         <option value="{{ $cust->id }}" {{ request('customer_id') == $cust->id ? 'selected' : '' }}>
-                                            {{ $cust->customer_name }} ({{ $cust->mobile }})
+                                            {{ $cust->customer_name }}
                                         </option>
                                     @endforeach
                                 </select>
                             </div>
 
-                            <button type="submit" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;">
+                            <button type="submit" class="btn btn-sm btn-primary px-3 fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm" style="border-radius: 7px; height: 32px; font-size: 0.76rem; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); border: none;">
                                 <i class="fas fa-filter"></i> Filter
                             </button>
 
-                            @if(request('ticket_no') || request('customer_id') || request('search'))
-                                <a href="{{ route('repair.index', request()->only('status')) }}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;" title="Clear Filters">
-                                    <i class="fas fa-times"></i> Reset
+                            @if(request('ticket_no') || request('customer_id') || request('search') || (request('status') && request('status') !== 'all'))
+                                <a href="{{ route('repair.index', request()->only('status')) }}" class="btn btn-sm btn-outline-secondary px-2.5 d-inline-flex align-items-center gap-1" style="border-radius: 7px; height: 32px; font-size: 0.75rem; background-color: #f8fafc;" title="Reset Filters">
+                                    <i class="fas fa-undo"></i> Reset
                                 </a>
                             @endif
                         </form>
