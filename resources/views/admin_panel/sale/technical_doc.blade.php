@@ -184,7 +184,7 @@
         }
 
         .signatures-section {
-            margin-top: 36px;
+            margin-top: 42px;
             padding-top: 16px;
             border-top: 1px solid var(--lte-border);
         }
@@ -318,6 +318,26 @@
                         <span class="info-lbl">Order Status:</span>
                         <span class="badge bg-success font-monospace text-uppercase" style="font-size: 10px;">{{ $sale->order_status ?: 'Delivered' }}</span>
                     </div>
+
+                    {{-- Moved Model, Serial No, and QTY --}}
+                    @php
+                        $firstItem = $sale->items->first();
+                        $allModels = $sale->items->pluck('model')->filter()->unique()->implode(', ');
+                        $allSerials = $sale->items->pluck('serial_no')->filter()->unique()->implode(', ');
+                        $totalQty = $sale->items->sum(function($i){ return (float)($i->total_pieces ?: ($i->qty ?: 1)); });
+                    @endphp
+                    <div class="info-row mt-2 pt-2 border-top">
+                        <span class="info-lbl">Model:</span>
+                        <span class="info-val text-dark">{{ $allModels ?: ($firstItem->model ?? '-') }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-lbl">Serial No:</span>
+                        <span class="info-val text-primary font-monospace">{{ $allSerials ?: ($firstItem->serial_no ?? '-') }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-lbl">QTY:</span>
+                        <span class="info-val text-primary font-monospace">{{ $totalQty == (int)$totalQty ? (int)$totalQty : $totalQty }}</span>
+                    </div>
                 </div>
             </div>
 
@@ -365,20 +385,15 @@
         <table class="doc-table">
             <thead>
                 <tr>
-                    <th style="width: 5%; text-align: center;">S#</th>
-                    <th style="width: 32%;">Equipment / Technical Title</th>
-                    <th style="width: 18%;">Model &amp; Serial Number</th>
-                    <th style="width: 8%; text-align: center;">QTY</th>
-                    <th style="width: 37%;">Technical Specifications, QC &amp; Remarks</th>
+                    <th style="width: 6%; text-align: center;">S#</th>
+                    <th style="width: 44%;">Equipment / Technical Title</th>
+                    <th style="width: 50%;">Technical Specifications, QC &amp; Remarks</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($sale->items as $idx => $item)
                     @php
                         $techTitle = $item->technical_name ?: ($item->product_name ?: ($item->product->item_name ?? 'Equipment Item'));
-                        $model = $item->model ?: '-';
-                        $serial = $item->serial_no ?: '-';
-                        $qty = (float)($item->total_pieces ?: ($item->qty ?: 1));
                     @endphp
                     <tr>
                         <td style="text-align: center; font-weight: 700; color: #64748b;">{{ $idx + 1 }}</td>
@@ -390,19 +405,6 @@
                             @if(!empty($item->product->item_code))
                                 <span class="param-badge"><i class="fas fa-barcode me-1"></i>SKU: {{ $item->product->item_code }}</span>
                             @endif
-                        </td>
-                        <td>
-                            <div class="mb-1">
-                                <span class="text-muted small fw-semibold">Model:</span>
-                                <strong class="text-dark d-block">{{ $model }}</strong>
-                            </div>
-                            <div>
-                                <span class="text-muted small fw-semibold">Serial No:</span>
-                                <strong class="text-primary font-monospace d-block">{{ $serial }}</strong>
-                            </div>
-                        </td>
-                        <td style="text-align: center; font-weight: 800; font-size: 13px; color: #1e3a8a;">
-                            {{ $qty == (int)$qty ? (int)$qty : $qty }}
                         </td>
                         <td>
                             @if(!empty($item->technical_specs))
@@ -438,21 +440,6 @@
                 @endforeach
             </tbody>
         </table>
-
-        {{-- Process Checklist & Important Guidelines --}}
-        <div class="mt-3 p-2.5 rounded-2 border bg-light" style="font-size: 11px; color: #475569;">
-            <div class="fw-bold text-dark mb-1"><i class="fas fa-info-circle text-primary me-1"></i> Inspection &amp; Company Verification Protocol:</div>
-            <div class="row g-2">
-                <div class="col-6">
-                    <div>✔ Power circuit &amp; IGBT module insulation resistance verified.</div>
-                    <div>✔ Water cooling circulation / chiller flow rate checked.</div>
-                </div>
-                <div class="col-6">
-                    <div>✔ Resonant frequency &amp; capacitor tuning tested on live load.</div>
-                    <div>✔ Serial number matched with internal equipment production registry.</div>
-                </div>
-            </div>
-        </div>
 
         {{-- Signatures Section --}}
         <div class="signatures-section">
