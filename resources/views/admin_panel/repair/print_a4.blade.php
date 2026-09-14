@@ -12,8 +12,29 @@
     $totalBill      = (float)($repair->total_charges > 0 ? $repair->total_charges : ($serviceCharges + $partsCharges));
     $advancePaid    = (float)($repair->advance_paid ?? 0);
     $finalPaid      = (float)($repair->final_paid ?? 0);
-    $totalPaid      = $advancePaid + $finalPaid;
-    $dueAmount      = max(0, $totalBill - $totalPaid);
+    $dueAmount      = max(0, $totalBill - $advancePaid);
+
+    if (!function_exists('numberToWordsPhp')) {
+        function numberToWordsPhp($num) {
+            $num = (float)$num;
+            if ($num <= 0) return '** Zero Rupees Only **';
+            $ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+            $tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+            
+            $inWords = function($n) use (&$inWords, $ones, $tens) {
+                if ($n < 20) return $ones[$n];
+                if ($n < 100) return $tens[(int)($n / 10)] . ($n % 10 ? ' ' . $ones[$n % 10] : '');
+                if ($n < 1000) return $ones[(int)($n / 100)] . ' Hundred' . ($n % 100 ? ' and ' . $inWords($n % 100) : '');
+                if ($n < 100000) return $inWords((int)($n / 1000)) . ' Thousand' . ($n % 1000 ? ' ' . $inWords($n % 1000) : '');
+                if ($n < 10000000) return $inWords((int)($n / 100000)) . ' Lakh' . ($n % 100000 ? ' ' . $inWords($n % 100000) : '');
+                return $inWords((int)($n / 10000000)) . ' Crore' . ($n % 10000000 ? ' ' . $inWords($n % 10000000) : '');
+            };
+            
+            $whole = (int)floor($num);
+            $words = trim($inWords($whole));
+            return '** ' . ($words ? $words . ' Rupees Only' : 'Zero Rupees Only') . ' **';
+        }
+    }
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -358,9 +379,19 @@
                     if (is_array($itemsData) && count($itemsData) > 0) {
                         foreach($itemsData as $idx => $it) {
                             $rate = (float)($it['estimated_cost'] ?? 0);
+                            if ($rate == 0 && count($itemsData) == 1 && $totalBill > 0) {
+                                $rate = $totalBill;
+                            }
+                            $descTitle = $it['item_name'] ?? $repair->item_name;
+                            $descExtra = [];
+                            if (!empty($it['brand_model'])) $descExtra[] = 'Model: ' . $it['brand_model'];
+                            if (!empty($it['serial_no'])) $descExtra[] = 'SN: ' . $it['serial_no'];
+                            if (!empty($it['problem_description']) && $it['problem_description'] !== $descTitle) $descExtra[] = $it['problem_description'];
+                            $fullDesc = $descTitle . (!empty($descExtra) ? ' (' . implode(' | ', $descExtra) . ')' : '');
+
                             $rows[] = [
                                 'no' => $it['sn'] ?? ($idx + 1),
-                                'desc' => $it['item_name'] . ($it['brand_model'] ? ' ('.$it['brand_model'].')' : '') . ($it['serial_no'] ? ' [SN: '.$it['serial_no'].']' : '') . ($it['problem_description'] ? ' - '.$it['problem_description'] : ''),
+                                'desc' => $fullDesc,
                                 'qty' => 1,
                                 'rate' => $rate,
                                 'gross' => $rate,
@@ -440,7 +471,7 @@
                 </tr>
                 <tr>
                     <td colspan="2" class="sum-cell-lbl" style="font-weight: 800; text-align: left; padding-left: 8px;">Amount in words</td>
-                    <td colspan="6" class="sum-cell-val" id="amountInWordsVal" contenteditable="true" style="font-weight: 700; text-align: center; font-style: italic; background: #f8fafc;">** Forty Thousand Rupees Only **</td>
+                    <td colspan="6" class="sum-cell-val" id="amountInWordsVal" contenteditable="true" style="font-weight: 700; text-align: center; font-style: italic; background: #f8fafc;">{{ numberToWordsPhp($totalBill) }}</td>
                 </tr>
                 <tr>
                     <td colspan="7" class="sum-cell-lbl">Advance</td>
@@ -471,39 +502,54 @@
     </div>
 </div>
 
-<script>
+<script data-version="{{ time() }}">
     let globalGstState = false;
 
+    function round2(num) {
+        let n = parseFloat(num);
+        if (isNaN(n)) return 0;
+        return Math.round((n + Number.EPSILON) * 100) / 100;
+    }
+
     function parseNum(val) {
-        if (!val) return 0;
-        let cleaned = val.toString().replace(/[^0-9.-]+/g, "");
-        return parseFloat(cleaned) || 0;
+        if (val === null || val === undefined) return 0;
+        if (typeof val === 'number') return isNaN(val) ? 0 : val;
+        let s = val.toString()
+            .replace(/Rs\.?/gi, ' ')
+            .replace(/PKR\.?/gi, ' ')
+            .replace(/[a-zA-Z]/g, ' ')
+            .replace(/,/g, '')
+            .trim();
+        s = s.replace(/^\.+/, '');
+        if (s === '') return 0;
+        let match = s.match(/-?\d+(\.\d+)?/);
+        if (!match) return 0;
+        let num = parseFloat(match[0]);
+        return isNaN(num) ? 0 : num;
     }
 
     function formatRs(num) {
-        return 'Rs. ' + num.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        const val = round2(num);
+        return 'Rs. ' + val.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     }
 
     function numberToWords(num) {
-        if (num === 0) return '** Zero Rupees Only **';
-        const a = ['','One ','Two ','Three ','Four ','Five ','Six ','Seven ','Eight ','Nine ','Ten ','Eleven ','Twelve ','Thirteen ','Fourteen ','Fifteen ','Sixteen ','Seventeen ','Eighteen ','Nineteen '];
-        const b = ['', '', 'Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+        num = round2(num);
+        if (num <= 0) return '** Zero Rupees Only **';
+        const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+        const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
         
         function inWords (n) {
-            if ((n = n.toString()).length > 9) return '';
-            let n_arr = ('000000000' + n).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
-            if (!n_arr) return '';
-            let str = '';
-            str += (n_arr[1] != 0) ? (a[Number(n_arr[1])] || b[n_arr[1][0]] + ' ' + a[n_arr[1][1]]) + 'Crore ' : '';
-            str += (n_arr[2] != 0) ? (a[Number(n_arr[2])] || b[n_arr[2][0]] + ' ' + a[n_arr[2][1]]) + 'Lakh ' : '';
-            str += (n_arr[3] != 0) ? (a[Number(n_arr[3])] || b[n_arr[3][0]] + ' ' + a[n_arr[3][1]]) + 'Thousand ' : '';
-            str += (n_arr[4] != 0) ? (a[Number(n_arr[4])] || b[n_arr[4][0]] + ' ' + a[n_arr[4][1]]) + 'Hundred ' : '';
-            str += (n_arr[5] != 0) ? ((str != '') ? 'and ' : '') + (a[Number(n_arr[5])] || b[n_arr[5][0]] + ' ' + a[n_arr[5][1]]) : '';
-            return str;
+            if (n < 20) return ones[n];
+            if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 ? ' ' + ones[n % 10] : '');
+            if (n < 1000) return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' and ' + inWords(n % 100) : '');
+            if (n < 100000) return inWords(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 ? ' ' + inWords(n % 1000) : '');
+            if (n < 10000000) return inWords(Math.floor(n / 100000)) + ' Lakh' + (n % 100000 ? ' ' + inWords(n % 100000) : '');
+            return inWords(Math.floor(n / 10000000)) + ' Crore' + (n % 10000000 ? ' ' + inWords(n % 10000000) : '');
         }
         let whole = Math.floor(num);
         let words = inWords(whole).trim();
-        return '** ' + (words ? words + ' Rupees Only' : '') + ' **';
+        return '** ' + (words ? words + ' Rupees Only' : 'Zero Rupees Only') + ' **';
     }
 
     function toggleGstAll() {
@@ -514,7 +560,7 @@
         rows.forEach(row => {
             const qtyCell = row.querySelector('.row-qty-cell');
             const gstPctCell = row.querySelector('.row-gstpct-cell');
-            if (qtyCell && parseNum(qtyCell.innerText) > 0 && gstPctCell) {
+            if (qtyCell && parseNum(qtyCell.innerText || qtyCell.textContent) > 0 && gstPctCell) {
                 gstPctCell.innerText = globalGstState ? '18' : '0';
             }
         });
@@ -540,29 +586,64 @@
             const gstAmtCell = row.querySelector('.row-gstamt-cell');
             const totalCell  = row.querySelector('.row-total-cell');
 
-            const qty    = parseNum(qtyCell ? qtyCell.innerText : 0);
-            const rate   = parseNum(rateCell ? rateCell.innerText : 0);
-            const gstPct = parseNum(gstPctCell ? gstPctCell.innerText : 0);
+            const qtyStr   = qtyCell ? (qtyCell.innerText || qtyCell.textContent || '').trim() : '';
+            const rateStr  = rateCell ? (rateCell.innerText || rateCell.textContent || '').trim() : '';
+            const grossStr = grossCell ? (grossCell.innerText || grossCell.textContent || '').trim() : '';
+            const totalStr = totalCell ? (totalCell.innerText || totalCell.textContent || '').trim() : '';
 
-            if (qty > 0 && rate > 0) {
-                const grossAmt = qty * rate;
+            const hasQtyInput  = qtyStr !== '';
+            const hasRateInput = rateStr !== '';
+
+            const qtyVal  = parseNum(qtyStr);
+            const rateVal = parseNum(rateStr);
+            const gstPct  = parseNum(gstPctCell ? (gstPctCell.innerText || gstPctCell.textContent) : 0);
+
+            let effectiveQty = 0;
+            let isRowActive = false;
+
+            if (hasQtyInput) {
+                effectiveQty = qtyVal;
+                if (qtyStr === '0' || qtyVal === 0) {
+                    effectiveQty = 0;
+                    isRowActive = true;
+                } else if (qtyVal > 0) {
+                    isRowActive = true;
+                }
+            } else if (hasRateInput && rateVal > 0) {
+                effectiveQty = 1;
+                isRowActive = true;
+            }
+
+            if (isRowActive) {
+                const grossAmt = round2(effectiveQty * rateVal);
+                const gstAmt   = round2(grossAmt * (gstPct / 100));
+                const rowTotal = round2(grossAmt + gstAmt);
+
                 if (grossCell) grossCell.innerText = grossAmt.toFixed(2);
-                sumGross += grossAmt;
-
-                const gstAmt = grossAmt * (gstPct / 100);
                 if (gstAmtCell) gstAmtCell.innerText = gstAmt.toFixed(2);
-                sumGst += gstAmt;
-
-                const rowTotal = grossAmt + gstAmt;
                 if (totalCell) totalCell.innerText = rowTotal.toFixed(2);
-                sumGrandTotal += rowTotal;
-            } else if (totalCell && totalCell.innerText.trim() !== '') {
-                const manualTotal = parseNum(totalCell.innerText);
-                sumGrandTotal += manualTotal;
-                sumGross += parseNum(grossCell ? grossCell.innerText : manualTotal);
-                sumGst += parseNum(gstAmtCell ? gstAmtCell.innerText : 0);
+
+                sumGross      = round2(sumGross + grossAmt);
+                sumGst        = round2(sumGst + gstAmt);
+                sumGrandTotal = round2(sumGrandTotal + rowTotal);
+            } else if (totalStr !== '' && parseNum(totalStr) > 0) {
+                const manualTotal = round2(parseNum(totalStr));
+                const manualGross = round2(parseNum(grossStr !== '' ? grossStr : manualTotal));
+                const manualGst   = round2(parseNum(gstAmtCell ? (gstAmtCell.innerText || gstAmtCell.textContent) : 0));
+
+                sumGrandTotal = round2(sumGrandTotal + manualTotal);
+                sumGross      = round2(sumGross + manualGross);
+                sumGst        = round2(sumGst + manualGst);
+            } else {
+                if (grossCell) grossCell.innerText = '';
+                if (gstAmtCell) gstAmtCell.innerText = '';
+                if (totalCell) totalCell.innerText = '';
             }
         });
+
+        sumGross      = round2(sumGross);
+        sumGst        = round2(sumGst);
+        sumGrandTotal = round2(sumGrandTotal);
 
         if (document.getElementById('totalGrossVal')) {
             document.getElementById('totalGrossVal').innerText = formatRs(sumGross);
@@ -574,25 +655,35 @@
             document.getElementById('grandTotalVal').innerText = formatRs(sumGrandTotal);
         }
 
-        // Amount in words update
         if (document.getElementById('amountInWordsVal')) {
             document.getElementById('amountInWordsVal').innerText = numberToWords(sumGrandTotal);
         }
 
-        const advance = parseNum(document.getElementById('advanceVal') ? document.getElementById('advanceVal').innerText : 0);
-        const balance = Math.max(0, sumGrandTotal - advance);
+        const advanceCell = document.getElementById('advanceVal');
+        const advanceText = advanceCell ? (advanceCell.innerText || advanceCell.textContent || '0') : '0';
+        const advance = round2(parseNum(advanceText));
+        const balance = round2(Math.max(0, sumGrandTotal - advance));
         if (document.getElementById('balanceVal')) {
             document.getElementById('balanceVal').innerText = formatRs(balance);
         }
     }
 
     function manualTotalChange() {
-        const grandTotal = parseNum(document.getElementById('grandTotalVal') ? document.getElementById('grandTotalVal').innerText : 0);
-        const advance = parseNum(document.getElementById('advanceVal') ? document.getElementById('advanceVal').innerText : 0);
+        const grandTotalCell = document.getElementById('grandTotalVal');
+        const advanceCell = document.getElementById('advanceVal');
 
-        const balance = Math.max(0, grandTotal - advance);
+        const grandTotalText = grandTotalCell ? (grandTotalCell.innerText || grandTotalCell.textContent || '0') : '0';
+        const advanceText = advanceCell ? (advanceCell.innerText || advanceCell.textContent || '0') : '0';
+
+        const grandTotal = round2(parseNum(grandTotalText));
+        const advance = round2(parseNum(advanceText));
+
+        const balance = round2(Math.max(0, grandTotal - advance));
         if (document.getElementById('balanceVal')) {
             document.getElementById('balanceVal').innerText = formatRs(balance);
+        }
+        if (document.getElementById('amountInWordsVal')) {
+            document.getElementById('amountInWordsVal').innerText = numberToWords(grandTotal);
         }
     }
 
@@ -637,6 +728,19 @@
             iBox.innerHTML = '&#10004;';
         }
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        recalculateTotals();
+
+        const grid = document.getElementById('invoiceGridTable');
+        if (grid) {
+            ['input', 'keyup', 'blur', 'change', 'paste', 'focusout'].forEach(evt => {
+                grid.addEventListener(evt, () => {
+                    recalculateTotals();
+                });
+            });
+        }
+    });
 </script>
 </body>
 </html>

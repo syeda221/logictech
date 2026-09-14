@@ -551,18 +551,11 @@
                             </select>
                         </div>
 
-                        <div class="mb-3">
+                        <div class="mb-1">
                             <label class="form-label small fw-bold text-dark mb-1">
                                 <i class="fas fa-stethoscope text-primary me-1"></i>Technician Diagnostic Notes
                             </label>
                             <textarea name="technician_notes" class="form-control form-control-sm border-primary-subtle" rows="3" placeholder="e.g. Main power supply capacitor replaced, circuit re-soldered, load tested under 220V..." style="border-radius: 8px; font-size: 0.78rem;">{{ $repair->technician_notes }}</textarea>
-                        </div>
-
-                        <div class="mb-1">
-                            <label class="form-label small fw-bold text-dark mb-1">
-                                <i class="fas fa-history text-secondary me-1"></i>Audit Remark / Note
-                            </label>
-                            <input type="text" name="log_note" class="form-control form-control-sm border-primary-subtle" placeholder="e.g. Work started by technician" style="border-radius: 8px; font-size: 0.78rem;">
                         </div>
 
                     </div>

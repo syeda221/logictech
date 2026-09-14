@@ -307,32 +307,11 @@
                                         </div>
                                     </div>
 
-                                    <div class="row g-2 mb-3">
-                                        <div class="col-md-8">
-                                            <label class="form-label required">Reported Fault / Problem Description</label>
-                                            <input type="text" name="problem_description" id="problemDescription" class="form-control"
-                                                value="{{ old('problem_description') }}" placeholder="e.g. Overheating, no display output, main PCB blown" required>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label class="form-label">Estimated Repair Charges (Rs.)</label>
-                                            <input type="number" step="0.01" min="0" name="estimated_cost" id="estimatedCost" class="form-control font-monospace fw-bold"
-                                                value="{{ old('estimated_cost') }}" placeholder="0.00">
-                                        </div>
-                                    </div>
-
                                     <div class="row g-2">
-                                        {{-- Physical Condition --}}
-                                        <div class="col-md-6">
-                                            <label class="form-label">Physical Condition &amp; Visual Inspection</label>
-                                            <textarea name="physical_condition" id="physicalCondition" rows="2" class="form-control"
-                                                placeholder="e.g. Outer casing scratched, power cord clipped, front knob missing...">{{ old('physical_condition') }}</textarea>
-                                        </div>
-
-                                        {{-- Accessories Received --}}
-                                        <div class="col-md-6">
-                                            <label class="form-label">Accessories Received With Item</label>
-                                            <textarea name="accessories_received" id="accessoriesReceived" rows="2" class="form-control"
-                                                placeholder="e.g. Power Cable, Remote, Connecting pipes, manual, extra fuses...">{{ is_array(old('accessories_received')) ? implode(', ', old('accessories_received')) : old('accessories_received') }}</textarea>
+                                        <div class="col-12">
+                                            <label class="form-label required">Reported Fault, Physical Condition &amp; Accessories Received</label>
+                                            <textarea name="problem_description" id="problemDescription" rows="3" class="form-control"
+                                                placeholder="Enter reported fault / problem description, physical condition, and accessories received..." required>{{ old('problem_description') }}</textarea>
                                         </div>
                                     </div>
                                 </div>

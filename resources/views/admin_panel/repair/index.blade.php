@@ -737,13 +737,6 @@
                                              <textarea name="technician_notes" class="form-control form-control-sm border-primary-subtle" rows="3" placeholder="e.g. Main power supply capacitor replaced, circuit re-soldered, load tested under 220V..." style="border-radius: 8px; font-size: 0.78rem;">{{ $repair->technician_notes }}</textarea>
                                          </div>
 
-                                         <div class="mb-1">
-                                             <label class="form-label small fw-bold text-dark">
-                                                 <i class="fas fa-history text-secondary me-1"></i>Audit Remark / Internal Note
-                                             </label>
-                                             <input type="text" name="log_note" class="form-control form-control-sm border-primary-subtle" placeholder="e.g. Status updated by workshop manager" style="border-radius: 8px; font-size: 0.78rem;">
-                                         </div>
-
                                      </div>
                                      <div class="modal-footer py-2.5 px-4 bg-light border-top d-flex justify-content-between align-items-center">
                                          <button type="button" class="btn btn-sm btn-outline-secondary px-3" data-bs-dismiss="modal" data-dismiss="modal" style="border-radius: 6px; font-size: 0.78rem;">
