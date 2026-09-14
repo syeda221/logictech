@@ -28,6 +28,7 @@ class GrnController extends Controller
         if ($request->filled('qc_status')) {
             $query->where('qc_status', $request->qc_status);
         }
+
         if ($request->filled('from_date')) {
             $query->whereDate('received_date', '>=', $request->from_date);
         }

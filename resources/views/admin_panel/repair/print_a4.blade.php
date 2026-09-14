@@ -31,22 +31,45 @@
     font-size: 11px;
     color: #000;
     background: #cbd5e1;
-    padding: 15px 0;
+    padding: 68px 0 25px 0;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  .no-print {
-    position: fixed; top: 12px; right: 20px; z-index: 9999; display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+  .no-print-bar {
+    position: fixed; top: 0; left: 0; right: 0; height: 56px; z-index: 9999;
+    background: rgba(15, 23, 42, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px;
   }
-  .no-print button, .no-print a {
-    padding: 7px 16px; font-size: 12px; font-weight: 700; border-radius: 6px; cursor: pointer; border: none; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-family: sans-serif;
+  .no-print-bar .hint-pill {
+    background: rgba(56, 189, 248, 0.12);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    color: #38bdf8;
+    padding: 7px 16px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex; align-items: center; gap: 8px;
   }
-  .no-print button.btn-print { background: #dc2626; color: #fff; box-shadow: 0 4px 10px rgba(220,38,38,0.3); }
-  .no-print button.btn-add   { background: #2563eb; color: #fff; }
-  .no-print button.btn-del   { background: #d97706; color: #fff; }
-  .no-print button.btn-gst   { background: #059669; color: #fff; box-shadow: 0 4px 10px rgba(5,150,105,0.3); }
-  .no-print a.btn-back       { background: #475569; color: #fff; }
-  .no-print .edit-hint       { background: #1e293b; color: #f8fafc; padding: 7px 14px; border-radius: 6px; font-size: 11.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+  .no-print-bar .action-group {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .no-print-bar button, .no-print-bar a {
+    padding: 7px 16px; font-size: 12px; font-weight: 700; border-radius: 8px; cursor: pointer; border: none; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-family: sans-serif; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  }
+  .no-print-bar button:hover, .no-print-bar a:hover {
+    transform: translateY(-1.5px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  .no-print-bar .btn-print { background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff; }
+  .no-print-bar .btn-add   { background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; }
+  .no-print-bar .btn-del   { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; }
+  .no-print-bar .btn-gst   { background: linear-gradient(135deg, #10b981, #059669); color: #fff; }
+  .no-print-bar .btn-back  { background: linear-gradient(135deg, #475569, #334155); color: #fff; }
 
   .page-pad {
     width: 210mm;
@@ -256,13 +279,18 @@
 </head>
 <body>
 
-<div class="no-print">
-    <button onclick="window.print()" class="btn-print">🖨️ Print Invoice</button>
-    <button onclick="addNewRow()" class="btn-add">➕ Add Item Row</button>
-    <button onclick="removeLastRow()" class="btn-del">🗑️ Remove Last Row</button>
-    <button onclick="toggleGstAll()" class="btn-gst" id="btnGstToggle">⚡ Apply 18% GST</button>
-    <span class="edit-hint">✏️ Click any cell to edit Description, QTY, Rate, Gross, GST %, GST Amt or Totals!</span>
-    <a href="{{ route('repair.show', $repair->id) }}" class="btn-back">← Back to Repair Details</a>
+<div class="no-print-bar no-print">
+    <div class="hint-pill">
+        <span>💡</span>
+        <span>Click any text, QTY, Rate, Gross Amount or GST cell to edit live on screen!</span>
+    </div>
+    <div class="action-group">
+        <button onclick="window.print()" class="btn-print">🖨️ Print Invoice</button>
+        <button onclick="addNewRow()" class="btn-add">➕ Add Item Row</button>
+        <button onclick="removeLastRow()" class="btn-del">🗑️ Remove Last Row</button>
+        <button onclick="toggleGstAll()" class="btn-gst" id="btnGstToggle">⚡ Apply 18% GST</button>
+        <a href="{{ route('repair.show', $repair->id) }}" class="btn-back">← Back to Repair Details</a>
+    </div>
 </div>
 
 <div class="page-pad">

@@ -48,16 +48,28 @@
     $exAmt = $exRet ? $exRet->items->sum('line_total') : 0;
 
     /* ── Totals ── */
-    $subTotal     = (float)$sale->total_bill_amount;
+    $itemDisc     = collect($saleItems)->sum('discount_amount');
     $extraDisc    = (float)($sale->total_extradiscount ?? 0);
-    $netPayable   = (float)$sale->total_net;
-    $finalPayable = $netPayable - $exAmt;
+    $storedBill   = (float)$sale->total_bill_amount;
+    
+    // Calculate gross subtotal before discount
+    $grossSubTotal = collect($saleItems)->sum(function($it) {
+        return (float)($it['total'] ?? 0) + (float)($it['discount_amount'] ?? 0);
+    });
+    if ($grossSubTotal <= 0) {
+        $grossSubTotal = $storedBill + $itemDisc;
+    }
+    $subTotal     = $grossSubTotal > 0 ? $grossSubTotal : $storedBill;
+
+    // Dynamically calculate net payable from line items sum to avoid double discount subtraction
+    $calcNet      = collect($saleItems)->sum('total') + (float)($sale->tax_amount ?? 0);
+    $netPayable   = $calcNet > 0 ? $calcNet : (float)$sale->total_net;
+    $finalPayable = max(0, $netPayable - $exAmt);
     $paidCash     = (float)($sale->cash  ?? 0);
     $paidCard     = (float)($sale->card  ?? 0);
     $paidTotal    = $paidCash + $paidCard;
     $changeGiven  = (float)($sale->change ?? 0);
     $balanceDue   = max(0, $finalPayable - $paidTotal);
-    $itemDisc     = collect($saleItems)->sum('discount_amount');
     $amtWords     = numberToWordsInvoice($finalPayable > 0 ? $finalPayable : $netPayable);
 
     /* ── Subject ── */
@@ -606,21 +618,7 @@ body{
                     @endif
                 </td>
             </tr>
-            <tr>
-                <td class="ml">Due Date</td>
-                <td class="mv" colspan="3">
-                    @if($sale->due_date)
-                        {{ \Carbon\Carbon::parse($sale->due_date)->format('d-M-Y') }}
-                        @if($sale->credit_days > 0)
-                            <span style="font-size:9px;color:#64748b;font-weight:400;">({{ $sale->credit_days }}d credit)</span>
-                        @endif
-                    @elseif($sale->credit_days > 0)
-                        {{ $sale->credit_days }} Days Credit
-                    @else
-                        —
-                    @endif
-                </td>
-            </tr>
+
         </table>
     </div>
 
@@ -709,7 +707,7 @@ body{
                 $h2=(float)($item['height']??0);$w2=(float)($item['width']??0);
                 if($sm=='by_size'&&$h2>0&&$w2>0) $specs[]=['Dimensions',number_format($w2,0).'×'.number_format($h2,0).' mm'];
                 if($wg>0) $specs[]=['Weight',($wg==(int)$wg?(int)$wg:$wg).'g'];
-                if($disc>0) $specs[]=['Discount',($discP>0?number_format($discP,1).'% — ':'').number_format($disc,2).' '.$currency];
+                if($disc>0) $specs[]=['Discount', ($discP>0 ? number_format($discP,1).'%' : 'Applied')];
 
                 $globalTaxPct = (float)($sale->tax_percent ?? 0);
                 $globalTaxAmt = (float)($sale->tax_amount ?? 0);
@@ -760,7 +758,14 @@ body{
                 <td class="tr">{{ number_format($gross,2) }}</td>
                 <td class="tc">{{ $itemTaxPct > 0 ? (float)$itemTaxPct.'%' : '0%' }}</td>
                 <td class="tr">{{ $itemTaxAmt > 0 ? number_format($itemTaxAmt,2) : '0.00' }}</td>
-                <td class="tr" style="font-weight:700;">{{ $currency }} {{ number_format($itemTotalWithTax,0) }}</td>
+                <td class="tr" style="font-weight:700; vertical-align:top; height:100%;">
+                    <div style="font-size:10.5px; color:#0f172a; font-weight:700;">{{ $currency }} {{ number_format($itemTotalWithTax,0) }}</div>
+                    @if($disc > 0)
+                        <div style="font-size:8.5px; font-weight:700; color:#c62828; margin-top: 56px;">
+                            -{{ number_format($disc,2) }} {{ $currency }}
+                        </div>
+                    @endif
+                </td>
             </tr>
             @endforeach
 
@@ -783,12 +788,18 @@ body{
             @php
                 $displayGrandTaxAmt = ($sale->tax_amount ?? 0) > 0 ? (float)$sale->tax_amount : $totalTableTax;
                 $displayGrandTaxPct = ($sale->tax_percent ?? 0) > 0 ? (float)$sale->tax_percent : ($displayGrandTaxAmt > 0 && $subTotal > 0 ? round(($displayGrandTaxAmt / $subTotal) * 100, 2) : 0);
+                $grossItemsSum = collect($saleItems)->sum(function($it) {
+                    $disc = (float)($it['discount_amount'] ?? 0);
+                    return (float)($it['total'] ?? 0) + $disc;
+                });
+                $netItemsSum = collect($saleItems)->sum('total') + $displayGrandTaxAmt - $exAmt;
             @endphp
             <tr class="gt-row">
-                <td colspan="5" class="gt-lbl">Grand Total &nbsp;&nbsp; ({{ $currency }})</td>
+                <td colspan="4" class="gt-lbl" style="text-align:right;padding-right:10px;">Grand Total &nbsp;&nbsp; ({{ $currency }})</td>
+                <td class="tr" style="font-weight:700;">{{ number_format($grossItemsSum,2) }}</td>
                 <td class="tc" style="font-weight:700">{{ $displayGrandTaxPct > 0 ? (float)$displayGrandTaxPct.'%' : '0%' }}</td>
                 <td class="tr" style="font-weight:700">{{ $displayGrandTaxAmt > 0 ? number_format($displayGrandTaxAmt,2) : '0.00' }}</td>
-                <td class="gt-val">{{ number_format($finalPayable>0?$finalPayable:$netPayable,0) }}</td>
+                <td class="gt-val">{{ number_format($netItemsSum,0) }}</td>
             </tr>
         </tbody>
     </table>
@@ -832,9 +843,7 @@ body{
                 @if($itemDisc>0)
                 <tr><td class="fl">Item Discount:</td><td class="fv red">-{{ number_format($itemDisc,2) }}</td></tr>
                 @endif
-                @if($extraDisc>0)
-                <tr><td class="fl">Extra Discount:</td><td class="fv red">-{{ number_format($extraDisc,2) }}</td></tr>
-                @endif
+
                 @if(($sale->tax_amount ?? 0) > 0 || ($sale->tax_percent ?? 0) > 0)
                 <tr><td class="fl">Sales Tax / GST ({{ (float)($sale->tax_percent ?? 0) }}%):</td><td class="fv green">+{{ number_format((float)($sale->tax_amount ?? 0),2) }}</td></tr>
                 @endif
