@@ -35,6 +35,7 @@ class RepairOrder extends Model
         'final_account_id',
         'due_amount',
         'status',
+        'doc_type',
         'priority',
         'received_date',
         'expected_delivery_date',

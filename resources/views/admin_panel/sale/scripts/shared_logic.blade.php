@@ -736,7 +736,7 @@
         $('#backendChange').val(balanceAmount <= 0 ? Math.abs(balanceAmount).toFixed(2) : 0);
         $('#subTotal1').val(tGross.toFixed(2));
         $('#subTotal2').val(currentInvoiceTotal.toFixed(2));
-        $('#discountAmount').val(totalDiscount.toFixed(2));
+        $('#discountAmount').val(orderDisc.toFixed(2));
         $('#totalBalance').val(currentInvoiceTotal.toFixed(2));
         $('input[name="cash"]').val(receipts.toFixed(2));
 

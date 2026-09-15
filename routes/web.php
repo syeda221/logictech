@@ -633,6 +633,8 @@ Route::middleware('auth')->group(function () {
     Route::delete('/repair/{id}', [\App\Http\Controllers\RepairController::class, 'destroy'])->name('repair.destroy');
     Route::get('/repair/{id}/print-thermal', [\App\Http\Controllers\RepairController::class, 'printThermal'])->name('repair.print.thermal');
     Route::get('/repair/{id}/print-a4', [\App\Http\Controllers\RepairController::class, 'printA4'])->name('repair.print.a4');
+    Route::get('/repair/{id}/print-jobsheet', [\App\Http\Controllers\RepairController::class, 'printJobSheet'])->name('repair.print.jobsheet');
+    Route::post('/repair/{id}/save-a4', [\App\Http\Controllers\RepairController::class, 'saveA4'])->name('repair.save.a4');
 
 });
 // Temporary debug route to inspect authenticated user's roles & permissions (remove after use)

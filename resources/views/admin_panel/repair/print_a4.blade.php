@@ -12,7 +12,7 @@
     $totalBill      = (float)($repair->total_charges > 0 ? $repair->total_charges : ($serviceCharges + $partsCharges));
     $advancePaid    = (float)($repair->advance_paid ?? 0);
     $finalPaid      = (float)($repair->final_paid ?? 0);
-    $dueAmount      = max(0, $totalBill - $advancePaid);
+live     $dueAmount      = max(0, $totalBill - $advancePaid);
 
     if (!function_exists('numberToWordsPhp')) {
         function numberToWordsPhp($num) {
@@ -20,7 +20,7 @@
             if ($num <= 0) return '** Zero Rupees Only **';
             $ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
             $tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-            
+
             $inWords = function($n) use (&$inWords, $ones, $tens) {
                 if ($n < 20) return $ones[$n];
                 if ($n < 100) return $tens[(int)($n / 10)] . ($n % 10 ? ' ' . $ones[$n % 10] : '');
@@ -29,7 +29,7 @@
                 if ($n < 10000000) return $inWords((int)($n / 100000)) . ' Lakh' . ($n % 100000 ? ' ' . $inWords($n % 100000) : '');
                 return $inWords((int)($n / 10000000)) . ' Crore' . ($n % 10000000 ? ' ' . $inWords($n % 10000000) : '');
             };
-            
+
             $whole = (int)floor($num);
             $words = trim($inWords($whole));
             return '** ' . ($words ? $words . ' Rupees Only' : 'Zero Rupees Only') . ' **';
@@ -45,6 +45,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body {
@@ -86,11 +87,13 @@
     transform: translateY(-1.5px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   }
-  .no-print-bar .btn-print { background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff; }
-  .no-print-bar .btn-add   { background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; }
-  .no-print-bar .btn-del   { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; }
-  .no-print-bar .btn-gst   { background: linear-gradient(135deg, #10b981, #059669); color: #fff; }
-  .no-print-bar .btn-back  { background: linear-gradient(135deg, #475569, #334155); color: #fff; }
+  .no-print-bar .btn-print    { background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff; }
+  .no-print-bar .btn-save     { background: linear-gradient(135deg, #16a34a, #15803d); color: #fff; }
+  .no-print-bar .btn-jobsheet { background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; }
+  .no-print-bar .btn-add      { background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; }
+  .no-print-bar .btn-del      { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; }
+  .no-print-bar .btn-gst      { background: linear-gradient(135deg, #10b981, #059669); color: #fff; }
+  .no-print-bar .btn-back     { background: linear-gradient(135deg, #475569, #334155); color: #fff; }
 
   .page-pad {
     width: 210mm;
@@ -301,12 +304,10 @@
 <body>
 
 <div class="no-print-bar no-print">
-    <div class="hint-pill">
-        <span>💡</span>
-        <span>Click any text, QTY, Rate, Gross Amount or GST cell to edit live on screen!</span>
-    </div>
     <div class="action-group">
+        <button onclick="saveInvoiceData()" class="btn-save" id="btnSaveInvoice">💾 Save Invoice</button>
         <button onclick="window.print()" class="btn-print">🖨️ Print Invoice</button>
+        <a href="{{ route('repair.print.jobsheet', $repair->id) }}" class="btn-jobsheet">📋 A4 Job Sheet</a>
         <button onclick="addNewRow()" class="btn-add">➕ Add Item Row</button>
         <button onclick="removeLastRow()" class="btn-del">🗑️ Remove Last Row</button>
         <button onclick="toggleGstAll()" class="btn-gst" id="btnGstToggle">⚡ Apply 18% GST</button>
@@ -336,8 +337,8 @@
 
         {{-- Type Checkboxes --}}
         <div class="doc-type-bar">
-            QUOTATION <span class="checkbox-box" id="chkQuotation" onclick="toggleDocType('quotation')"></span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-            INVOICE <span class="checkbox-box" id="chkInvoice" onclick="toggleDocType('invoice')">&#10004;</span>
+            QUOTATION <span class="checkbox-box" id="chkQuotation" onclick="toggleDocType('quotation')">{!! ($repair->doc_type ?? 'invoice') === 'quotation' ? '&#10004;' : '' !!}</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            INVOICE <span class="checkbox-box" id="chkInvoice" onclick="toggleDocType('invoice')">{!! ($repair->doc_type ?? 'invoice') === 'invoice' ? '&#10004;' : '' !!}</span>
         </div>
 
         {{-- Meta Information Lines --}}
@@ -378,27 +379,49 @@
 
                     if (is_array($itemsData) && count($itemsData) > 0) {
                         foreach($itemsData as $idx => $it) {
-                            $rate = (float)($it['estimated_cost'] ?? 0);
-                            if ($rate == 0 && count($itemsData) == 1 && $totalBill > 0) {
-                                $rate = $totalBill;
-                            }
-                            $descTitle = $it['item_name'] ?? $repair->item_name;
-                            $descExtra = [];
-                            if (!empty($it['brand_model'])) $descExtra[] = 'Model: ' . $it['brand_model'];
-                            if (!empty($it['serial_no'])) $descExtra[] = 'SN: ' . $it['serial_no'];
-                            if (!empty($it['problem_description']) && $it['problem_description'] !== $descTitle) $descExtra[] = $it['problem_description'];
-                            $fullDesc = $descTitle . (!empty($descExtra) ? ' (' . implode(' | ', $descExtra) . ')' : '');
+                            if (isset($it['desc'])) {
+                                // Saved directly from A4 screen
+                                $qty = isset($it['qty']) && $it['qty'] !== '' ? (float)$it['qty'] : 1;
+                                $rate = (float)($it['rate'] ?? 0);
+                                $gross = (float)($it['gross'] ?? ($qty * $rate));
+                                $gst_pct = (float)($it['gst_pct'] ?? 0);
+                                $gst_amt = (float)($it['gst_amt'] ?? 0);
+                                $total = (float)($it['total'] ?? ($gross + $gst_amt));
 
-                            $rows[] = [
-                                'no' => $it['sn'] ?? ($idx + 1),
-                                'desc' => $fullDesc,
-                                'qty' => 1,
-                                'rate' => $rate,
-                                'gross' => $rate,
-                                'gst_pct' => 0,
-                                'gst_amt' => 0,
-                                'total' => $rate,
-                            ];
+                                $rows[] = [
+                                    'no' => $it['sn'] ?? ($idx + 1),
+                                    'desc' => $it['desc'],
+                                    'qty' => $qty,
+                                    'rate' => $rate,
+                                    'gross' => $gross,
+                                    'gst_pct' => $gst_pct,
+                                    'gst_amt' => $gst_amt,
+                                    'total' => $total,
+                                ];
+                            } else {
+                                // Initial intake format
+                                $rate = (float)($it['estimated_cost'] ?? 0);
+                                if ($rate == 0 && count($itemsData) == 1 && $totalBill > 0) {
+                                    $rate = $totalBill;
+                                }
+                                $descTitle = $it['item_name'] ?? $repair->item_name;
+                                $descExtra = [];
+                                if (!empty($it['brand_model'])) $descExtra[] = 'Model: ' . $it['brand_model'];
+                                if (!empty($it['serial_no'])) $descExtra[] = 'SN: ' . $it['serial_no'];
+                                if (!empty($it['problem_description']) && $it['problem_description'] !== $descTitle) $descExtra[] = $it['problem_description'];
+                                $fullDesc = $descTitle . (!empty($descExtra) ? ' (' . implode(' | ', $descExtra) . ')' : '');
+
+                                $rows[] = [
+                                    'no' => $it['sn'] ?? ($idx + 1),
+                                    'desc' => $fullDesc,
+                                    'qty' => 1,
+                                    'rate' => $rate,
+                                    'gross' => $rate,
+                                    'gst_pct' => 0,
+                                    'gst_amt' => 0,
+                                    'total' => $rate,
+                                ];
+                            }
                         }
                     } else {
                         // Single Repair Item Format
@@ -437,8 +460,8 @@
 
                 @foreach($rows as $r)
                     <tr class="item-grid-row">
-                        <td class="td-center row-sn-cell" contenteditable="true">{{ $r['no'] }}</td>
-                        <td class="row-desc-cell" contenteditable="true">{{ $r['desc'] }}</td>
+                        <td class="td-center row-sn-cell" contenteditable="true" oninput="recalculateTotals()">{{ $r['no'] }}</td>
+                        <td class="row-desc-cell" contenteditable="true" oninput="recalculateTotals()">{{ $r['desc'] }}</td>
                         <td class="td-center row-qty-cell" contenteditable="true" oninput="recalculateTotals()">{{ $r['qty'] }}</td>
                         <td class="td-right row-rate-cell" contenteditable="true" oninput="recalculateTotals()">{{ number_format($r['rate'], 2, '.', '') }}</td>
                         <td class="td-right row-gross-cell" contenteditable="true" style="font-weight: 700;" oninput="recalculateTotals()">{{ number_format($r['gross'], 2, '.', '') }}</td>
@@ -450,8 +473,8 @@
 
                 @for($i = $actualCount + 1; $i <= $totalRowsToFill; $i++)
                     <tr class="item-grid-row">
-                        <td class="td-center row-sn-cell" contenteditable="true"></td>
-                        <td class="row-desc-cell" contenteditable="true"></td>
+                        <td class="td-center row-sn-cell" contenteditable="true" oninput="recalculateTotals()"></td>
+                        <td class="row-desc-cell" contenteditable="true" oninput="recalculateTotals()"></td>
                         <td class="td-center row-qty-cell" contenteditable="true" oninput="recalculateTotals()"></td>
                         <td class="td-right row-rate-cell" contenteditable="true" oninput="recalculateTotals()"></td>
                         <td class="td-right row-gross-cell" contenteditable="true" style="font-weight: 700;" oninput="recalculateTotals()"></td>
@@ -538,12 +561,12 @@
         if (num <= 0) return '** Zero Rupees Only **';
         const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
         const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-        
+
         function inWords (n) {
             if (n < 20) return ones[n];
             if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 ? ' ' + ones[n % 10] : '');
             if (n < 1000) return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' and ' + inWords(n % 100) : '');
-            if (n < 100000) return inWords(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 ? ' ' + inWords(n % 1000) : '');
+            if (n < 100000) return inWords(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 ? ' and ' + inWords(n % 1000) : '');
             if (n < 10000000) return inWords(Math.floor(n / 100000)) + ' Lakh' + (n % 100000 ? ' ' + inWords(n % 100000) : '');
             return inWords(Math.floor(n / 10000000)) + ' Crore' + (n % 10000000 ? ' ' + inWords(n % 10000000) : '');
         }
@@ -556,7 +579,7 @@
         globalGstState = !globalGstState;
         const btn = document.getElementById('btnGstToggle');
         const rows = document.querySelectorAll('#invoiceTableBody tr.item-grid-row');
-        
+
         rows.forEach(row => {
             const qtyCell = row.querySelector('.row-qty-cell');
             const gstPctCell = row.querySelector('.row-gstpct-cell');
@@ -576,9 +599,12 @@
         let sumGross = 0;
         let sumGst = 0;
         let sumGrandTotal = 0;
+        let autoSnCounter = 0;
 
         const rows = document.querySelectorAll('#invoiceTableBody tr.item-grid-row');
         rows.forEach(row => {
+            const snCell     = row.querySelector('.row-sn-cell');
+            const descCell   = row.querySelector('.row-desc-cell');
             const qtyCell    = row.querySelector('.row-qty-cell');
             const rateCell   = row.querySelector('.row-rate-cell');
             const grossCell  = row.querySelector('.row-gross-cell');
@@ -586,6 +612,7 @@
             const gstAmtCell = row.querySelector('.row-gstamt-cell');
             const totalCell  = row.querySelector('.row-total-cell');
 
+            const descStr  = descCell ? (descCell.innerText || descCell.textContent || '').trim() : '';
             const qtyStr   = qtyCell ? (qtyCell.innerText || qtyCell.textContent || '').trim() : '';
             const rateStr  = rateCell ? (rateCell.innerText || rateCell.textContent || '').trim() : '';
             const grossStr = grossCell ? (grossCell.innerText || grossCell.textContent || '').trim() : '';
@@ -593,6 +620,7 @@
 
             const hasQtyInput  = qtyStr !== '';
             const hasRateInput = rateStr !== '';
+            const hasDescInput = descStr !== '';
 
             const qtyVal  = parseNum(qtyStr);
             const rateVal = parseNum(rateStr);
@@ -601,40 +629,42 @@
             let effectiveQty = 0;
             let isRowActive = false;
 
-            if (hasQtyInput) {
-                effectiveQty = qtyVal;
-                if (qtyStr === '0' || qtyVal === 0) {
-                    effectiveQty = 0;
-                    isRowActive = true;
-                } else if (qtyVal > 0) {
-                    isRowActive = true;
-                }
-            } else if (hasRateInput && rateVal > 0) {
-                effectiveQty = 1;
+            if (hasDescInput || hasQtyInput || (hasRateInput && rateVal > 0) || (totalStr !== '' && parseNum(totalStr) > 0)) {
                 isRowActive = true;
             }
 
             if (isRowActive) {
+                autoSnCounter++;
+                if (snCell) {
+                    snCell.innerText = autoSnCounter;
+                }
+
+                if (hasQtyInput) {
+                    effectiveQty = qtyVal;
+                    if (qtyStr === '0' || qtyVal === 0) {
+                        effectiveQty = 0;
+                    }
+                } else if (hasRateInput && rateVal > 0) {
+                    effectiveQty = 1;
+                }
+
                 const grossAmt = round2(effectiveQty * rateVal);
                 const gstAmt   = round2(grossAmt * (gstPct / 100));
                 const rowTotal = round2(grossAmt + gstAmt);
 
-                if (grossCell) grossCell.innerText = grossAmt.toFixed(2);
-                if (gstAmtCell) gstAmtCell.innerText = gstAmt.toFixed(2);
-                if (totalCell) totalCell.innerText = rowTotal.toFixed(2);
+                if (grossCell && (hasQtyInput || hasRateInput)) grossCell.innerText = grossAmt.toFixed(2);
+                if (gstAmtCell && (hasQtyInput || hasRateInput)) gstAmtCell.innerText = gstAmt.toFixed(2);
+                if (totalCell && (hasQtyInput || hasRateInput)) totalCell.innerText = rowTotal.toFixed(2);
 
-                sumGross      = round2(sumGross + grossAmt);
-                sumGst        = round2(sumGst + gstAmt);
-                sumGrandTotal = round2(sumGrandTotal + rowTotal);
-            } else if (totalStr !== '' && parseNum(totalStr) > 0) {
-                const manualTotal = round2(parseNum(totalStr));
-                const manualGross = round2(parseNum(grossStr !== '' ? grossStr : manualTotal));
-                const manualGst   = round2(parseNum(gstAmtCell ? (gstAmtCell.innerText || gstAmtCell.textContent) : 0));
+                const finalGross = round2(parseNum(grossCell ? (grossCell.innerText || grossCell.textContent) : grossAmt));
+                const finalGst   = round2(parseNum(gstAmtCell ? (gstAmtCell.innerText || gstAmtCell.textContent) : gstAmt));
+                const finalTotal = round2(parseNum(totalCell ? (totalCell.innerText || totalCell.textContent) : rowTotal));
 
-                sumGrandTotal = round2(sumGrandTotal + manualTotal);
-                sumGross      = round2(sumGross + manualGross);
-                sumGst        = round2(sumGst + manualGst);
+                sumGross      = round2(sumGross + finalGross);
+                sumGst        = round2(sumGst + finalGst);
+                sumGrandTotal = round2(sumGrandTotal + finalTotal);
             } else {
+                if (snCell) snCell.innerText = '';
                 if (grossCell) grossCell.innerText = '';
                 if (gstAmtCell) gstAmtCell.innerText = '';
                 if (totalCell) totalCell.innerText = '';
@@ -717,7 +747,10 @@
         }
     }
 
+    let currentDocType = '{{ $repair->doc_type ?? "invoice" }}';
+
     function toggleDocType(type) {
+        currentDocType = type;
         const qBox = document.getElementById('chkQuotation');
         const iBox = document.getElementById('chkInvoice');
         if (type === 'quotation') {
@@ -726,6 +759,117 @@
         } else {
             qBox.innerHTML = '';
             iBox.innerHTML = '&#10004;';
+        }
+    }
+
+    async function saveInvoiceData() {
+        const btn = document.getElementById('btnSaveInvoice');
+        const origText = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Saving...';
+        }
+
+        try {
+            const rows = [];
+            const trs = document.querySelectorAll('#invoiceTableBody tr.item-grid-row');
+            trs.forEach(tr => {
+                const snCell = tr.querySelector('.row-sn-cell');
+                const descCell = tr.querySelector('.row-desc-cell');
+                const qtyCell = tr.querySelector('.row-qty-cell');
+                const rateCell = tr.querySelector('.row-rate-cell');
+                const grossCell = tr.querySelector('.row-gross-cell');
+                const gstPctCell = tr.querySelector('.row-gstpct-cell');
+                const gstAmtCell = tr.querySelector('.row-gstamt-cell');
+                const totalCell = tr.querySelector('.row-total-cell');
+
+                const desc = descCell ? (descCell.innerText || descCell.textContent || '').trim() : '';
+                const qty = parseNum(qtyCell ? (qtyCell.innerText || qtyCell.textContent) : 0);
+                const rate = parseNum(rateCell ? (rateCell.innerText || rateCell.textContent) : 0);
+                const gross = parseNum(grossCell ? (grossCell.innerText || grossCell.textContent) : 0);
+                const gstPct = parseNum(gstPctCell ? (gstPctCell.innerText || gstPctCell.textContent) : 0);
+                const gstAmt = parseNum(gstAmtCell ? (gstAmtCell.innerText || gstAmtCell.textContent) : 0);
+                const total = parseNum(totalCell ? (totalCell.innerText || totalCell.textContent) : 0);
+
+                if (desc !== '' || total > 0 || qty > 0) {
+                    rows.push({
+                        sn: snCell ? (snCell.innerText || snCell.textContent || '').trim() : '',
+                        desc: desc,
+                        qty: qty,
+                        rate: rate,
+                        gross: gross,
+                        gst_pct: gstPct,
+                        gst_amt: gstAmt,
+                        total: total
+                    });
+                }
+            });
+
+            const grandTotalVal = parseNum(document.getElementById('grandTotalVal')?.innerText || 0);
+            const advanceVal = parseNum(document.getElementById('advanceVal')?.innerText || 0);
+            const balanceVal = parseNum(document.getElementById('balanceVal')?.innerText || 0);
+
+            const customerNameCell = document.querySelector('.meta-lines .line-field[style*="width: calc"]');
+            const customerName = customerNameCell ? customerNameCell.innerText.trim() : '';
+
+            const dateCell = document.querySelector('.meta-lines .meta-line-row div:nth-child(2) .line-field');
+            const receivedDate = dateCell ? dateCell.innerText.trim() : '';
+
+            const payload = {
+                _token: '{{ csrf_token() }}',
+                doc_type: currentDocType,
+                items: rows,
+                total_charges: grandTotalVal,
+                advance_paid: advanceVal,
+                due_amount: balanceVal,
+                customer_name: customerName,
+                received_date: receivedDate
+            };
+
+            const response = await fetch('{{ route("repair.save.a4", $repair->id) }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const resData = await response.json();
+
+            if (response.ok && resData.status === 'success') {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Saved Successfully',
+                        text: resData.message,
+                        timer: 2500,
+                        showConfirmButton: false,
+                        toast: true,
+                        position: 'top-end'
+                    });
+                } else {
+                    alert(resData.message);
+                }
+            } else {
+                throw new Error(resData.message || 'Error occurred while saving invoice');
+            }
+        } catch (err) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Save Failed',
+                    text: err.message,
+                });
+            } else {
+                alert('Save Failed: ' + err.message);
+            }
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = origText;
+            }
         }
     }
 

@@ -707,7 +707,10 @@ body{
                 $h2=(float)($item['height']??0);$w2=(float)($item['width']??0);
                 if($sm=='by_size'&&$h2>0&&$w2>0) $specs[]=['Dimensions',number_format($w2,0).'×'.number_format($h2,0).' mm'];
                 if($wg>0) $specs[]=['Weight',($wg==(int)$wg?(int)$wg:$wg).'g'];
-                if($disc>0) $specs[]=['Discount', ($discP>0 ? number_format($discP,1).'%' : 'Applied')];
+                if($disc > 0) {
+                    $discLabel = 'Discount' . ($discP > 0 ? ' (' . (float)$discP . '%)' : '');
+                    $specs[] = [$discLabel, '', true];
+                }
 
                 $globalTaxPct = (float)($sale->tax_percent ?? 0);
                 $globalTaxAmt = (float)($sale->tax_amount ?? 0);
@@ -743,10 +746,17 @@ body{
                             Specifications &amp; Details:
                         </div>
                         <ul class="ispec-ul" style="list-style: none; padding: 0; margin: 0; font-size: 9px; color: #334155; line-height: 1.45;">
-                            @foreach($specs as [$l, $v])
+                            @foreach($specs as $sp)
+                                @php
+                                    $l = $sp[0];
+                                    $v = $sp[1];
+                                    $isRed = $sp[2] ?? false;
+                                @endphp
                                 <li style="margin-bottom: 1.5px; padding-left: 0;">
-                                    <strong style="color: #1e3a8a; font-weight: 700;">{{ $l }}:</strong> 
-                                    <span style="color: #1e293b;">{{ $v }}</span>
+                                    <strong style="color: {{ $isRed ? '#c62828' : '#1e3a8a' }}; font-weight: 700;">{{ $l }}{{ $v !== '' ? ':' : '' }}</strong> 
+                                    @if($v !== '')
+                                        <span style="color: {{ $isRed ? '#c62828' : '#1e293b' }}; font-weight: {{ $isRed ? '700' : '400' }};">{{ $v }}</span>
+                                    @endif
                                 </li>
                             @endforeach
                         </ul>
@@ -755,16 +765,18 @@ body{
                 </td>
                 <td class="tc">{{ $qd }}</td>
                 <td class="tr">{{ number_format($item['price'],2) }}</td>
-                <td class="tr">{{ number_format($gross,2) }}</td>
+                <td class="tr" style="vertical-align: top; position: relative; padding-bottom: {{ $disc > 0 ? '22px' : '4.5px' }};">
+                    <div>{{ number_format($gross, 2) }}</div>
+                    @if($disc > 0)
+                        <div style="position: absolute; bottom: 4px; right: 6px; font-size: 9px; font-weight: 700; color: #c62828; white-space: nowrap;">
+                            -{{ number_format($disc, 2) }}
+                        </div>
+                    @endif
+                </td>
                 <td class="tc">{{ $itemTaxPct > 0 ? (float)$itemTaxPct.'%' : '0%' }}</td>
                 <td class="tr">{{ $itemTaxAmt > 0 ? number_format($itemTaxAmt,2) : '0.00' }}</td>
                 <td class="tr" style="font-weight:700; vertical-align:top; height:100%;">
                     <div style="font-size:10.5px; color:#0f172a; font-weight:700;">{{ $currency }} {{ number_format($itemTotalWithTax,0) }}</div>
-                    @if($disc > 0)
-                        <div style="font-size:8.5px; font-weight:700; color:#c62828; margin-top: 56px;">
-                            -{{ number_format($disc,2) }} {{ $currency }}
-                        </div>
-                    @endif
                 </td>
             </tr>
             @endforeach
@@ -788,15 +800,12 @@ body{
             @php
                 $displayGrandTaxAmt = ($sale->tax_amount ?? 0) > 0 ? (float)$sale->tax_amount : $totalTableTax;
                 $displayGrandTaxPct = ($sale->tax_percent ?? 0) > 0 ? (float)$sale->tax_percent : ($displayGrandTaxAmt > 0 && $subTotal > 0 ? round(($displayGrandTaxAmt / $subTotal) * 100, 2) : 0);
-                $grossItemsSum = collect($saleItems)->sum(function($it) {
-                    $disc = (float)($it['discount_amount'] ?? 0);
-                    return (float)($it['total'] ?? 0) + $disc;
-                });
-                $netItemsSum = collect($saleItems)->sum('total') + $displayGrandTaxAmt - $exAmt;
+                $netItemsSubtotal = collect($saleItems)->sum('total');
+                $netItemsSum = $netItemsSubtotal + $displayGrandTaxAmt - $exAmt;
             @endphp
             <tr class="gt-row">
                 <td colspan="4" class="gt-lbl" style="text-align:right;padding-right:10px;">Grand Total &nbsp;&nbsp; ({{ $currency }})</td>
-                <td class="tr" style="font-weight:700;">{{ number_format($grossItemsSum,2) }}</td>
+                <td class="tr" style="font-weight:700;">{{ number_format($netItemsSubtotal, 2) }}</td>
                 <td class="tc" style="font-weight:700">{{ $displayGrandTaxPct > 0 ? (float)$displayGrandTaxPct.'%' : '0%' }}</td>
                 <td class="tr" style="font-weight:700">{{ $displayGrandTaxAmt > 0 ? number_format($displayGrandTaxAmt,2) : '0.00' }}</td>
                 <td class="gt-val">{{ number_format($netItemsSum,0) }}</td>

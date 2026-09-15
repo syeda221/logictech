@@ -454,6 +454,15 @@ class RepairController extends Controller
     }
 
     /**
+     * Print A4 Technical Job Sheet & Customer Intake Receipt.
+     */
+    public function printJobSheet($id)
+    {
+        $repair = RepairOrder::with(['customer', 'product', 'advanceAccount', 'finalAccount', 'receiver', 'deliverer'])->findOrFail($id);
+        return view('admin_panel.repair.print_jobsheet', compact('repair'));
+    }
+
+    /**
      * Helper to create double-entry receipt voucher
      */
     protected function recordPaymentVoucher(RepairOrder $repair, int $accountId, float $amount, string $date, string $narration)
@@ -499,6 +508,205 @@ class RepairController extends Controller
 
         } catch (\Exception $e) {
             \Log::warning("RepairController voucher creation failed: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Save edited A4 Invoice or Quotation details & update Accounts/Ledger if Invoice.
+     */
+    public function saveA4(Request $request, $id)
+    {
+        $repair = RepairOrder::findOrFail($id);
+
+        $validated = $request->validate([
+            'doc_type' => 'required|in:quotation,invoice',
+            'items' => 'nullable|array',
+            'total_charges' => 'nullable|numeric|min:0',
+            'advance_paid' => 'nullable|numeric|min:0',
+            'due_amount' => 'nullable|numeric|min:0',
+            'customer_name' => 'nullable|string|max:255',
+            'received_date' => 'nullable|string',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $docType = $validated['doc_type'];
+            $repair->doc_type = $docType;
+
+            if (isset($validated['total_charges'])) {
+                $repair->total_charges = (float)$validated['total_charges'];
+                $repair->estimated_cost = (float)$validated['total_charges'];
+            }
+
+            if (isset($validated['advance_paid'])) {
+                $repair->advance_paid = (float)$validated['advance_paid'];
+            }
+
+            if (isset($validated['due_amount'])) {
+                $repair->due_amount = (float)$validated['due_amount'];
+            }
+
+            if (!empty($validated['customer_name'])) {
+                $repair->customer_name = trim($validated['customer_name']);
+            }
+
+            if (!empty($validated['received_date'])) {
+                try {
+                    $repair->received_date = date('Y-m-d', strtotime($validated['received_date']));
+                } catch (\Exception $e) {}
+            }
+
+            if (isset($validated['items']) && is_array($validated['items'])) {
+                $repair->problem_description = json_encode($validated['items']);
+                
+                $firstRow = $validated['items'][0] ?? null;
+                if ($firstRow && !empty($firstRow['desc'])) {
+                    $repair->item_name = \Illuminate\Support\Str::limit(trim($firstRow['desc']), 150);
+                }
+            }
+
+            $repair->save();
+
+            // Handle Ledger & Accounts Reflection
+            $remarksQuery = "Repair Invoice #{$repair->repair_no}";
+            
+            // Search for existing Repair Invoice Voucher
+            $existingVoucher = VoucherMaster::where('remarks', $remarksQuery)->first();
+
+            if ($docType === 'quotation') {
+                // If saved as Quotation: DO NOT affect ledger. Remove existing voucher/journal entry if present.
+                if ($existingVoucher) {
+                    \App\Models\JournalEntry::where('source_type', VoucherMaster::class)
+                        ->where('source_id', $existingVoucher->id)
+                        ->delete();
+                    $existingVoucher->details()->delete();
+                    $existingVoucher->delete();
+                }
+            } else {
+                // If saved as Invoice: REFLECT in accounts & ledger!
+                $totalAmount = (float)$repair->total_charges;
+
+                if ($repair->customer_id || $repair->customer_name) {
+                    $balanceService = app(\App\Services\BalanceService::class);
+                    $journalService = app(\App\Services\JournalEntryService::class);
+                    
+                    $receivableAccountId = $balanceService->getAccountsReceivableId();
+                    $salesAccountId = $balanceService->getSalesRevenueId();
+                    $date = $repair->received_date ? $repair->received_date->format('Y-m-d') : date('Y-m-d');
+                    $customer = $repair->customer_id ? Customer::find($repair->customer_id) : null;
+
+                    if ($existingVoucher) {
+                        $voucher = $existingVoucher;
+                        $voucher->update([
+                            'date' => $date,
+                            'party_type' => $customer ? Customer::class : null,
+                            'party_id' => $customer ? $customer->id : null,
+                            'total_amount' => $totalAmount,
+                            'status' => VoucherMaster::STATUS_POSTED,
+                        ]);
+
+                        // Delete existing details & journal entries for clean update
+                        \App\Models\JournalEntry::where('source_type', VoucherMaster::class)
+                            ->where('source_id', $voucher->id)
+                            ->delete();
+                        $voucher->details()->delete();
+                    } else {
+                        $prefix = 'JV';
+                        $year = date('Y');
+                        $lastVoucher = VoucherMaster::where('voucher_type', VoucherMaster::TYPE_JOURNAL)
+                            ->where('voucher_no', 'like', "{$prefix}-{$year}-%")
+                            ->orderBy('id', 'desc')
+                            ->first();
+
+                        $nextNum = 1;
+                        if ($lastVoucher) {
+                            $parts = explode('-', $lastVoucher->voucher_no);
+                            $nextNum = (int)end($parts) + 1;
+                        }
+                        $voucherNo = sprintf('%s-%s-%04d', $prefix, $year, $nextNum);
+
+                        $voucher = VoucherMaster::create([
+                            'voucher_type' => VoucherMaster::TYPE_JOURNAL,
+                            'voucher_no' => $voucherNo,
+                            'date' => $date,
+                            'party_type' => $customer ? Customer::class : null,
+                            'party_id' => $customer ? $customer->id : null,
+                            'total_amount' => $totalAmount,
+                            'remarks' => $remarksQuery,
+                            'status' => VoucherMaster::STATUS_POSTED,
+                            'created_by' => Auth::id(),
+                            'posted_at' => now(),
+                        ]);
+                    }
+
+                    if ($totalAmount > 0) {
+                        // Line 1: Debit Receivable (Customer)
+                        \App\Models\VoucherDetail::create([
+                            'voucher_master_id' => $voucher->id,
+                            'account_id' => $receivableAccountId,
+                            'debit' => $totalAmount,
+                            'credit' => 0,
+                            'narration' => "{$remarksQuery} - {$repair->item_name}",
+                        ]);
+
+                        // Line 2: Credit Repair Revenue
+                        \App\Models\VoucherDetail::create([
+                            'voucher_master_id' => $voucher->id,
+                            'account_id' => $salesAccountId,
+                            'debit' => 0,
+                            'credit' => $totalAmount,
+                            'narration' => "{$remarksQuery} - {$repair->item_name}",
+                        ]);
+
+                        // Journal Entry 1: Dr Receivable with Customer Party
+                        $journalService->recordEntry(
+                            $voucher,
+                            $receivableAccountId,
+                            $totalAmount,
+                            0,
+                            "{$remarksQuery} - {$repair->item_name}",
+                            $date,
+                            $customer
+                        );
+
+                        // Journal Entry 2: Cr Sales Revenue
+                        $journalService->recordEntry(
+                            $voucher,
+                            $salesAccountId,
+                            0,
+                            $totalAmount,
+                            "{$remarksQuery} - {$repair->item_name}",
+                            $date
+                        );
+                    }
+                }
+            }
+
+            // Log activity
+            RepairOrderLog::create([
+                'repair_order_id' => $repair->id,
+                'user_id' => Auth::id(),
+                'action' => 'a4_saved',
+                'to_status' => $repair->status,
+                'amount' => $repair->total_charges,
+                'notes' => "A4 " . ucfirst($docType) . " saved live from screen. Bill: Rs. " . number_format($repair->total_charges, 2) . ($docType === 'quotation' ? ' (Quotation - No Ledger Impact)' : ' (Invoice - Ledger Reflected)'),
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => "Saved successfully as " . ucfirst($docType) . "!" . ($docType === 'quotation' ? " (No ledger impact)" : " (Reflected in accounts & ledger)"),
+                'doc_type' => $docType,
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to save: ' . $e->getMessage(),
+            ], 500);
         }
     }
 }

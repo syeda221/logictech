@@ -202,6 +202,8 @@
             @else
                 Rs. {{ number_format($sale->total_net, 2) }}
             @endif
+        <td class="text-end fw-bold font-monospace text-primary" style="font-size: 0.80rem;">
+            Rs. {{ number_format($salePaid, 2) }}
         </td>
         <td class="text-end font-monospace">
             @if ($balanceIsDue)
@@ -320,7 +322,7 @@
         elseif ($sale->sale_status === 'returned' || $sale->sale_status == 1) $cardBorderColor = '#dc2626';
     @endphp
     <tr class="d-table-row d-md-none border-0">
-        <td colspan="13" class="p-0 border-0 bg-transparent">
+        <td colspan="14" class="p-0 border-0 bg-transparent">
             <div class="sale-mcard p-3 bg-white rounded-3 border mb-3 shadow-sm" style="border-left: 4px solid {{ $cardBorderColor }} !important;">
                 <div class="d-flex align-items-center justify-content-between mb-2">
                     <div class="d-flex align-items-center gap-2">
@@ -355,22 +357,26 @@
                 </div>
 
                 <div class="row g-2 bg-light rounded-2 p-2 my-2 text-center" style="font-size: 0.8rem;">
-                    <div class="col-4">
+                    <div class="col-3">
                         <div class="text-muted small">Subtotal</div>
-                        <div class="fw-bold text-dark font-monospace" style="font-size: 0.75rem;">Rs. {{ number_format($gross_subtotal, 2) }}</div>
+                        <div class="fw-bold text-dark font-monospace" style="font-size: 0.72rem;">Rs. {{ number_format($gross_subtotal, 2) }}</div>
                     </div>
-                    <div class="col-4">
+                    <div class="col-3">
                         <div class="text-muted small">Net Total</div>
-                        <div class="fw-bold text-success font-monospace" style="font-size: 0.75rem;">Rs. {{ number_format($sale->total_net, 2) }}</div>
+                        <div class="fw-bold text-success font-monospace" style="font-size: 0.72rem;">Rs. {{ number_format($sale->total_net, 2) }}</div>
                     </div>
-                    <div class="col-4">
+                    <div class="col-3">
+                        <div class="text-muted small">Payment Rec.</div>
+                        <div class="fw-bold text-primary font-monospace" style="font-size: 0.72rem;">Rs. {{ number_format($salePaid, 2) }}</div>
+                    </div>
+                    <div class="col-3">
                         <div class="text-muted small">Balance</div>
                         @if ($balanceIsDue)
-                            <div class="fw-bold font-monospace" style="color: #dc2626; font-size: 0.75rem;">{{ $balanceDisplayVal }}</div>
+                            <div class="fw-bold font-monospace" style="color: #dc2626; font-size: 0.72rem;">{{ $balanceDisplayVal }}</div>
                         @elseif ($balanceDisplayVal === '-')
-                            <div class="text-muted fw-bold font-monospace" style="font-size: 0.75rem;">-</div>
+                            <div class="text-muted fw-bold font-monospace" style="font-size: 0.72rem;">-</div>
                         @else
-                            <div class="fw-bold text-success font-monospace" style="font-size: 0.75rem;">{{ $balanceDisplayVal }}</div>
+                            <div class="fw-bold text-success font-monospace" style="font-size: 0.72rem;">{{ $balanceDisplayVal }}</div>
                         @endif
                         {!! $balanceBadgeHtml !!}
                     </div>

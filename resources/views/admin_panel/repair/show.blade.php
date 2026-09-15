@@ -165,8 +165,11 @@
                         <a href="{{ route('repair.print.thermal', $repair->id) }}" target="_blank" class="btn btn-outline-dark btn-erp-action bg-white">
                             <i class="fas fa-receipt text-secondary"></i> 80mm Thermal Slip
                         </a>
-                        <a href="{{ route('repair.print.a4', $repair->id) }}" target="_blank" class="btn btn-primary btn-erp-action">
-                            <i class="fas fa-print"></i> Print A4 Invoice / Job Sheet
+                        <a href="{{ route('repair.print.jobsheet', $repair->id) }}" target="_blank" class="btn btn-info text-white btn-erp-action fw-bold">
+                            <i class="fas fa-clipboard-list"></i> Print A4 Job Sheet
+                        </a>
+                        <a href="{{ route('repair.print.a4', $repair->id) }}" target="_blank" class="btn btn-primary btn-erp-action fw-bold">
+                            <i class="fas fa-file-invoice"></i> Print A4 Invoice
                         </a>
 
                         @if ($repair->status !== 'delivered')

@@ -644,6 +644,10 @@
                                                              <a href="{{ route('repair.show', $repair->id) }}" class="btn-erp-table-action" title="View Job Card & Audit Trail">
                                                                  <i class="fas fa-eye"></i>
                                                              </a>
+                                                             {{-- Print A4 Technical Job Sheet --}}
+                                                             <a href="{{ route('repair.print.jobsheet', $repair->id) }}" target="_blank" class="btn-erp-table-action text-info fw-bold bg-light" title="Print A4 Technical Job Sheet">
+                                                                 <i class="fas fa-clipboard-list me-1"></i> Job Sheet
+                                                             </a>
                                                              {{-- Print A4 Invoice --}}
                                                              <a href="{{ route('repair.print.a4', $repair->id) }}" target="_blank" class="btn-erp-table-action text-danger fw-bold bg-light" title="Print LOGICTECH Invoice">
                                                                  <i class="fas fa-file-invoice-dollar me-1"></i> Invoice
