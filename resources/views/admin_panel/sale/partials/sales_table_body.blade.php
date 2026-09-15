@@ -56,9 +56,12 @@
         }
 
         $inline_val = $sale->items ? $sale->items->sum('discount_amount') : 0;
+        $extra_disc = (float)($sale->total_extradiscount ?? 0);
+        $total_sale_discount = $inline_val + $extra_disc;
+
         $bill_amount = $sale->total_bill_amount > 0 ? $sale->total_bill_amount : (float) $sale->per_total;
         $gross_subtotal = $bill_amount + $inline_val;
-        $inline_pct = $gross_subtotal > 0 ? ($inline_val / $gross_subtotal) * 100 : 0;
+        $discount_pct = $gross_subtotal > 0 ? ($total_sale_discount / $gross_subtotal) * 100 : 0;
 
         $collected = $sale->cash - $sale->change;
         $refunded = 0;
@@ -177,15 +180,11 @@
             Rs. {{ number_format($gross_subtotal, 2) }}
         </td>
         <td class="text-end text-dark font-monospace">
-            @if ($sale->total_extradiscount > 0)
-                @php
-                    $add_val = $sale->total_extradiscount;
-                    $add_pct = $bill_amount > 0 ? ($add_val / $bill_amount) * 100 : 0;
-                @endphp
+            @if ($total_sale_discount > 0)
                 <span class="badge rounded-pill border px-1.5 py-0.5" style="background-color: #fffbeb; color: #b45309; border-color: #fde68a !important; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; gap: 2px;">
-                    <i class="fas fa-tag" style="font-size: 8px;"></i> Rs. {{ number_format($add_val, 2) }}
+                    <i class="fas fa-tag" style="font-size: 8px;"></i> Rs. {{ number_format($total_sale_discount, 2) }}
                 </span>
-                <div class="text-muted small mt-0.5" style="font-size: 9px;">({{ number_format($add_pct, 1) }}%)</div>
+                <div class="text-muted small mt-0.5" style="font-size: 9px;">({{ number_format($discount_pct, 1) }}%)</div>
             @else
                 <span class="text-muted" style="font-size: 0.75rem;">Rs. 0.00</span>
             @endif
