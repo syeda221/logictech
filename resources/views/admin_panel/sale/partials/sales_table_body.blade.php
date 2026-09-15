@@ -59,9 +59,17 @@
         $extra_disc = (float)($sale->total_extradiscount ?? 0);
         $total_sale_discount = $inline_val + $extra_disc;
 
+        $saleGstAmt = (float)($sale->tax_amount ?? 0);
+        if ($saleGstAmt <= 0 && $sale->items) {
+            $saleGstAmt = (float)$sale->items->sum('tax_amount');
+        }
         $bill_amount = $sale->total_bill_amount > 0 ? $sale->total_bill_amount : (float) $sale->per_total;
         $gross_subtotal = $bill_amount + $inline_val;
         $discount_pct = $gross_subtotal > 0 ? ($total_sale_discount / $gross_subtotal) * 100 : 0;
+        $saleGstPct = (float)($sale->tax_percent ?? 0);
+        if ($saleGstPct <= 0 && $gross_subtotal > 0 && $saleGstAmt > 0) {
+            $saleGstPct = ($saleGstAmt / $gross_subtotal) * 100;
+        }
 
         $collected = $sale->cash - $sale->change;
         $refunded = 0;
@@ -189,6 +197,18 @@
                 <span class="text-muted" style="font-size: 0.75rem;">Rs. 0.00</span>
             @endif
         </td>
+        <td class="text-end text-dark font-monospace">
+            @if ($saleGstAmt > 0)
+                <span class="badge rounded-pill border px-1.5 py-0.5" style="background-color: #f0f9ff; color: #0369a1; border-color: #bae6fd !important; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; gap: 2px;">
+                    <i class="fas fa-percent" style="font-size: 8px;"></i> Rs. {{ number_format($saleGstAmt, 2) }}
+                </span>
+                @if ($saleGstPct > 0)
+                    <div class="text-muted small mt-0.5" style="font-size: 9px;">({{ number_format($saleGstPct, 1) }}%)</div>
+                @endif
+            @else
+                <span class="text-muted" style="font-size: 0.75rem;">Rs. 0.00</span>
+            @endif
+        </td>
         <td class="text-end fw-bold font-monospace" style="color: #047857; font-size: 0.80rem;">
             @if (isset($isExchange) && $isExchange)
                 @if ($collected > 0)
@@ -202,6 +222,7 @@
             @else
                 Rs. {{ number_format($sale->total_net, 2) }}
             @endif
+        </td>
         <td class="text-end fw-bold font-monospace text-primary" style="font-size: 0.80rem;">
             Rs. {{ number_format($salePaid, 2) }}
         </td>
@@ -322,7 +343,7 @@
         elseif ($sale->sale_status === 'returned' || $sale->sale_status == 1) $cardBorderColor = '#dc2626';
     @endphp
     <tr class="d-table-row d-md-none border-0">
-        <td colspan="14" class="p-0 border-0 bg-transparent">
+        <td colspan="15" class="p-0 border-0 bg-transparent">
             <div class="sale-mcard p-3 bg-white rounded-3 border mb-3 shadow-sm" style="border-left: 4px solid {{ $cardBorderColor }} !important;">
                 <div class="d-flex align-items-center justify-content-between mb-2">
                     <div class="d-flex align-items-center gap-2">

@@ -12,7 +12,7 @@
     $totalBill      = (float)($repair->total_charges > 0 ? $repair->total_charges : ($serviceCharges + $partsCharges));
     $advancePaid    = (float)($repair->advance_paid ?? 0);
     $finalPaid      = (float)($repair->final_paid ?? 0);
-live     $dueAmount      = max(0, $totalBill - $advancePaid);
+    $dueAmount      = max(0, $totalBill - $advancePaid);
 
     if (!function_exists('numberToWordsPhp')) {
         function numberToWordsPhp($num) {

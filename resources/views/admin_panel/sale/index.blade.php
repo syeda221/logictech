@@ -760,6 +760,7 @@
                                         <th class="text-center" style="width: 38px;">Qty</th>
                                         <th class="text-end" style="width: 80px;">Gross</th>
                                         <th class="text-end" style="width: 80px;">Add. Disc</th>
+                                        <th class="text-end" style="width: 80px;">GST</th>
                                         <th class="text-end" style="width: 85px;">Net Total</th>
                                         <th class="text-end" style="width: 100px;">Payment Received</th>
                                         <th class="text-end" style="width: 85px;">Balance</th>
