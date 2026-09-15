@@ -79,6 +79,8 @@
         $balanceIsDue = false;
         $balanceBadgeHtml = '';
 
+        $salePaid = (float)($sale->cash ?? 0) + (float)($sale->card ?? 0);
+
         if ($isOrderCancelled) {
             $balanceDisplayVal = '-';
             $balanceBadgeHtml = '<div class="mt-0.5"><span class="erp-badge state-cancelled" style="font-size: 0.65rem; padding: 1px 6px;"><i class="fas fa-ban me-1"></i>Cancelled</span></div>';
@@ -99,7 +101,6 @@
                 $balanceBadgeHtml = '<div class="mt-0.5"><span class="erp-badge badge-returned" style="font-size: 0.65rem; padding: 1px 6px;"><i class="fas fa-undo me-1"></i>Returned</span></div>';
             }
         } else {
-            $salePaid = (float)($sale->cash ?? 0) + (float)($sale->card ?? 0);
             $saleNet = (float)($sale->total_net ?? 0);
             $retDueAdj = $hasReturns ? (float)$sale->returns->sum('due_adjusted') : 0;
             
