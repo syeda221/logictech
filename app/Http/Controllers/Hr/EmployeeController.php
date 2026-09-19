@@ -30,13 +30,13 @@ class EmployeeController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'first_name' => 'required|string',
-            'last_name' => 'required|string',
-            'phone' => 'required|string|max:11',
-            'email' => 'required|email|max:255|unique:hr_employees,email,'.$request->edit_id,
-            'department_id' => 'required|exists:hr_departments,id',
-            'designation_id' => 'required|exists:hr_designations,id',
-            'joining_date' => 'required|date',
-            'basic_salary' => 'required|numeric',
+            'last_name' => 'nullable|string',
+            'phone' => 'nullable|string|max:20',
+            'email' => 'nullable|email|max:255|unique:hr_employees,email,'.$request->edit_id,
+            'department_id' => 'nullable|exists:hr_departments,id',
+            'designation_id' => 'nullable|exists:hr_designations,id',
+            'joining_date' => 'nullable|date',
+            'basic_salary' => 'nullable|numeric',
             'password' => 'nullable|min:6',
             'punch_gap_minutes' => 'nullable|integer|min:1|max:120',
             'document_degree' => 'nullable|file|mimes:pdf,jpg,png,jpeg|max:2048',
@@ -52,12 +52,53 @@ class EmployeeController extends Controller
 
         $data = $request->except(['document_degree', 'document_certificate', 'document_hsc_marksheet', 'document_ssc_marksheet', 'document_cv', 'password', 'casual_leave_days']);
         $data['is_docs_submitted'] = $request->has('is_docs_submitted') ? 1 : 0;
+        $data['last_name'] = $request->last_name ?? '';
+        // Default Department and Designation if omitted
+        if (empty($request->department_id)) {
+            $defaultDept = Department::firstOrCreate(['name' => 'General']);
+            $data['department_id'] = $defaultDept->id;
+        } else {
+            $data['department_id'] = $request->department_id;
+        }
+
+        if (empty($request->designation_id)) {
+            $defaultDesig = Designation::firstOrCreate(['name' => 'General']);
+            $data['designation_id'] = $defaultDesig->id;
+        } else {
+            $data['designation_id'] = $request->designation_id;
+        }
+        $data['joining_date'] = $request->joining_date ?: date('Y-m-d');
+        $data['status'] = $request->status ?: 'active';
+
+        $basicSalaryAmount = $request->basic_salary !== null ? floatval($request->basic_salary) : 0;
+        if (\Illuminate\Support\Facades\Schema::hasColumn('hr_employees', 'basic_salary')) {
+            $data['basic_salary'] = $basicSalaryAmount;
+        } else {
+            unset($data['basic_salary']);
+        }
+
+        // Auto-generate email if not provided
+        $email = $request->email;
+        if (empty($email)) {
+            if ($request->filled('edit_id')) {
+                $empExisting = Employee::find($request->edit_id);
+                $email = $empExisting->email ?? ('emp_'.time().'@logictech.local');
+            } else {
+                $cleanName = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $request->first_name));
+                $email = ($cleanName ?: 'emp').'_'.time().'_'.rand(100, 999).'@logictech.local';
+            }
+        }
+        $data['email'] = $email;
+        $fullName = trim($request->first_name.' '.($request->last_name ?? ''));
 
         // Handle Custom Shift Logic
         if ($request->shift_id === 'custom') {
             $data['shift_id'] = null; // No standard shift assigned
+        } elseif (! empty($request->shift_id)) {
+            $data['custom_start_time'] = null;
+            $data['custom_end_time'] = null;
         } else {
-            // Standard shift assigned, clear custom times
+            $data['shift_id'] = null;
             $data['custom_start_time'] = null;
             $data['custom_end_time'] = null;
         }
@@ -72,8 +113,8 @@ class EmployeeController extends Controller
             if ($employee->user_id) {
                 $user = \App\Models\User::find($employee->user_id);
                 if ($user) {
-                    $user->email = $request->email;
-                    $user->name = $request->first_name.' '.$request->last_name;
+                    $user->email = $email;
+                    $user->name = $fullName;
                     if ($request->filled('password')) {
                         $user->password = \Illuminate\Support\Facades\Hash::make($request->password);
                     }
@@ -87,14 +128,26 @@ class EmployeeController extends Controller
                 return response()->json(['error' => 'Unauthorized action.'], 403);
             }
             // Create User Account
+            $pwd = $request->filled('password') ? $request->password : '12345678';
             $user = \App\Models\User::create([
-                'name' => $request->first_name.' '.$request->last_name,
-                'email' => $request->email,
-                'password' => \Illuminate\Support\Facades\Hash::make($request->password),
+                'name' => $fullName,
+                'email' => $email,
+                'password' => \Illuminate\Support\Facades\Hash::make($pwd),
             ]);
 
             $data['user_id'] = $user->id;
             $employee = Employee::create($data);
+        }
+
+        // Always sync Salary Structure so payroll calculations work seamlessly
+        if ($request->has('basic_salary')) {
+            \App\Models\Hr\SalaryStructure::updateOrCreate(
+                ['employee_id' => $employee->id],
+                [
+                    'base_salary' => floatval($request->basic_salary ?: 0),
+                    'salary_type' => 'salary',
+                ]
+            );
         }
 
         // Handle File Uploads (Create/Update in hr_employee_documents)

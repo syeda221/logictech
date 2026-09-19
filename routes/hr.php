@@ -66,6 +66,13 @@ Route::middleware(['auth'])->prefix('hr')->name('hr.')->group(function () {
 
     // Payroll
     Route::get('payroll', [PayrollController::class, 'index'])->name('payroll.index')->middleware('permission:hr.payroll.view');
+    Route::get('payroll/history', [PayrollController::class, 'history'])->name('payroll.history')->middleware('permission:hr.payroll.view');
+    Route::get('payroll/employee-ledger', [PayrollController::class, 'employeeLedger'])->name('payroll.employee-ledger')->middleware('permission:hr.payroll.view');
+    Route::get('payroll/print-employee-ledger', [PayrollController::class, 'printEmployeeLedger'])->name('payroll.print-employee-ledger')->middleware('permission:hr.payroll.view');
+    Route::post('payroll/give-advance', [PayrollController::class, 'giveAdvance'])->name('payroll.give-advance')->middleware('permission:hr.payroll.create|hr.payroll.edit');
+    Route::get('payroll/print-summary', [PayrollController::class, 'printSummary'])->name('payroll.print-summary')->middleware('permission:hr.payroll.view');
+    Route::get('payroll/{payroll}/payslip', [PayrollController::class, 'payslip'])->name('payroll.payslip')->middleware('permission:hr.payroll.view');
+    Route::post('payroll/save-sheet', [PayrollController::class, 'saveSheet'])->name('payroll.save-sheet')->middleware('permission:hr.payroll.create|hr.payroll.edit');
     Route::get('payroll/monthly', [PayrollController::class, 'monthly'])->name('payroll.monthly')->middleware('permission:hr.payroll.view');
     Route::get('payroll/daily', [PayrollController::class, 'daily'])->name('payroll.daily')->middleware('permission:hr.payroll.view');
     Route::get('payroll/{payroll}/details', [PayrollController::class, 'details'])->name('payroll.details')->middleware('permission:hr.payroll.view');

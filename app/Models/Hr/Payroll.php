@@ -16,7 +16,15 @@ class Payroll extends Model
         'employee_id',
         'payroll_type',
         'month',
+        'p_days',
         'basic_salary',
+        'salary_count',
+        'overtime_hours',
+        'overtime_days',
+        'overtime_pay',
+        'total_pay',
+        'advances',
+        'other_allowance',
         'gross_salary',
         'allowances',
         'deductions',
@@ -27,6 +35,10 @@ class Payroll extends Model
         'carried_forward_to_next',
         'bonuses',
         'net_salary',
+        'payment_this_month',
+        'closing_balance',
+        'previous_advance_balance',
+        'account_id',
         'notes',
         'auto_generated',
         'status',
@@ -39,6 +51,17 @@ class Payroll extends Model
         'auto_generated' => 'boolean',
         'reviewed_at' => 'datetime',
         'payment_date' => 'date',
+        'p_days' => 'float',
+        'salary_count' => 'float',
+        'overtime_hours' => 'float',
+        'overtime_days' => 'float',
+        'overtime_pay' => 'float',
+        'total_pay' => 'float',
+        'advances' => 'float',
+        'previous_advance_balance' => 'float',
+        'other_allowance' => 'float',
+        'payment_this_month' => 'float',
+        'closing_balance' => 'float',
     ];
 
     /**
@@ -47,6 +70,11 @@ class Payroll extends Model
     public function employee()
     {
         return $this->belongsTo(Employee::class);
+    }
+
+    public function account()
+    {
+        return $this->belongsTo(\App\Models\Account::class, 'account_id');
     }
 
     public function details()

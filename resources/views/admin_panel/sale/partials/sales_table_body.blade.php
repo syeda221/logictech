@@ -147,7 +147,6 @@
 
     {{-- Desktop Table Row (≥ 768px) --}}
     <tr class="border-bottom-0 d-none d-md-table-row">
-        <td class="ps-2 text-center" data-sort="{{ $sale->id }}"><span class="erp-bill-tag">#{{ $sale->id }}</span></td>
         <td>
             <div class="d-flex align-items-center gap-1.5" style="max-width: 140px;">
                 <div class="erp-avatar {{ $isWalkin ? 'erp-avatar-walkin' : 'erp-avatar-registered' }}">

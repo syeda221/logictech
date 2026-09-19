@@ -37,6 +37,7 @@ class Employee extends Model
         'last_device_sync_at',
         'punch_gap_minutes',
         'pending_deductions',
+        'basic_salary',
     ];
 
     protected $casts = [
@@ -130,7 +131,11 @@ class Employee extends Model
      */
     public function getSalaryStructureAttribute()
     {
-        return $this->activeSalaryStructure ? $this->activeSalaryStructure->salaryStructure : null;
+        if ($this->activeSalaryStructure && $this->activeSalaryStructure->salaryStructure) {
+            return $this->activeSalaryStructure->salaryStructure;
+        }
+
+        return SalaryStructure::where('employee_id', $this->id)->latest()->first();
     }
 
     /**
@@ -143,7 +148,21 @@ class Employee extends Model
 
     public function getFullNameAttribute()
     {
-        return "{$this->first_name} {$this->last_name}";
+        return trim("{$this->first_name} {$this->last_name}");
+    }
+
+    public function getBasicSalaryAttribute()
+    {
+        if (array_key_exists('basic_salary', $this->attributes) && $this->attributes['basic_salary'] !== null && floatval($this->attributes['basic_salary']) > 0) {
+            return floatval($this->attributes['basic_salary']);
+        }
+
+        $structure = $this->salaryStructure;
+        if ($structure && floatval($structure->base_salary) > 0) {
+            return floatval($structure->base_salary);
+        }
+
+        return 0;
     }
 
     /**

@@ -23,90 +23,100 @@
         /* Page Layout */
         .erp-page-header {
             margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border: 1px solid #e2e8f0;
+            padding: 1.25rem 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
         }
         .erp-title {
-            font-size: 1.35rem;
-            font-weight: 700;
+            font-size: 1.45rem;
+            font-weight: 800;
             color: #0f172a;
             letter-spacing: -0.02em;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.6rem;
         }
         .erp-subtitle {
-            font-size: 0.815rem;
+            font-size: 0.825rem;
             color: #64748b;
-            margin-top: 0.15rem;
+            margin-top: 0.2rem;
             margin-bottom: 0;
+            font-weight: 500;
         }
 
         /* Top Action Buttons */
         .btn-erp-primary {
-            background-color: #2563eb;
-            border: 1px solid #1d4ed8;
+            background: linear-gradient(135deg, #4f46e5 0%, #2563eb 100%);
+            border: none;
             color: #ffffff !important;
-            font-weight: 600;
-            font-size: 0.815rem;
-            border-radius: 8px;
-            padding: 0.5rem 1rem;
-            box-shadow: 0 1px 2px rgba(37, 99, 235, 0.2);
-            transition: all 0.15s ease;
+            font-weight: 700;
+            font-size: 0.825rem;
+            border-radius: 10px;
+            padding: 0.6rem 1.15rem;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+            transition: all 0.2s ease;
             display: inline-flex;
             align-items: center;
-            gap: 0.4rem;
+            gap: 0.5rem;
         }
         .btn-erp-primary:hover {
-            background-color: #1d4ed8;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3);
+            background: linear-gradient(135deg, #4338ca 0%, #1d4ed8 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
         }
 
         .btn-erp-outline {
             background-color: #ffffff;
-            border: 1px solid #cbd5e1;
+            border: 1.5px solid #cbd5e1;
             color: #334155 !important;
-            font-weight: 600;
-            font-size: 0.815rem;
-            border-radius: 8px;
-            padding: 0.5rem 0.9rem;
-            transition: all 0.15s ease;
+            font-weight: 700;
+            font-size: 0.825rem;
+            border-radius: 10px;
+            padding: 0.55rem 1rem;
+            transition: all 0.2s ease;
             display: inline-flex;
             align-items: center;
-            gap: 0.4rem;
+            gap: 0.5rem;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
         }
         .btn-erp-outline:hover {
             background-color: #f8fafc;
             border-color: #94a3b8;
             color: #0f172a !important;
+            transform: translateY(-1px);
         }
 
         .btn-erp-outline-danger {
             background-color: #ffffff;
-            border: 1px solid #fca5a5;
+            border: 1.5px solid #fca5a5;
             color: #dc2626 !important;
-            font-weight: 600;
-            font-size: 0.815rem;
-            border-radius: 8px;
-            padding: 0.5rem 0.9rem;
-            transition: all 0.15s ease;
+            font-weight: 700;
+            font-size: 0.825rem;
+            border-radius: 10px;
+            padding: 0.55rem 1rem;
+            transition: all 0.2s ease;
             display: inline-flex;
             align-items: center;
-            gap: 0.4rem;
+            gap: 0.5rem;
+            box-shadow: 0 1px 2px rgba(220, 38, 38, 0.05);
         }
         .btn-erp-outline-danger:hover {
             background-color: #fef2f2;
             border-color: #f87171;
             color: #b91c1c !important;
+            transform: translateY(-1px);
         }
 
         /* KPI Metric Cards */
         .erp-kpi-card {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 1.15rem 1.25rem;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+            border: 1.5px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 1.2rem 1.35rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             height: 100%;
             display: flex;
             align-items: center;
@@ -114,48 +124,49 @@
         }
         .erp-kpi-card:hover {
             border-color: #cbd5e1;
-            box-shadow: 0 6px 16px -2px rgba(0, 0, 0, 0.07);
-            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+            transform: translateY(-3px);
         }
         .erp-kpi-label {
             font-size: 0.72rem;
-            font-weight: 700;
+            font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.06em;
             color: #64748b;
             margin-bottom: 0.35rem;
         }
         .erp-kpi-value {
-            font-size: 1.35rem;
-            font-weight: 700;
+            font-size: 1.45rem;
+            font-weight: 800;
             line-height: 1.2;
             color: #0f172a;
             letter-spacing: -0.02em;
         }
         .erp-kpi-icon {
-            width: 44px;
-            height: 44px;
-            border-radius: 10px;
+            width: 46px;
+            height: 46px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.15rem;
+            font-size: 1.25rem;
             flex-shrink: 0;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
         }
 
         /* Filter Panel Single-Row System */
         .erp-filter-card {
             background-color: #ffffff;
-            border: 1.5px solid #dbeafe;
-            border-radius: 12px;
-            padding: 0.85rem 1rem;
+            border: 1.5px solid #e0e7ff;
+            border-radius: 14px;
+            padding: 0.9rem 1.15rem;
             margin-bottom: 1.25rem;
-            box-shadow: 0 1px 4px rgba(37, 99, 235, 0.05);
+            box-shadow: 0 4px 16px rgba(79, 70, 229, 0.04);
         }
         .erp-filter-single-row {
             display: flex;
             align-items: flex-end;
-            gap: 8px;
+            gap: 10px;
             width: 100%;
             flex-wrap: nowrap;
         }
@@ -167,17 +178,17 @@
         }
         .erp-item-quick { flex: 1.1; min-width: 105px; }
         .erp-item-date { flex: 1; min-width: 95px; }
-        .erp-item-bill, .erp-item-serial { flex: 0.9; min-width: 95px; }
+        .erp-item-bill, .erp-item-serial { flex: 1; min-width: 110px; }
         .erp-item-status { flex: 1.1; min-width: 105px; }
-        .erp-item-customer { flex: 1.3; min-width: 125px; }
+        .erp-item-customer { flex: 1.4; min-width: 135px; }
         .erp-item-actions {
             flex: 0 0 auto;
             margin-left: auto;
         }
         .erp-filter-label {
-            font-size: 0.68rem;
-            font-weight: 700;
-            color: #1e40af;
+            font-size: 0.70rem;
+            font-weight: 800;
+            color: #3730a3;
             text-transform: uppercase;
             letter-spacing: 0.04em;
             margin-bottom: 0.3rem;
@@ -704,14 +715,9 @@
                                     <input type="text" class="form-control erp-filter-input datepicker-custom bg-white" name="to_date" id="filter_to_date" placeholder="dd/mm/yy">
                                 </div>
 
-                                <div class="erp-filter-item erp-item-bill">
-                                    <label class="erp-filter-label"><i class="fas fa-hashtag text-primary"></i> Bill#</label>
-                                    <input type="text" class="form-control erp-filter-input" name="bill_no" id="filter_bill_no" placeholder="Bill ID...">
-                                </div>
-
                                 <div class="erp-filter-item erp-item-serial">
-                                    <label class="erp-filter-label"><i class="fas fa-barcode text-primary"></i> Serial No</label>
-                                    <input type="text" class="form-control erp-filter-input" name="serial_no" id="filter_serial_no" placeholder="Serial No...">
+                                    <label class="erp-filter-label"><i class="fas fa-barcode text-primary"></i> Serial / Search</label>
+                                    <input type="text" class="form-control erp-filter-input" name="serial_no" id="filter_serial_no" placeholder="Serial / Product...">
                                 </div>
 
                                 <div class="erp-filter-item erp-item-status">
@@ -753,8 +759,7 @@
                             <table id="sales-table" class="table erp-table datanew" style="width:100%">
                                 <thead>
                                     <tr>
-                                        <th class="ps-2 text-center" style="width: 50px;">Bill#</th>
-                                        <th style="min-width: 110px;">Customer</th>
+                                        <th style="min-width: 120px;">Customer</th>
                                         <th style="min-width: 75px;">Serial No</th>
                                         <th style="min-width: 100px;">Products</th>
                                         <th class="text-center" style="width: 38px;">Qty</th>

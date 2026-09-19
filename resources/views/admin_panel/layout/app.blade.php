@@ -1039,6 +1039,11 @@
                                                         class="fa-solid fa-truck"></i> Vendor Ledger</a></li>
                                         @endcan
 
+                                        @can('hr.payroll.view')
+                                            <li><a href="{{ route('report.employee-ledger') }}"><i
+                                                        class="fa-solid fa-user-gear text-primary"></i> Employee Ledger</a></li>
+                                        @endcan
+
 
                                         @can('inventory.onhand.view')
                                             <li><a href="{{ route('reports.onhand') }}"><i class="fas fa-warehouse"></i>
@@ -1126,7 +1131,11 @@
                                         @endcan
                                         @can('hr.payroll.view')
                                             <li><a href="{{ route('hr.payroll.index') }}"><i
-                                                        class="fa-solid fa-money-check-alt"></i> Payroll</a></li>
+                                                        class="fa-solid fa-table"></i> Payroll Sheet</a></li>
+                                            <li><a href="{{ route('hr.payroll.history') }}"><i
+                                                        class="fa-solid fa-history"></i> Payroll History</a></li>
+                                            <li><a href="{{ route('hr.payroll.employee-ledger') }}"><i
+                                                        class="fa-solid fa-file-invoice-dollar"></i> Employee Ledger</a></li>
                                         @endcan
                                         @can('hr.leaves.view')
                                             <li><a href="{{ route('hr.leaves.index') }}"><i

@@ -17,7 +17,7 @@
                         <p class="page-subtitle">Manage your organization's employee database</p>
                     </div>
                     @can('hr.employees.create')
-                        <button type="button" class="btn btn-create" id="createBtn">
+                        <button type="button" class="btn btn-create" id="createBtn" data-toggle="modal" data-target="#employeeModal" data-bs-toggle="modal" data-bs-target="#employeeModal">
                             <i class="fa fa-user-plus"></i> Add Employee
                         </button>
                     @endcan
@@ -104,14 +104,19 @@
                                 <div class="hr-item-header">
                                     <div class="d-flex align-items-center">
                                         <div class="hr-avatar">
-                                            {{ strtoupper(substr($emp->first_name, 0, 1) . substr($emp->last_name, 0, 1)) }}
+                                            {{ strtoupper(substr($emp->first_name, 0, 1) . substr($emp->last_name ?: $emp->first_name, 0, 1)) }}
                                         </div>
                                         <div class="hr-item-info">
-                                            <h4 class="hr-item-name">{{ $emp->full_name }}</h4>
-                                            <div class="hr-item-subtitle">{{ $emp->email }}</div>
-                                            <div class="hr-item-meta">
-                                                ID: {{ $emp->id }} • Joined
-                                                {{ \Carbon\Carbon::parse($emp->joining_date)->format('d/m/Y') }}
+                                            <h4 class="hr-item-name mb-0">{{ $emp->full_name }}</h4>
+                                            <div class="hr-item-subtitle text-primary fw-semibold" style="font-size: 0.85rem;">
+                                                @if($emp->phone)
+                                                    <i class="fa fa-phone me-1"></i>{{ $emp->phone }}
+                                                @else
+                                                    <i class="fa fa-envelope me-1 text-muted"></i><span class="text-muted">{{ $emp->email }}</span>
+                                                @endif
+                                            </div>
+                                            <div class="hr-item-meta text-muted" style="font-size: 0.75rem;">
+                                                ID: {{ $emp->id }} @if($emp->joining_date) • Joined {{ \Carbon\Carbon::parse($emp->joining_date)->format('d/m/Y') }} @endif
                                             </div>
                                         </div>
                                     </div>
@@ -133,28 +138,30 @@
                                         @endcan
                                     </div>
                                 </div>
-                                <div class="hr-tags">
-                                    <span class="hr-tag default mb-1"><i
-                                            class="fa fa-building me-1"></i>{{ $emp->department->name ?? 'N/A' }}</span>
-                                    <span class="hr-tag default mb-1"><i
-                                            class="fa fa-briefcase me-1"></i>{{ $emp->designation->name ?? 'N/A' }}</span>
+                                <div class="hr-tags align-items-center gap-1">
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1 mb-1" style="font-size: 0.85rem; font-weight: 600;">
+                                        <i class="fa fa-money-bill-wave me-1"></i>Rs. {{ number_format($emp->basic_salary, 0) }}
+                                    </span>
+                                    @if($emp->department)
+                                        <span class="hr-tag default mb-1"><i
+                                                class="fa fa-building me-1"></i>{{ $emp->department->name }}</span>
+                                    @endif
+                                    @if($emp->designation)
+                                        <span class="hr-tag default mb-1"><i
+                                                class="fa fa-briefcase me-1"></i>{{ $emp->designation->name }}</span>
+                                    @endif
                                     @if ($emp->custom_start_time)
-                                        <span class="hr-tag warning mb-1"><i class="fa fa-clock me-1"></i>Custom
-                                            Timing</span>
-                                    @else
+                                        <span class="hr-tag warning mb-1"><i class="fa fa-clock me-1"></i>Custom Timing</span>
+                                    @elseif($emp->shift)
                                         <span class="hr-tag info mb-1"><i
-                                                class="fa fa-clock me-1"></i>{{ $emp->shift->name ?? 'Default' }}</span>
+                                                class="fa fa-clock me-1"></i>{{ $emp->shift->name }}</span>
                                     @endif
                                     <span
                                         class="hr-tag {{ $emp->status == 'active' ? 'success' : ($emp->status == 'non-active' ? 'warning' : 'danger') }} mb-1">
                                         {{ ucfirst($emp->status) }}
                                     </span>
                                     @if (!empty($emp->face_encoding) && is_array($emp->face_encoding) && count($emp->face_encoding) > 0)
-                                        <span class="badge bg-primary p-2 mb-1"><i class="fa fa-smile me-1"></i>Face ID
-                                            Set</span>
-                                    @else
-                                        <span class="badge bg-secondary p-2 mb-1"><i class="fa fa-meh me-1"></i>No Face
-                                            ID</span>
+                                        <span class="badge bg-primary p-2 mb-1"><i class="fa fa-smile me-1"></i>Face ID</span>
                                     @endif
                                 </div>
 
@@ -200,246 +207,43 @@
     </div>
 
     <!-- Modal -->
-    <div class="modal fade" id="employeeModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal fade" id="employeeModal" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
             <div class="modal-content">
-                <div class="modal-header gradient">
-                    <h5 class="modal-title" id="modalLabel">
+                <div class="modal-header gradient d-flex align-items-center justify-content-between">
+                    <h5 class="modal-title text-white" id="modalLabel">
                         <i class="fa fa-user-plus"></i>
                         <span>Add Employee</span>
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="close text-white" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close" style="background:none; border:none; font-size:1.5rem; opacity:0.9;">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
                 </div>
                 <form id="employeeForm" action="{{ route('hr.employees.store') }}" method="POST"
                     enctype="multipart/form-data" data-ajax-validate="true">
                     @csrf
                     <input type="hidden" name="edit_id" id="edit_id">
                     <div class="modal-body">
-                        <div class="row">
-                            <!-- Personal Info -->
-                            <div class="col-md-6">
-                                <div class="form-group-modern">
-                                    <label class="form-label"><i class="fa fa-user"></i> First Name</label>
+                        <div class="row g-3">
+                            <div class="col-md-12">
+                                <div class="form-group-modern mb-2">
+                                    <label class="form-label fw-bold text-dark"><i class="fa fa-user me-1 text-primary"></i> Name <span class="text-danger">*</span></label>
                                     <input type="text" name="first_name" id="first_name" class="form-control"
-                                        placeholder="Enter first name" required>
+                                        placeholder="Enter employee name" required>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="form-group-modern">
-                                    <label class="form-label"><i class="fa fa-user"></i> Last Name</label>
-                                    <input type="text" name="last_name" id="last_name" class="form-control"
-                                        placeholder="Enter last name" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group-modern">
-                                    <label class="form-label"><i class="fa fa-envelope"></i> Email</label>
-                                    <input type="email" name="email" id="email" class="form-control"
-                                        placeholder="Enter email address" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group-modern">
-                                    <label class="form-label"><i class="fa fa-lock"></i> Password</label>
-                                    <div class="input-group">
-                                        <input type="password" name="password" id="password" class="form-control"
-                                            placeholder="Leave blank to keep existing">
-                                        <button class="btn btn-outline-secondary toggle-password" type="button"
-                                            data-target="password">
-                                            <i class="fa fa-eye"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group-modern">
-                                    <label class="form-label"><i class="fa fa-phone"></i> Phone</label>
+                                <div class="form-group-modern mb-2">
+                                    <label class="form-label fw-bold text-dark"><i class="fa fa-phone me-1 text-primary"></i> Phone Number</label>
                                     <input type="text" name="phone" id="phone" class="form-control"
                                         placeholder="Enter phone number">
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="form-group-modern">
-                                    <label class="form-label"><i class="fa fa-building"></i> Department</label>
-                                    <select name="department_id" id="department_id" class="form-select" required>
-                                        <option value="">Select Department</option>
-                                        @foreach ($departments as $dept)
-                                            <option value="{{ $dept->id }}">{{ $dept->name }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group-modern">
-                                    <label class="form-label"><i class="fa fa-clock"></i> Shift</label>
-                                    <select name="shift_id" id="shift_id" class="form-select">
-                                        @php
-                                            $defaultShift = $shifts->where('is_default', true)->first();
-                                            $otherShifts = $shifts->where('is_default', false);
-                                        @endphp
-                                        @if ($defaultShift)
-                                            <option value="{{ $defaultShift->id }}">
-                                                Default - {{ $defaultShift->name }}
-                                                ({{ \Carbon\Carbon::parse($defaultShift->start_time)->format('h:i A') }} -
-                                                {{ \Carbon\Carbon::parse($defaultShift->end_time)->format('h:i A') }})
-                                            </option>
-                                        @else
-                                            <option value="">Default (9AM - 6PM)</option>
-                                        @endif
-                                        @foreach ($otherShifts as $shift)
-                                            <option value="{{ $shift->id }}">{{ $shift->name }}
-                                                ({{ \Carbon\Carbon::parse($shift->start_time)->format('h:i A') }} -
-                                                {{ \Carbon\Carbon::parse($shift->end_time)->format('h:i A') }})
-                                            </option>
-                                        @endforeach
-                                        <option value="custom">Custom Timing</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <!-- Custom Time Container -->
-                            <div id="custom_time_container" class="row col-12 ps-0 pe-0 ms-0 me-0"
-                                style="display: none;">
-                                <div class="col-md-6">
-                                    <div class="form-group-modern">
-                                        <label class="form-label"><i class="fa fa-clock"></i> Custom Start Time</label>
-                                        <input type="time" name="custom_start_time" id="custom_start_time"
-                                            class="form-control">
-                                        <small class="text-muted">Overrides Shift Start Time</small>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group-modern">
-                                        <label class="form-label"><i class="fa fa-clock"></i> Custom End Time</label>
-                                        <input type="time" name="custom_end_time" id="custom_end_time"
-                                            class="form-control">
-                                        <small class="text-muted">Overrides Shift End Time</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group-modern">
-                                    <label class="form-label"><i class="fa fa-briefcase"></i> Designation</label>
-                                    <select name="designation_id" id="designation_id" class="form-select" required>
-                                        <option value="">Select Designation</option>
-                                        @foreach ($designations as $des)
-                                            <option value="{{ $des->id }}">{{ $des->name }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group-modern">
-                                    <label class="form-label"><i class="fa fa-calendar"></i> Joining Date</label>
-                                    <input type="date" name="joining_date" id="joining_date" class="form-control"
-                                        required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group-modern">
-                                    <label class="form-label"><i class="fa fa-money-bill"></i> Basic Salary</label>
+                                <div class="form-group-modern mb-2">
+                                    <label class="form-label fw-bold text-dark"><i class="fa fa-money-bill me-1 text-success"></i> Basic Salary <span class="text-danger">*</span></label>
                                     <input type="number" step="0.01" name="basic_salary" id="basic_salary"
                                         class="form-control" placeholder="Enter basic salary" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group-modern">
-                                    <label class="form-label"><i class="fa fa-toggle-on"></i> Status</label>
-                                    <select name="status" id="status" class="form-select">
-                                        <option value="active">Active</option>
-                                        <option value="non-active">Non-Active</option>
-                                        <option value="terminated">Terminated</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-12">
-                                <div class="form-group-modern">
-                                    <label class="form-label"><i class="fa fa-map-marker-alt"></i> Address</label>
-                                    <textarea name="address" id="address" class="form-control" rows="2" placeholder="Enter address"></textarea>
-                                </div>
-                            </div>
-                            <div class="col-md-12">
-                                <div class="form-check mb-3">
-                                    <input class="form-check-input" type="checkbox" name="is_docs_submitted"
-                                        id="is_docs_submitted" value="1">
-                                    <label class="form-check-label" for="is_docs_submitted">Documents Submitted</label>
-                                </div>
-                            </div>
-
-                            <!-- Casual Leave Days -->
-                            <div class="col-md-12 mb-3">
-                                <div class="form-group-modern">
-                                    <label class="form-label" for="casual_leave_days">
-                                        <i class="fa fa-calendar-check me-1"></i>
-                                        Casual Leave Days
-                                    </label>
-                                    <div id="casual_leave_days_container"
-                                        style="display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 0;">
-                                        <span class="casual-day-option badge bg-light text-dark border"
-                                            data-value="Monday"
-                                            style="cursor:pointer; padding:8px 16px; font-size:15px;">Monday</span>
-                                        <span class="casual-day-option badge bg-light text-dark border"
-                                            data-value="Tuesday"
-                                            style="cursor:pointer; padding:8px 16px; font-size:15px;">Tuesday</span>
-                                        <span class="casual-day-option badge bg-light text-dark border"
-                                            data-value="Wednesday"
-                                            style="cursor:pointer; padding:8px 16px; font-size:15px;">Wednesday</span>
-                                        <span class="casual-day-option badge bg-light text-dark border"
-                                            data-value="Thursday"
-                                            style="cursor:pointer; padding:8px 16px; font-size:15px;">Thursday</span>
-                                        <span class="casual-day-option badge bg-light text-dark border"
-                                            data-value="Friday"
-                                            style="cursor:pointer; padding:8px 16px; font-size:15px;">Friday</span>
-                                        <span class="casual-day-option badge bg-light text-dark border"
-                                            data-value="Saturday"
-                                            style="cursor:pointer; padding:8px 16px; font-size:15px;">Saturday</span>
-                                        <span class="casual-day-option badge bg-light text-dark border"
-                                            data-value="Sunday"
-                                            style="cursor:pointer; padding:8px 16px; font-size:15px;">Sunday</span>
-                                    </div>
-                                    <input type="hidden" name="casual_leave_days" id="casual_leave_days" />
-                                    <small class="text-muted d-block mt-1">
-                                        <i class="fa fa-info-circle me-1"></i>
-                                        Click to select/deselect casual leave days. Selected days will be highlighted.
-                                    </small>
-                                </div>
-                            </div>
-
-                            <!-- Documents -->
-                            <div id="documents_container" class="row" style="display: none;">
-                                <div class="col-12 mb-3">
-                                    <h6 class="text-primary"><i class="fa fa-file-alt me-2"></i>Upload Documents</h6>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group-modern">
-                                        <label class="form-label">Degree <span id="link_degree"></span></label>
-                                        <input type="file" name="document_degree" class="form-control">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group-modern">
-                                        <label class="form-label">Certificate <span id="link_certificate"></span></label>
-                                        <input type="file" name="document_certificate" class="form-control">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group-modern">
-                                        <label class="form-label">Intermediate Marksheet <span
-                                                id="link_hsc_marksheet"></span></label>
-                                        <input type="file" name="document_hsc_marksheet" class="form-control">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group-modern">
-                                        <label class="form-label">Matric Marksheet <span
-                                                id="link_ssc_marksheet"></span></label>
-                                        <input type="file" name="document_ssc_marksheet" class="form-control">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group-modern">
-                                        <label class="form-label">CV <span id="link_cv"></span></label>
-                                        <input type="file" name="document_cv" class="form-control">
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -511,31 +315,14 @@
                 }
             });
 
-            // Create Employee - using event delegation to ensure it works
-            $(document).on('click', '#createBtn', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('Create button clicked!');
-                console.log('Modal element:', $('#employeeModal'));
-                console.log('Bootstrap modal method:', typeof $('#employeeModal').modal);
-
+            // Create Employee
+            $(document).on('click', '#createBtn', function() {
                 $('#edit_id').val('');
-                $('#employeeForm')[0].reset();
-                $('#is_docs_submitted').prop('checked', false);
-                $('#documents_container').hide();
-                $('#custom_time_container').hide();
-                $('#shift_id').val($('#shift_id option:first').val()); // Select Default
-                $('#link_degree, #link_certificate, #link_hsc_marksheet, #link_ssc_marksheet, #link_cv')
-                    .html('');
+                if ($('#employeeForm').length > 0 && $('#employeeForm')[0]) {
+                    $('#employeeForm')[0].reset();
+                }
                 $('#modalLabel').html('<i class="fa fa-user-plus"></i><span>Add Employee</span>');
-
-                // Clear casual leave day selections
-                $('#casual_leave_days_container .casual-day-option').removeClass('selected');
-                $('#casual_leave_days').val('');
-
-                console.log('About to show modal...');
                 $('#employeeModal').modal('show');
-                console.log('Modal show called');
             });
 
             // Edit Employee
@@ -543,66 +330,8 @@
                 var card = $(this).closest('.hr-item-card');
                 $('#edit_id').val(card.data('id'));
                 $('#first_name').val(card.find('.first_name').val());
-                $('#last_name').val(card.find('.last_name').val());
-                $('#email').val(card.find('.email').val());
                 $('#phone').val(card.find('.phone').val());
-                $('#address').val(card.find('.address').val());
-                $('#department_id').val(card.find('.department_id').val());
-                $('#designation_id').val(card.find('.designation_id').val());
-
-                // Handle Shift/Custom Logic
-                var customStart = card.find('.custom_start_time').val();
-                if (customStart && customStart !== '') {
-                    $('#shift_id').val('custom');
-                    $('#custom_start_time').val(card.find('.custom_start_time').val());
-                    $('#custom_end_time').val(card.find('.custom_end_time').val());
-                    $('#custom_time_container').show();
-                } else {
-                    $('#shift_id').val(card.find('.shift_id').val());
-                    $('#custom_time_container').hide();
-                }
-
-                $('#joining_date').val(card.find('.joining_date').val());
                 $('#basic_salary').val(card.find('.basic_salary').val());
-                $('#status').val(card.find('.status').val());
-
-
-                if (card.find('.is_docs_submitted').val() == '1') {
-                    $('#is_docs_submitted').prop('checked', true);
-                    $('#documents_container').show();
-                } else {
-                    $('#is_docs_submitted').prop('checked', false);
-                    $('#documents_container').hide();
-                }
-
-                function setLink(id, filepath) {
-                    if (filepath && filepath !== '') {
-                        $('#' + id).html('<a href="{{ asset('') }}' + filepath +
-                            '" target="_blank" class="text-primary small ms-2">(View)</a>');
-                    } else {
-                        $('#' + id).html('');
-                    }
-                }
-
-                setLink('link_degree', card.find('.doc_degree').val());
-                setLink('link_certificate', card.find('.doc_certificate').val());
-                setLink('link_hsc_marksheet', card.find('.doc_hsc_marksheet').val());
-                setLink('link_ssc_marksheet', card.find('.doc_ssc_marksheet').val());
-                setLink('link_cv', card.find('.doc_cv').val());
-
-
-                // Load casual leave days (badges)
-                const leaveDays = card.find('.casual_leave_dates').val();
-                $('#casual_leave_days_container .casual-day-option').removeClass('selected');
-                if (leaveDays) {
-                    const daysArray = leaveDays.split(',').filter(d => d.trim() !== '');
-                    daysArray.forEach(function(day) {
-                        $('#casual_leave_days_container .casual-day-option[data-value="' + day +
-                            '"]').addClass('selected');
-                    });
-                    $('#casual_leave_days').val(leaveDays);
-                    console.log('Loaded leave days:', daysArray);
-                }
 
                 $('#modalLabel').html('<i class="fa fa-pen"></i><span>Edit Employee</span>');
                 $('#employeeModal').modal('show');

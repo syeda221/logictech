@@ -23,7 +23,7 @@ class PayrollController extends Controller
     }
 
     /**
-     * Display paginated payrolls with filters
+     * Display Payroll Summary Sheet (Excel-style)
      */
     public function index(Request $request)
     {
@@ -31,16 +31,447 @@ class PayrollController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        $query = Payroll::with(['employee.designation', 'employee.department']);
+        // Get selected month (default to current Y-m, e.g., '2026-08')
+        $month = $request->get('month', date('Y-m'));
+        $prevMonth = Carbon::parse($month.'-01')->subMonth()->format('Y-m');
 
-        // Apply filters
-        if ($request->filled('type')) {
-            $query->where('payroll_type', $request->type);
+        // Fetch Active Financial Accounts for Payment Account Dropdown
+        $accounts = \App\Models\Account::where('status', 1)->orderBy('title', 'asc')->get();
+
+        // Get all active employees sorted by ID
+        $employees = Employee::with(['designation', 'department', 'salaryStructure'])
+            ->where('status', 'active')
+            ->orderBy('id', 'asc')
+            ->get();
+
+        // Get existing payroll records for this month
+        $existingPayrolls = Payroll::where('month', $month)
+            ->where('payroll_type', 'monthly')
+            ->get()
+            ->keyBy('employee_id');
+
+        // Get previous month's payroll records for closing balance carrying
+        $prevPayrolls = Payroll::where('month', $prevMonth)
+            ->where('payroll_type', 'monthly')
+            ->get()
+            ->keyBy('employee_id');
+
+        $payrollItems = [];
+        $totals = [
+            'basic_salary' => 0,
+            'salary_count' => 0,
+            'overtime_hours' => 0,
+            'overtime_days' => 0,
+            'overtime_pay' => 0,
+            'total_pay' => 0,
+            'advances' => 0,
+            'other_allowance' => 0,
+            'net_payable' => 0,
+            'payment_this_month' => 0,
+            'closing_balance' => 0,
+        ];
+
+        foreach ($employees as $index => $emp) {
+            $p = $existingPayrolls->get($emp->id);
+            $prevP = $prevPayrolls->get($emp->id);
+
+            // Auto-fetch Basic Salary from Payroll or Employee Profile / Salary Structure
+            $basicSalary = floatval(($p && floatval($p->basic_salary) > 0) ? $p->basic_salary : $emp->basic_salary);
+            
+            // Previous Closing Balance
+            $prevClosing = floatval($prevP->closing_balance ?? 0);
+
+            // Total outstanding advance loans
+            $totalActiveLoans = floatval(\App\Models\Hr\Loan::where('employee_id', $emp->id)
+                ->where('status', 'approved')
+                ->get()
+                ->sum(function($l) { return $l->amount - $l->paid_amount; }));
+
+            if ($p) {
+                $pDays = floatval($p->p_days ?? 30);
+                $salaryCount = floatval($p->salary_count ?? (($basicSalary / 30) * $pDays));
+                $otHours = floatval($p->overtime_hours ?? 0);
+                $otDays = floatval($p->overtime_days ?? ($otHours / 9.0));
+                $otPay = floatval($p->overtime_pay ?? (($basicSalary / 30) * $otDays));
+                $totalPay = floatval($p->total_pay ?? ($salaryCount + $otPay));
+                $advances = floatval($p->advances ?? $p->deductions ?? 0);
+                $otherAllowance = floatval($p->other_allowance ?? $p->manual_allowances ?? 0);
+                $netPayable = floatval($p->net_salary ?? ($totalPay - $advances + $otherAllowance));
+                $paymentThisMonth = floatval($p->payment_this_month ?? $netPayable);
+                $closingBalance = floatval($p->closing_balance ?? ($prevClosing != 0 ? ($prevClosing + $advances) : ($totalActiveLoans > 0 ? -($totalActiveLoans - $advances) : 0)));
+                $paymentDate = $p->payment_date ? $p->payment_date->format('Y-m-d') : date('Y-m-04');
+                $accountId = $p->account_id;
+                $status = $p->status;
+                $payrollId = $p->id;
+            } else {
+                // Default initial draft values with auto-fetched calculations
+                $pDays = 30.0;
+                $salaryCount = round(($basicSalary / 30) * $pDays);
+                $otHours = 0.0;
+                $otDays = 0.0;
+                $otPay = 0.0;
+                $totalPay = $salaryCount + $otPay;
+                $advances = floatval($totalActiveLoans > 0 ? $totalActiveLoans : 0);
+                $otherAllowance = 0.0;
+                $netPayable = $totalPay - $advances + $otherAllowance;
+                $paymentThisMonth = $netPayable;
+                
+                // Auto-calculate closing balance: Previous Closing + Advances Deducted/Remaining
+                if ($prevClosing != 0) {
+                    $closingBalance = $prevClosing + $advances;
+                } elseif ($totalActiveLoans > 0) {
+                    $closingBalance = -($totalActiveLoans - $advances);
+                } else {
+                    $closingBalance = 0.0;
+                }
+
+                $paymentDate = date('Y-m-04');
+                $accountId = $accounts->first()?->id;
+                $status = 'draft';
+                $payrollId = null;
+            }
+
+            $payrollItems[] = [
+                'sn' => $index + 1,
+                'employee_id' => $emp->id,
+                'employee_name' => $emp->full_name,
+                'designation' => $emp->designation->name ?? '',
+                'basic_salary' => $basicSalary,
+                'p_days' => $pDays,
+                'salary_count' => $salaryCount,
+                'overtime_hours' => $otHours,
+                'overtime_days' => $otDays,
+                'overtime_pay' => $otPay,
+                'total_pay' => $totalPay,
+                'advances' => $advances,
+                'prev_closing' => $prevClosing,
+                'active_loans' => $totalActiveLoans,
+                'other_allowance' => $otherAllowance,
+                'net_payable' => $netPayable,
+                'payment_this_month' => $paymentThisMonth,
+                'closing_balance' => $closingBalance,
+                'payment_date' => $paymentDate,
+                'account_id' => $accountId,
+                'status' => $status,
+                'payroll_id' => $payrollId,
+            ];
+
+            // Accumulate Totals
+            $totals['basic_salary'] += $basicSalary;
+            $totals['salary_count'] += $salaryCount;
+            $totals['overtime_hours'] += $otHours;
+            $totals['overtime_days'] += $otDays;
+            $totals['overtime_pay'] += $otPay;
+            $totals['total_pay'] += $totalPay;
+            $totals['advances'] += $advances;
+            $totals['other_allowance'] += $otherAllowance;
+            $totals['net_payable'] += $netPayable;
+            $totals['payment_this_month'] += $paymentThisMonth;
+            $totals['closing_balance'] += $closingBalance;
         }
 
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
+        $payrolls = Payroll::with(['employee.designation', 'employee.department'])
+            ->where('month', $month)
+            ->latest()
+            ->paginate(50);
+
+        return view('hr.payroll.index', compact(
+            'payrollItems',
+            'totals',
+            'month',
+            'employees',
+            'accounts',
+            'payrolls'
+        ))->with('activeTab', 'all');
+    }
+
+    /**
+     * Bulk save monthly payroll summary sheet
+     */
+    public function saveSheet(Request $request)
+    {
+        if (! auth()->user()->can('hr.payroll.create') && ! auth()->user()->can('hr.payroll.edit')) {
+            return response()->json(['error' => 'Unauthorized action.'], 403);
         }
+
+        $validator = Validator::make($request->all(), [
+            'month' => 'required',
+            'rows' => 'required|array',
+            'rows.*.employee_id' => 'required|exists:hr_employees,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $month = $request->month;
+
+            foreach ($request->rows as $row) {
+                $employeeId = $row['employee_id'];
+                $basicSalary = floatval($row['basic_salary'] ?? 0);
+                $pDays = floatval($row['p_days'] ?? 30);
+                $salaryCount = floatval($row['salary_count'] ?? (($basicSalary / 30) * $pDays));
+                $otHours = floatval($row['overtime_hours'] ?? 0);
+                $otDays = floatval($row['overtime_days'] ?? ($otHours / 9.0));
+                $otPay = floatval($row['overtime_pay'] ?? (($basicSalary / 30) * $otDays));
+                $totalPay = floatval($row['total_pay'] ?? ($salaryCount + $otPay));
+                $advances = floatval($row['advances'] ?? 0);
+                $otherAllowance = floatval($row['other_allowance'] ?? 0);
+                $netPayable = floatval($row['net_payable'] ?? ($totalPay - $advances + $otherAllowance));
+                $paymentThisMonth = floatval($row['payment_this_month'] ?? $netPayable);
+                $closingBalance = floatval($row['closing_balance'] ?? 0);
+                $paymentDate = !empty($row['payment_date']) ? $row['payment_date'] : date('Y-m-d');
+                $accountId = !empty($row['account_id']) ? $row['account_id'] : ($request->account_id ?? null);
+
+                // Update employee basic salary if changed
+                $employee = Employee::find($employeeId);
+                if ($employee && $basicSalary > 0 && $employee->basic_salary != $basicSalary) {
+                    $employee->update(['basic_salary' => $basicSalary]);
+                }
+
+                // Create or Update Payroll Record
+                $payroll = Payroll::updateOrCreate(
+                    [
+                        'employee_id' => $employeeId,
+                        'month' => $month,
+                        'payroll_type' => 'monthly',
+                    ],
+                    [
+                        'basic_salary' => $basicSalary,
+                        'p_days' => $pDays,
+                        'salary_count' => $salaryCount,
+                        'overtime_hours' => $otHours,
+                        'overtime_days' => $otDays,
+                        'overtime_pay' => $otPay,
+                        'total_pay' => $totalPay,
+                        'advances' => $advances,
+                        'other_allowance' => $otherAllowance,
+                        'gross_salary' => $totalPay,
+                        'deductions' => $advances,
+                        'allowances' => $otherAllowance,
+                        'manual_allowances' => $otherAllowance,
+                        'manual_deductions' => $advances,
+                        'net_salary' => $netPayable,
+                        'payment_this_month' => $paymentThisMonth,
+                        'closing_balance' => $closingBalance,
+                        'payment_date' => $paymentDate,
+                        'account_id' => $accountId,
+                        'status' => 'paid',
+                    ]
+                );
+
+                // Deduct from Loan/Advance if advances deducted in payroll
+                if ($advances > 0) {
+                    $loans = \App\Models\Hr\Loan::where('employee_id', $employeeId)
+                        ->where('status', 'approved')
+                        ->whereRaw('paid_amount < amount')
+                        ->get();
+
+                    $remDeduction = $advances;
+                    foreach ($loans as $loan) {
+                        if ($remDeduction <= 0) break;
+                        $unpaid = $loan->amount - $loan->paid_amount;
+                        $payAmount = min($remDeduction, $unpaid);
+                        $loan->increment('paid_amount', $payAmount);
+                        $remDeduction -= $payAmount;
+                    }
+                }
+
+                // Record Financial Account History if Payment Account is specified
+                if ($accountId && $paymentThisMonth > 0) {
+                    $account = \App\Models\Account::find($accountId);
+                    if ($account) {
+                        $oldBalance = floatval($account->current_balance);
+                        $newBalance = $oldBalance - $paymentThisMonth;
+                        $account->update(['current_balance' => $newBalance]);
+
+                        // Create Account History Entry for Payroll Expense
+                        \App\Models\AccountHistory::create([
+                            'account_id' => $account->id,
+                            'old_balance' => $oldBalance,
+                            'new_balance' => $newBalance,
+                            'user_id' => auth()->id(),
+                            'user_name' => auth()->user()->name ?? 'System',
+                            'note' => "Salary Paid: Rs. " . number_format($paymentThisMonth, 2) . " to {$employee->full_name} for {$month} (Ref Payroll #{$payroll->id})",
+                        ]);
+
+                        // Post General Ledger Payment Voucher if VoucherService exists
+                        try {
+                            if (class_exists(\App\Services\VoucherService::class)) {
+                                $voucherService = app(\App\Services\VoucherService::class);
+                                $salariesAccount = \App\Models\Account::where('title', 'like', '%Salary%')
+                                    ->orWhere('title', 'like', '%Payroll%')
+                                    ->first() ?? $account;
+
+                                $voucherData = [
+                                    'voucher_type' => \App\Models\VoucherMaster::TYPE_PAYMENT ?? 'payment',
+                                    'date' => $paymentDate,
+                                    'status' => \App\Models\VoucherMaster::STATUS_POSTED ?? 'posted',
+                                    'remarks' => "Salary Paid to {$employee->full_name} for {$month} (Payroll #{$payroll->id})",
+                                ];
+
+                                $lines = [
+                                    [
+                                        'account_id' => $salariesAccount->id,
+                                        'debit' => $paymentThisMonth,
+                                        'credit' => 0,
+                                        'narration' => "Salary for {$employee->full_name} ({$month})",
+                                    ],
+                                    [
+                                        'account_id' => $account->id,
+                                        'debit' => 0,
+                                        'credit' => $paymentThisMonth,
+                                        'narration' => "Paid from {$account->title}",
+                                    ],
+                                ];
+
+                                $voucherService->createVoucher($voucherData, $lines, auth()->id());
+                            }
+                        } catch (\Exception $ex) {
+                            \Log::warning("Voucher creation for salary payment failed: " . $ex->getMessage());
+                        }
+                    }
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => 'Payroll Sheet saved and payments recorded successfully.',
+                'reload' => true,
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'errors' => ['general' => [$e->getMessage()]],
+            ], 422);
+        }
+    }
+
+    /**
+     * Give Advance Salary / Loan to Employee
+     */
+    public function giveAdvance(Request $request)
+    {
+        if (auth()->check() && ! auth()->user()->hasRole('Super Admin') && ! auth()->user()->can('hr.payroll.create') && ! auth()->user()->can('hr.payroll.edit') && ! auth()->user()->can('hr.payroll.generate')) {
+            return response()->json(['error' => 'Unauthorized action.'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'employee_id' => 'required|exists:hr_employees,id',
+            'amount' => 'required|numeric|min:1',
+            'date' => 'required|date',
+            'reason' => 'nullable|string',
+            'account_id' => 'nullable|exists:accounts,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $employee = Employee::findOrFail($request->employee_id);
+            $amount = floatval($request->amount);
+
+            // Create Loan / Advance Record
+            $loan = \App\Models\Hr\Loan::create([
+                'employee_id' => $employee->id,
+                'amount' => $amount,
+                'installment_amount' => $amount,
+                'status' => 'approved',
+                'reason' => $request->reason ?? 'Advance Salary Paid',
+                'paid_amount' => 0,
+            ]);
+
+            // If Financial Account selected, record payout from account
+            if ($request->account_id) {
+                $account = \App\Models\Account::find($request->account_id);
+                if ($account) {
+                    $oldBalance = floatval($account->current_balance);
+                    $newBalance = $oldBalance - $amount;
+                    $account->update(['current_balance' => $newBalance]);
+
+                    // Log Account History Audit Entry
+                    \App\Models\AccountHistory::create([
+                        'account_id' => $account->id,
+                        'old_balance' => $oldBalance,
+                        'new_balance' => $newBalance,
+                        'user_id' => auth()->id(),
+                        'user_name' => auth()->user()->name ?? 'System',
+                        'note' => "Advance Salary Paid: Rs. " . number_format($amount, 2) . " to {$employee->full_name}" . ($request->reason ? " (Reason: {$request->reason})" : ""),
+                    ]);
+
+                    // Post General Ledger Payment Voucher if VoucherService exists
+                    try {
+                        if (class_exists(\App\Services\VoucherService::class)) {
+                            $voucherService = app(\App\Services\VoucherService::class);
+                            $salariesAccount = \App\Models\Account::where('title', 'like', '%Salary%')
+                                ->orWhere('title', 'like', '%Advance%')
+                                ->orWhere('title', 'like', '%Payroll%')
+                                ->first() ?? $account;
+
+                            $voucherData = [
+                                'voucher_type' => \App\Models\VoucherMaster::TYPE_PAYMENT ?? 'payment',
+                                'date' => $request->date,
+                                'status' => \App\Models\VoucherMaster::STATUS_POSTED ?? 'posted',
+                                'remarks' => "Advance Salary Paid to {$employee->full_name}" . ($request->reason ? " - {$request->reason}" : ""),
+                            ];
+
+                            $lines = [
+                                [
+                                    'account_id' => $salariesAccount->id,
+                                    'debit' => $amount,
+                                    'credit' => 0,
+                                    'narration' => "Advance Salary to {$employee->full_name}",
+                                ],
+                                [
+                                    'account_id' => $account->id,
+                                    'debit' => 0,
+                                    'credit' => $amount,
+                                    'narration' => "Paid from {$account->title}",
+                                ],
+                            ];
+
+                            $voucherService->createVoucher($voucherData, $lines, auth()->id());
+                        }
+                    } catch (\Exception $ex) {
+                        \Log::warning("Voucher creation for advance salary failed: " . $ex->getMessage());
+                    }
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => "Rs. ".number_format($amount)." Advance Salary issued to {$employee->full_name} successfully.",
+                'reload' => true,
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'errors' => ['general' => [$e->getMessage()]],
+            ], 422);
+        }
+    }
+
+    /**
+     * View Payment History of all paid payrolls
+     */
+    public function history(Request $request)
+    {
+        if (! auth()->user()->can('hr.payroll.view')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $query = Payroll::with(['employee.designation', 'employee.department', 'account'])
+            ->where('status', 'paid');
 
         if ($request->filled('month')) {
             $query->where('month', $request->month);
@@ -50,10 +481,338 @@ class PayrollController extends Controller
             $query->where('employee_id', $request->employee_id);
         }
 
-        $payrolls = $query->latest()->paginate(12);
-        $employees = Employee::all();
+        if ($request->filled('account_id')) {
+            $query->where('account_id', $request->account_id);
+        }
 
-        return view('hr.payroll.index', compact('payrolls', 'employees'))->with('activeTab', 'all');
+        $payrolls = $query->latest('payment_date')->paginate(30);
+        $employees = Employee::all();
+        $accounts = \App\Models\Account::all();
+
+        return view('hr.payroll.history', compact('payrolls', 'employees', 'accounts'));
+    }
+
+    /**
+     * View Printable Payslip for individual employee
+     */
+    public function payslip($id)
+    {
+        if (! auth()->user()->can('hr.payroll.view')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $payroll = Payroll::with(['employee.designation', 'employee.department', 'account'])->findOrFail($id);
+
+        return view('hr.payroll.payslip', compact('payroll'));
+    }
+
+    /**
+     * Print printable payroll summary sheet matching Excel design
+     */
+    public function printSummary(Request $request)
+    {
+        if (! auth()->user()->can('hr.payroll.view')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $month = $request->get('month', date('Y-m'));
+
+        $employees = Employee::with(['designation', 'department', 'salaryStructure'])
+            ->where('status', 'active')
+            ->orderBy('id', 'asc')
+            ->get();
+
+        $existingPayrolls = Payroll::where('month', $month)
+            ->where('payroll_type', 'monthly')
+            ->get()
+            ->keyBy('employee_id');
+
+        $payrollItems = [];
+        $totals = [
+            'basic_salary' => 0,
+            'salary_count' => 0,
+            'overtime_hours' => 0,
+            'overtime_days' => 0,
+            'overtime_pay' => 0,
+            'total_pay' => 0,
+            'advances' => 0,
+            'other_allowance' => 0,
+            'net_payable' => 0,
+            'payment_this_month' => 0,
+            'closing_balance' => 0,
+        ];
+
+        foreach ($employees as $index => $emp) {
+            $p = $existingPayrolls->get($emp->id);
+            $basicSalary = floatval(($p && floatval($p->basic_salary) > 0) ? $p->basic_salary : $emp->basic_salary);
+            
+            if ($p) {
+                $pDays = floatval($p->p_days ?? 30);
+                $salaryCount = floatval($p->salary_count ?? (($basicSalary / 30) * $pDays));
+                $otHours = floatval($p->overtime_hours ?? 0);
+                $otDays = floatval($p->overtime_days ?? ($otHours / 9.0));
+                $otPay = floatval($p->overtime_pay ?? (($basicSalary / 30) * $otDays));
+                $totalPay = floatval($p->total_pay ?? ($salaryCount + $otPay));
+                $advances = floatval($p->advances ?? $p->deductions ?? 0);
+                $otherAllowance = floatval($p->other_allowance ?? $p->manual_allowances ?? 0);
+                $netPayable = floatval($p->net_salary ?? ($totalPay - $advances + $otherAllowance));
+                $paymentThisMonth = floatval($p->payment_this_month ?? $netPayable);
+                $closingBalance = floatval($p->closing_balance ?? 0);
+                $paymentDate = $p->payment_date ? $p->payment_date->format('d-M-y') : date('d-M-y');
+            } else {
+                $pDays = 30.0;
+                $salaryCount = round(($basicSalary / 30) * $pDays);
+                $otHours = 0.0;
+                $otDays = 0.0;
+                $otPay = 0.0;
+                $totalPay = $salaryCount + $otPay;
+                $advances = 0.0;
+                $otherAllowance = 0.0;
+                $netPayable = $totalPay - $advances + $otherAllowance;
+                $paymentThisMonth = $netPayable;
+                $closingBalance = 0.0;
+                $paymentDate = date('d-M-y');
+            }
+
+            $payrollItems[] = [
+                'sn' => $index + 1,
+                'employee_name' => $emp->full_name,
+                'basic_salary' => $basicSalary,
+                'p_days' => $pDays,
+                'salary_count' => $salaryCount,
+                'overtime_hours' => $otHours,
+                'overtime_days' => $otDays,
+                'overtime_pay' => $otPay,
+                'total_pay' => $totalPay,
+                'advances' => $advances,
+                'other_allowance' => $otherAllowance,
+                'net_payable' => $netPayable,
+                'payment_this_month' => $paymentThisMonth,
+                'closing_balance' => $closingBalance,
+                'payment_date' => $paymentDate,
+            ];
+
+            $totals['basic_salary'] += $basicSalary;
+            $totals['salary_count'] += $salaryCount;
+            $totals['overtime_hours'] += $otHours;
+            $totals['overtime_days'] += $otDays;
+            $totals['overtime_pay'] += $otPay;
+            $totals['total_pay'] += $totalPay;
+            $totals['advances'] += $advances;
+            $totals['other_allowance'] += $otherAllowance;
+            $totals['net_payable'] += $netPayable;
+            $totals['payment_this_month'] += $paymentThisMonth;
+            $totals['closing_balance'] += $closingBalance;
+        }
+
+        return view('hr.payroll.print', compact('payrollItems', 'totals', 'month'));
+    }
+
+    /**
+     * Display Employee Ledger Statement & Transaction Report
+     */
+    public function employeeLedger(Request $request)
+    {
+        if (! auth()->user()->can('hr.payroll.view')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $employees = Employee::where('status', 'active')->orderBy('first_name')->get();
+        if ($employees->isEmpty()) {
+            $employees = Employee::orderBy('first_name')->get();
+        }
+
+        $employeeId = $request->get('employee_id');
+        $startDate = $request->get('start_date', date('Y-01-01'));
+        $endDate = $request->get('end_date', date('Y-12-31'));
+
+        $selectedEmployee = $employeeId ? Employee::with(['designation', 'department'])->find($employeeId) : null;
+
+        $ledgerEntries = collect([]);
+        $summary = [
+            'opening_balance' => 0,
+            'total_advances_given' => 0,
+            'total_advances_deducted' => 0,
+            'total_salary_earned' => 0,
+            'total_net_paid' => 0,
+            'closing_balance' => 0,
+        ];
+
+        if ($selectedEmployee) {
+            $loans = \App\Models\Hr\Loan::where('employee_id', $selectedEmployee->id)->where('status', 'approved')->get();
+            $payrolls = Payroll::where('employee_id', $selectedEmployee->id)->where('status', 'paid')->get();
+
+            foreach ($loans as $loan) {
+                $dateStr = $loan->created_at ? $loan->created_at->format('Y-m-d') : date('Y-m-d');
+                $ledgerEntries->push([
+                    'date' => $dateStr,
+                    'raw_date' => $loan->created_at ? $loan->created_at->timestamp : 0,
+                    'type' => 'Advance Issued',
+                    'description' => 'Advance Salary Issued' . ($loan->reason ? " ({$loan->reason})" : ''),
+                    'advance_given' => floatval($loan->amount),
+                    'advance_deducted' => 0,
+                    'salary_earned' => 0,
+                    'net_paid' => 0,
+                    'ref' => "ADV-#{$loan->id}",
+                ]);
+            }
+
+            foreach ($payrolls as $p) {
+                $dateStr = $p->payment_date ? $p->payment_date->format('Y-m-d') : ($p->updated_at ? $p->updated_at->format('Y-m-d') : date('Y-m-d'));
+                $monthName = \Carbon\Carbon::parse($p->month.'-01')->format('M Y');
+                $advDeducted = floatval($p->advances ?: $p->deductions ?: 0);
+                $salaryEarned = floatval($p->total_pay ?: $p->gross_salary ?: $p->basic_salary);
+                $netPaid = floatval($p->payment_this_month ?: $p->net_salary);
+
+                $ledgerEntries->push([
+                    'date' => $dateStr,
+                    'raw_date' => $p->payment_date ? $p->payment_date->timestamp : ($p->updated_at ? $p->updated_at->timestamp : 0),
+                    'type' => "Salary Paid ({$monthName})",
+                    'description' => "Monthly Salary for {$monthName}",
+                    'advance_given' => 0,
+                    'advance_deducted' => $advDeducted,
+                    'salary_earned' => $salaryEarned,
+                    'net_paid' => $netPaid,
+                    'ref' => "PAY-#{$p->id}",
+                ]);
+            }
+
+            $ledgerEntries = $ledgerEntries->sortBy('raw_date')->values();
+            $filteredEntries = collect([]);
+            $runningBalance = 0;
+
+            foreach ($ledgerEntries as $entry) {
+                $eDate = $entry['date'];
+                $balanceChange = $entry['advance_given'] - $entry['advance_deducted'];
+
+                if ($eDate < $startDate) {
+                    $summary['opening_balance'] += $balanceChange;
+                    $runningBalance += $balanceChange;
+                } elseif ($eDate >= $startDate && $eDate <= $endDate) {
+                    $runningBalance += $balanceChange;
+                    $entry['running_balance'] = $runningBalance;
+                    $filteredEntries->push($entry);
+
+                    $summary['total_advances_given'] += $entry['advance_given'];
+                    $summary['total_advances_deducted'] += $entry['advance_deducted'];
+                    $summary['total_salary_earned'] += $entry['salary_earned'];
+                    $summary['total_net_paid'] += $entry['net_paid'];
+                }
+            }
+
+            $summary['closing_balance'] = $runningBalance;
+            $ledgerEntries = $filteredEntries;
+        }
+
+        return view('hr.payroll.employee_ledger', compact(
+            'employees',
+            'employeeId',
+            'selectedEmployee',
+            'startDate',
+            'endDate',
+            'ledgerEntries',
+            'summary'
+        ));
+    }
+
+    /**
+     * Print Printable Employee Ledger Statement
+     */
+    public function printEmployeeLedger(Request $request)
+    {
+        if (! auth()->user()->can('hr.payroll.view')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $employeeId = $request->get('employee_id');
+        $startDate = $request->get('start_date', date('Y-01-01'));
+        $endDate = $request->get('end_date', date('Y-12-31'));
+
+        $selectedEmployee = $employeeId ? Employee::with(['designation', 'department'])->find($employeeId) : null;
+
+        $ledgerEntries = collect([]);
+        $summary = [
+            'opening_balance' => 0,
+            'total_advances_given' => 0,
+            'total_advances_deducted' => 0,
+            'total_salary_earned' => 0,
+            'total_net_paid' => 0,
+            'closing_balance' => 0,
+        ];
+
+        if ($selectedEmployee) {
+            $loans = \App\Models\Hr\Loan::where('employee_id', $selectedEmployee->id)->where('status', 'approved')->get();
+            $payrolls = Payroll::where('employee_id', $selectedEmployee->id)->where('status', 'paid')->get();
+
+            foreach ($loans as $loan) {
+                $dateStr = $loan->created_at ? $loan->created_at->format('Y-m-d') : date('Y-m-d');
+                $ledgerEntries->push([
+                    'date' => $dateStr,
+                    'raw_date' => $loan->created_at ? $loan->created_at->timestamp : 0,
+                    'type' => 'Advance Issued',
+                    'description' => 'Advance Salary Issued' . ($loan->reason ? " ({$loan->reason})" : ''),
+                    'advance_given' => floatval($loan->amount),
+                    'advance_deducted' => 0,
+                    'salary_earned' => 0,
+                    'net_paid' => 0,
+                    'ref' => "ADV-#{$loan->id}",
+                ]);
+            }
+
+            foreach ($payrolls as $p) {
+                $dateStr = $p->payment_date ? $p->payment_date->format('Y-m-d') : ($p->updated_at ? $p->updated_at->format('Y-m-d') : date('Y-m-d'));
+                $monthName = \Carbon\Carbon::parse($p->month.'-01')->format('M Y');
+                $advDeducted = floatval($p->advances ?: $p->deductions ?: 0);
+                $salaryEarned = floatval($p->total_pay ?: $p->gross_salary ?: $p->basic_salary);
+                $netPaid = floatval($p->payment_this_month ?: $p->net_salary);
+
+                $ledgerEntries->push([
+                    'date' => $dateStr,
+                    'raw_date' => $p->payment_date ? $p->payment_date->timestamp : ($p->updated_at ? $p->updated_at->timestamp : 0),
+                    'type' => "Salary Paid ({$monthName})",
+                    'description' => "Monthly Salary for {$monthName}",
+                    'advance_given' => 0,
+                    'advance_deducted' => $advDeducted,
+                    'salary_earned' => $salaryEarned,
+                    'net_paid' => $netPaid,
+                    'ref' => "PAY-#{$p->id}",
+                ]);
+            }
+
+            $ledgerEntries = $ledgerEntries->sortBy('raw_date')->values();
+            $filteredEntries = collect([]);
+            $runningBalance = 0;
+
+            foreach ($ledgerEntries as $entry) {
+                $eDate = $entry['date'];
+                $balanceChange = $entry['advance_given'] - $entry['advance_deducted'];
+
+                if ($eDate < $startDate) {
+                    $summary['opening_balance'] += $balanceChange;
+                    $runningBalance += $balanceChange;
+                } elseif ($eDate >= $startDate && $eDate <= $endDate) {
+                    $runningBalance += $balanceChange;
+                    $entry['running_balance'] = $runningBalance;
+                    $filteredEntries->push($entry);
+
+                    $summary['total_advances_given'] += $entry['advance_given'];
+                    $summary['total_advances_deducted'] += $entry['advance_deducted'];
+                    $summary['total_salary_earned'] += $entry['salary_earned'];
+                    $summary['total_net_paid'] += $entry['net_paid'];
+                }
+            }
+
+            $summary['closing_balance'] = $runningBalance;
+            $ledgerEntries = $filteredEntries;
+        }
+
+        return view('hr.payroll.print_employee_ledger', compact(
+            'selectedEmployee',
+            'startDate',
+            'endDate',
+            'ledgerEntries',
+            'summary'
+        ));
     }
 
     /**

@@ -511,6 +511,11 @@ Route::middleware('auth')->group(function () {
     Route::get('report/vendor/ledger', [ReportingController::class, 'vendor_ledger_report'])->middleware('permission:vendor.ledger.view')->name('report.vendor.ledger');
     Route::get('report/vendor-ledger/fetch', [ReportingController::class, 'fetch_vendor_ledger'])->middleware('permission:vendor.ledger.view')->name('report.vendor.ledger.fetch');
 
+    Route::get('report/employee/ledger', [\App\Http\Controllers\Hr\PayrollController::class, 'employeeLedger'])->middleware('permission:hr.payroll.view')->name('report.employee-ledger');
+    Route::get('report/employee-ledger/fetch', [\App\Http\Controllers\Hr\PayrollController::class, 'employeeLedger'])->middleware('permission:hr.payroll.view')->name('report.employee-ledger.fetch');
+    Route::get('hr/payroll/employee-ledger', [\App\Http\Controllers\Hr\PayrollController::class, 'employeeLedger'])->middleware('permission:hr.payroll.view')->name('payroll.employee-ledger');
+    Route::get('hr/payroll/print-employee-ledger', [\App\Http\Controllers\Hr\PayrollController::class, 'printEmployeeLedger'])->middleware('permission:hr.payroll.view')->name('payroll.print-employee-ledger');
+
     Route::get('reports/onhand', [ReportingController::class, 'onhand'])->middleware('permission:inventory.onhand.view')->name('reports.onhand');
 
     // Return modules list for permission dropdowns (AJAX)
@@ -660,3 +665,9 @@ Route::get('/notifications/fetch', [\App\Http\Controllers\SystemNotificationCont
 require __DIR__.'/auth.php';
 
 require __DIR__.'/hr.php';
+
+// Route aliases for Payroll Ledger
+Route::middleware(['auth', 'permission:hr.payroll.view'])->group(function () {
+    Route::get('payroll/employee-ledger', [\App\Http\Controllers\Hr\PayrollController::class, 'employeeLedger'])->name('payroll.employee-ledger');
+    Route::get('payroll/print-employee-ledger', [\App\Http\Controllers\Hr\PayrollController::class, 'printEmployeeLedger'])->name('payroll.print-employee-ledger');
+});
