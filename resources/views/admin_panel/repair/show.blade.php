@@ -173,10 +173,10 @@
                         </a>
 
                         @if ($repair->status !== 'delivered')
-                            <button type="button" class="btn btn-warning text-white btn-erp-action" data-bs-toggle="modal" data-bs-target="#statusModal">
+                            <button type="button" class="btn btn-warning text-white btn-erp-action" data-toggle="modal" data-target="#statusModal" data-bs-toggle="modal" data-bs-target="#statusModal">
                                 <i class="fas fa-tasks"></i> Update Status
                             </button>
-                            <button type="button" class="btn btn-success btn-erp-action" data-bs-toggle="modal" data-bs-target="#deliverModal">
+                            <button type="button" class="btn btn-success btn-erp-action" data-toggle="modal" data-target="#deliverModal" data-bs-toggle="modal" data-bs-target="#deliverModal">
                                 <i class="fas fa-check-double"></i> Deliver &amp; Settle Invoice
                             </button>
                         @endif
@@ -531,7 +531,7 @@
                                 Ticket #<span class="font-monospace text-white fw-bold">{{ $repair->repair_no }}</span>
                             </small>
                         </div>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <button type="button" class="btn-close btn-close-white" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body p-4" style="background-color: #f8fafc;">
                         
@@ -563,7 +563,7 @@
 
                     </div>
                     <div class="modal-footer py-2.5 px-4 bg-light border-top d-flex justify-content-between align-items-center">
-                        <button type="button" class="btn btn-sm btn-outline-secondary px-3" data-bs-dismiss="modal" style="border-radius: 6px; font-size: 0.78rem;">
+                        <button type="button" class="btn btn-sm btn-outline-secondary px-3" data-dismiss="modal" data-bs-dismiss="modal" style="border-radius: 6px; font-size: 0.78rem;">
                             Cancel
                         </button>
                         <button type="submit" class="btn btn-sm btn-primary px-4 fw-bold shadow-sm" style="border-radius: 6px; font-size: 0.78rem;">
@@ -590,7 +590,7 @@
                                 Ticket #<span class="font-monospace text-white fw-bold">{{ $repair->repair_no }}</span>
                             </small>
                         </div>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <button type="button" class="btn-close btn-close-white" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body p-4" style="background-color: #f8fafc;">
                         
@@ -659,7 +659,7 @@
                         </div>
                     </div>
                     <div class="modal-footer py-2.5 px-4 bg-light border-top d-flex justify-content-between align-items-center">
-                        <button type="button" class="btn btn-sm btn-outline-secondary px-3" data-bs-dismiss="modal" style="border-radius: 6px; font-size: 0.78rem;">Cancel</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary px-3" data-dismiss="modal" data-bs-dismiss="modal" style="border-radius: 6px; font-size: 0.78rem;">Cancel</button>
                         <button type="submit" class="btn btn-sm btn-success px-4 fw-bold shadow-sm" style="border-radius: 6px; font-size: 0.78rem;">
                             <i class="fas fa-check-circle me-1"></i> Confirm Delivery &amp; Settle
                         </button>
