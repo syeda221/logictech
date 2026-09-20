@@ -353,24 +353,31 @@ class RepairController extends Controller
         $repair = RepairOrder::findOrFail($id);
 
         $validated = $request->validate([
-            'service_charges' => 'required|numeric|min:0',
+            'service_charges' => 'nullable|numeric|min:0',
             'parts_charges' => 'nullable|numeric|min:0',
             'final_paid' => 'nullable|numeric|min:0',
             'final_account_id' => 'nullable|exists:accounts,id',
+            'delivery_date' => 'nullable|date',
             'delivery_notes' => 'nullable|string',
         ]);
 
-        $serviceCharges = (float) $validated['service_charges'];
-        $partsCharges = (float) ($validated['parts_charges'] ?? 0);
-        $totalCharges = $serviceCharges + $partsCharges;
+        $serviceCharges = isset($validated['service_charges']) ? (float) $validated['service_charges'] : (float) ($repair->service_charges > 0 ? $repair->service_charges : $repair->estimated_cost);
+        $partsCharges = isset($validated['parts_charges']) ? (float) $validated['parts_charges'] : (float) $repair->parts_charges;
+        $totalCharges = ($serviceCharges + $partsCharges) > 0 ? ($serviceCharges + $partsCharges) : (float) ($repair->total_charges > 0 ? $repair->total_charges : $repair->estimated_cost);
 
-        $finalPaid = (float) ($validated['final_paid'] ?? 0);
-        if ($finalPaid > 0 && empty($validated['final_account_id'])) {
+        $finalPaid = isset($validated['final_paid']) ? (float) $validated['final_paid'] : (float) $repair->final_paid;
+        $finalAccountId = $validated['final_account_id'] ?? $repair->final_account_id;
+
+        if ($finalPaid > 0 && empty($finalAccountId)) {
             return back()->with('error', 'Please select an account to deposit the final payment.');
         }
 
         $totalPaid = $repair->advance_paid + $finalPaid;
         $dueAmount = max(0, $totalCharges - $totalPaid);
+
+        $deliveredAt = !empty($validated['delivery_date']) 
+            ? \Carbon\Carbon::parse($validated['delivery_date'])->setTimeFrom(now()) 
+            : now();
 
         try {
             DB::beginTransaction();
@@ -382,10 +389,11 @@ class RepairController extends Controller
                 'parts_charges' => $partsCharges,
                 'total_charges' => $totalCharges,
                 'final_paid' => $finalPaid,
-                'final_account_id' => $finalPaid > 0 ? $validated['final_account_id'] : null,
+                'final_account_id' => $finalPaid > 0 ? $finalAccountId : null,
                 'due_amount' => $dueAmount,
                 'status' => 'delivered',
-                'delivered_at' => now(),
+                'delivery_notes' => $validated['delivery_notes'] ?? null,
+                'delivered_at' => $deliveredAt,
                 'delivered_by' => Auth::id(),
             ]);
 
@@ -395,12 +403,16 @@ class RepairController extends Controller
                     $repair,
                     $repair->final_account_id,
                     $finalPaid,
-                    date('Y-m-d'),
+                    $deliveredAt->format('Y-m-d'),
                     "Final Settlement for Repair #{$repair->repair_no} - {$repair->item_name}"
                 );
             }
 
             // Create Audit Log
+            $logNotes = !empty($validated['delivery_notes'])
+                ? "Item delivered. Remarks: " . $validated['delivery_notes']
+                : "Item delivered to customer. Final Bill: Rs. " . number_format($totalCharges, 2);
+
             RepairOrderLog::create([
                 'repair_order_id' => $repair->id,
                 'user_id' => Auth::id(),
@@ -409,13 +421,13 @@ class RepairController extends Controller
                 'to_status' => 'delivered',
                 'amount' => $finalPaid,
                 'account_id' => $repair->final_account_id,
-                'notes' => "Item delivered to customer. Final Bill: Rs. " . number_format($totalCharges, 2) . " | Paid: Rs. " . number_format($finalPaid, 2) . ($dueAmount > 0 ? " | Due: Rs. " . number_format($dueAmount, 2) : " | Fully Paid"),
+                'notes' => $logNotes,
             ]);
 
             DB::commit();
 
             return redirect()->route('repair.print.a4', $repair->id)
-                ->with('success', "Item delivered successfully! Final payment recorded. Invoice generated.");
+                ->with('success', "Item delivered successfully!");
 
         } catch (\Exception $e) {
             DB::rollBack();

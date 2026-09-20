@@ -40,6 +40,7 @@ class RepairOrder extends Model
         'received_date',
         'expected_delivery_date',
         'delivered_at',
+        'delivery_notes',
         'received_by',
         'delivered_by',
     ];

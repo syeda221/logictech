@@ -512,19 +512,44 @@ body{
 .fin-hl .fv{font-size:11.5px !important;}
 
 /* Signature */
-.sig-area{display:flex;justify-content:flex-end;margin-top:16px;}
-.sig-blk{text-align:center;width:185px;}
+.sig-area{display:flex;justify-content:flex-end;margin-top:40px;}
+.sig-blk{text-align:center;width:220px;position:relative;}
 .sig-co{
     font-family:'Outfit', sans-serif;
-    font-size:9.5px;color:#1e3a8a;font-weight:700;
-    margin-bottom:24px;text-transform:uppercase;letter-spacing:.3px;
+    font-size:10px;color:#1e3a8a;font-weight:700;
+    margin-bottom:65px;text-transform:uppercase;letter-spacing:.3px;
 }
 .sig-line{
     border-top:1.5px solid #0f172a;
-    padding-top:3px;
+    padding-top:4px;
     font-family:'Outfit', sans-serif;
     font-size:9.5px;font-weight:800;
     text-transform:uppercase;letter-spacing:.3px;color:#0f172a;
+}
+.sig-img-container{
+    position:absolute;
+    bottom:20px;
+    left:50%;
+    transform:translateX(-50%);
+    width:100%;
+    height:60px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    pointer-events:none;
+}
+.sig-stamp-img{
+    max-height:60px;
+    max-width:130px;
+    object-fit:contain;
+    opacity:0.85;
+}
+.sig-sign-img{
+    max-height:45px;
+    max-width:120px;
+    object-fit:contain;
+    position:absolute;
+    top:5px;
 }
 
 /* ── PRINT ── */
@@ -876,10 +901,24 @@ body{
         </div>
     </div>
 
-    {{-- Signature --}}
+    {{-- Signature & Stamp --}}
+    @php
+        $coStamp = \App\Models\Setting::getStampUrl();
+        $coSignature = \App\Models\Setting::getSignatureUrl();
+    @endphp
     <div class="sig-area">
         <div class="sig-blk">
             <div class="sig-co">For {{ $coName }}</div>
+            @if($coStamp || $coSignature)
+                <div class="sig-img-container">
+                    @if($coStamp)
+                        <img src="{{ $coStamp }}" alt="Company Stamp" class="sig-stamp-img">
+                    @endif
+                    @if($coSignature)
+                        <img src="{{ $coSignature }}" alt="E-Signature" class="sig-sign-img">
+                    @endif
+                </div>
+            @endif
             <div class="sig-line">Authorized Signature</div>
         </div>
     </div>

@@ -227,7 +227,7 @@
                             </thead>
                             <tbody>
                                 @forelse($payrollItems as $item)
-                                    <tr data-emp-id="{{ $item['employee_id'] }}" data-prev-closing="{{ $item['prev_closing'] }}">
+                                    <tr data-emp-id="{{ $item['employee_id'] }}" data-prev-closing="{{ $item['prev_closing'] }}" data-active-loans="{{ $item['active_loans'] }}">
                                         <td>{{ $item['sn'] }}</td>
                                         <td class="text-start ps-3 fw-bold text-uppercase">
                                             {{ $item['employee_name'] }}
@@ -461,13 +461,13 @@
                 var salaryCount = Math.round((basicSalary / 30) * pDays);
                 tr.querySelector('.td-salary-count').textContent = salaryCount.toLocaleString('en-US');
 
-                // Overtime Days & Pay
+                // Overtime Days & Pay (1.5x Multiplier)
                 var otDays = parseFloat(tr.querySelector('.inp-ot-days').value) || 0;
                 var otPayInput = tr.querySelector('.inp-ot-pay');
                 var otPay = parseFloat(otPayInput.value);
 
                 if (isNaN(otPay) && otDays > 0) {
-                    otPay = Math.round((basicSalary / 30) * otDays);
+                    otPay = Math.round((basicSalary / 30) * 1.5 * otDays);
                     otPayInput.value = otPay;
                 } else if (isNaN(otPay)) {
                     otPay = 0;
@@ -485,21 +485,22 @@
                 var netPayable = totalPay - advances + otherAllowance;
                 tr.querySelector('.td-net-payable').textContent = netPayable.toLocaleString('en-US');
 
-                // Auto-calculate Closing Balance based on Previous Closing + Advances
-                var prevClosing = parseFloat(tr.dataset.prevClosing) || 0;
-                var closingInput = tr.querySelector('.inp-closing-balance');
-                if (!closingInput.dataset.userEdited) {
-                    if (prevClosing !== 0) {
-                        closingInput.value = prevClosing + advances;
-                    } else if (advances > 0) {
-                        closingInput.value = -advances;
-                    }
-                }
-
                 // Sync payment this month default if unmodified
                 var paymentInput = tr.querySelector('.inp-payment-month');
                 if (!paymentInput.dataset.userEdited) {
                     paymentInput.value = netPayable;
+                }
+                var paymentThisMonth = parseFloat(paymentInput.value) || 0;
+
+                // Auto-calculate Closing Balance based on Previous Closing / Active Loans + Advances + (Net Payable - Payment)
+                var prevClosing = parseFloat(tr.dataset.prevClosing) || 0;
+                var activeLoans = parseFloat(tr.dataset.activeLoans) || 0;
+                var baseClosing = prevClosing !== 0 ? prevClosing : (activeLoans > 0 ? -activeLoans : 0);
+
+                var closingInput = tr.querySelector('.inp-closing-balance');
+                if (!closingInput.dataset.userEdited) {
+                    var computedClosing = baseClosing + advances + (netPayable - paymentThisMonth);
+                    closingInput.value = computedClosing !== 0 ? computedClosing : '';
                 }
 
                 calculateTotals();
@@ -578,7 +579,7 @@
                         inpOtDays.value = days > 0 ? days : '';
                         
                         var basicSalary = parseFloat(tr.querySelector('.inp-basic-salary').value) || 0;
-                        var otPay = Math.round((basicSalary / 30) * days);
+                        var otPay = Math.round((basicSalary / 30) * 1.5 * days);
                         tr.querySelector('.inp-ot-pay').value = otPay > 0 ? otPay : '';
 
                         calculateRow(tr);
@@ -648,7 +649,7 @@
                         var otHours = otHoursSec ? (parseFloat(otHoursSec.value) || 0) : 0;
 
                         var otDays = parseFloat(tr.querySelector('.inp-ot-days').value) || (otHours / 9.0);
-                        var otPay = parseFloat(tr.querySelector('.inp-ot-pay').value) || Math.round((basicSalary / 30) * otDays);
+                        var otPay = parseFloat(tr.querySelector('.inp-ot-pay').value) || Math.round((basicSalary / 30) * 1.5 * otDays);
 
                         var totalPay = salaryCount + otPay;
                         var advances = Math.abs(parseFloat(tr.querySelector('.inp-advances').value) || 0);

@@ -3,7 +3,7 @@
     $coName    = \App\Models\Setting::get('company_name', 'LOGIC TECH ENGINEERING');
     $coAddr    = \App\Models\Setting::get('company_address', 'Hno 2/11B near bight future high school husri distric hyderabad');
     $coEmail   = \App\Models\Setting::get('company_email', 'info@logictech.com.pk');
-    $coPhone   = \App\Models\Setting::get('company_phone', '0300-9464887, 0321-9596972');
+    $coPhone   = \App\Models\Setting::get('company_phone', '0336-1500082');
     $coLogo    = \App\Models\Setting::getLogoUrl();
 
     $itemsData = json_decode($repair->problem_description, true);

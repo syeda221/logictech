@@ -43,12 +43,16 @@ class SettingsController extends Controller
             $validated = $request->validate([
                 'settings' => 'nullable|array',
                 'company_logo' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg,webp|max:8192',
+                'company_stamp' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg,webp|max:8192',
+                'company_signature' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg,webp|max:8192',
                 'remove_company_logo' => 'nullable|string',
+                'remove_company_stamp' => 'nullable|string',
+                'remove_company_signature' => 'nullable|string',
             ]);
 
             if (!empty($validated['settings'])) {
                 foreach ($validated['settings'] as $key => $value) {
-                    if ($key === 'company_logo') continue;
+                    if (in_array($key, ['company_logo', 'company_stamp', 'company_signature'])) continue;
                     Setting::set($key, $value);
                 }
             }
@@ -56,12 +60,8 @@ class SettingsController extends Controller
             // Handle company logo removal or update
             if ($request->input('remove_company_logo') == '1' || $request->input('remove_company_logo') === 'true') {
                 $oldLogo = Setting::get('company_logo') ?: Setting::get('web_site_logo');
-                if ($oldLogo && file_exists(public_path($oldLogo))) {
-                    @unlink(public_path($oldLogo));
-                }
-                if ($oldLogo && file_exists(base_path($oldLogo))) {
-                    @unlink(base_path($oldLogo));
-                }
+                if ($oldLogo && file_exists(public_path($oldLogo))) @unlink(public_path($oldLogo));
+                if ($oldLogo && file_exists(base_path($oldLogo))) @unlink(base_path($oldLogo));
                 Setting::set('company_logo', null, 'company', 'image', 'Company Logo', 'Logo displayed at the top of receipts and invoices');
                 Setting::set('web_site_logo', null, 'website', 'string', 'Site Logo', 'Website Logo');
                 Cache::forget('setting_company_logo');
@@ -70,31 +70,16 @@ class SettingsController extends Controller
                 $file = $request->file('company_logo');
                 $fileName = 'company_logo_' . time() . '.' . $file->getClientOriginalExtension();
                 $destinationPath = public_path('uploads/settings');
-                if (!file_exists($destinationPath)) {
-                    @mkdir($destinationPath, 0777, true);
-                }
+                if (!file_exists($destinationPath)) @mkdir($destinationPath, 0777, true);
                 $file->move($destinationPath, $fileName);
                 $logoPath = 'uploads/settings/' . $fileName;
 
-                // Also copy to root uploads/settings if root uploads exists (e.g. shared host cPanel setups)
                 if (file_exists(base_path('uploads'))) {
                     $rootSettingsDir = base_path('uploads/settings');
-                    if (!file_exists($rootSettingsDir)) {
-                        @mkdir($rootSettingsDir, 0777, true);
-                    }
+                    if (!file_exists($rootSettingsDir)) @mkdir($rootSettingsDir, 0777, true);
                     @copy($destinationPath . '/' . $fileName, $rootSettingsDir . '/' . $fileName);
                 }
 
-                // Also copy to public_html/uploads/settings if exists (cPanel setups)
-                if (file_exists(base_path('public_html'))) {
-                    $cpanelSettingsDir = base_path('public_html/uploads/settings');
-                    if (!file_exists($cpanelSettingsDir)) {
-                        @mkdir($cpanelSettingsDir, 0777, true);
-                    }
-                    @copy($destinationPath . '/' . $fileName, $cpanelSettingsDir . '/' . $fileName);
-                }
-
-                // Remove old logo if exists
                 $oldLogo = Setting::get('company_logo');
                 if ($oldLogo && $oldLogo !== $logoPath) {
                     if (file_exists(public_path($oldLogo))) @unlink(public_path($oldLogo));
@@ -107,12 +92,74 @@ class SettingsController extends Controller
                 Cache::forget('setting_web_site_logo');
             }
 
-            $currentLogo = Setting::get('company_logo') ?: Setting::get('web_site_logo');
+            // Handle company stamp removal or update
+            if ($request->input('remove_company_stamp') == '1' || $request->input('remove_company_stamp') === 'true') {
+                $oldStamp = Setting::get('company_stamp');
+                if ($oldStamp && file_exists(public_path($oldStamp))) @unlink(public_path($oldStamp));
+                if ($oldStamp && file_exists(base_path($oldStamp))) @unlink(base_path($oldStamp));
+                Setting::set('company_stamp', null, 'company', 'image', 'Company Stamp', 'Official digital company stamp');
+                Cache::forget('setting_company_stamp');
+            } elseif ($request->hasFile('company_stamp')) {
+                $file = $request->file('company_stamp');
+                $fileName = 'company_stamp_' . time() . '.' . $file->getClientOriginalExtension();
+                $destinationPath = public_path('uploads/settings');
+                if (!file_exists($destinationPath)) @mkdir($destinationPath, 0777, true);
+                $file->move($destinationPath, $fileName);
+                $stampPath = 'uploads/settings/' . $fileName;
+
+                if (file_exists(base_path('uploads'))) {
+                    $rootSettingsDir = base_path('uploads/settings');
+                    if (!file_exists($rootSettingsDir)) @mkdir($rootSettingsDir, 0777, true);
+                    @copy($destinationPath . '/' . $fileName, $rootSettingsDir . '/' . $fileName);
+                }
+
+                $oldStamp = Setting::get('company_stamp');
+                if ($oldStamp && $oldStamp !== $stampPath) {
+                    if (file_exists(public_path($oldStamp))) @unlink(public_path($oldStamp));
+                    if (file_exists(base_path($oldStamp))) @unlink(base_path($oldStamp));
+                }
+
+                Setting::set('company_stamp', $stampPath, 'company', 'image', 'Company Stamp', 'Official digital company stamp');
+                Cache::forget('setting_company_stamp');
+            }
+
+            // Handle company signature removal or update
+            if ($request->input('remove_company_signature') == '1' || $request->input('remove_company_signature') === 'true') {
+                $oldSig = Setting::get('company_signature');
+                if ($oldSig && file_exists(public_path($oldSig))) @unlink(public_path($oldSig));
+                if ($oldSig && file_exists(base_path($oldSig))) @unlink(base_path($oldSig));
+                Setting::set('company_signature', null, 'company', 'image', 'Authorized Signature', 'Official E-Signature');
+                Cache::forget('setting_company_signature');
+            } elseif ($request->hasFile('company_signature')) {
+                $file = $request->file('company_signature');
+                $fileName = 'company_signature_' . time() . '.' . $file->getClientOriginalExtension();
+                $destinationPath = public_path('uploads/settings');
+                if (!file_exists($destinationPath)) @mkdir($destinationPath, 0777, true);
+                $file->move($destinationPath, $fileName);
+                $sigPath = 'uploads/settings/' . $fileName;
+
+                if (file_exists(base_path('uploads'))) {
+                    $rootSettingsDir = base_path('uploads/settings');
+                    if (!file_exists($rootSettingsDir)) @mkdir($rootSettingsDir, 0777, true);
+                    @copy($destinationPath . '/' . $fileName, $rootSettingsDir . '/' . $fileName);
+                }
+
+                $oldSig = Setting::get('company_signature');
+                if ($oldSig && $oldSig !== $sigPath) {
+                    if (file_exists(public_path($oldSig))) @unlink(public_path($oldSig));
+                    if (file_exists(base_path($oldSig))) @unlink(base_path($oldSig));
+                }
+
+                Setting::set('company_signature', $sigPath, 'company', 'image', 'Authorized Signature', 'Official E-Signature');
+                Cache::forget('setting_company_signature');
+            }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Settings updated successfully',
                 'logo_url' => Setting::getLogoUrl(),
+                'stamp_url' => Setting::getStampUrl(),
+                'signature_url' => Setting::getSignatureUrl(),
             ]);
         } catch (\Illuminate\Validation\ValidationException $ve) {
             return response()->json([

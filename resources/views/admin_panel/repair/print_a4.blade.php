@@ -516,7 +516,7 @@
         </div>
         <div class="footer-row-2">
             <div contenteditable="true">
-                Cell: 0300-9464887, 0321-9596972 &nbsp;&nbsp;&nbsp;&nbsp; info@logictech.com.pk
+                Cell: 0336-1500082 &nbsp;&nbsp;&nbsp;&nbsp; info@logictech.com.pk
             </div>
             <div style="font-weight: 800;" contenteditable="true">
                 Signature. ___________________________

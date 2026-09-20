@@ -615,8 +615,14 @@
                                             </td>
 
                                             {{-- Balance Amount --}}
-                                            <td class="text-end font-monospace text-danger fw-bold">
-                                                {{ number_format($repair->due_amount, 2) }}
+                                            <td class="text-end font-monospace" data-order="{{ $repair->due_amount }}">
+                                                @if($repair->due_amount > 0)
+                                                    <span class="badge text-white px-2 py-1 font-monospace" style="background-color: #ef4444 !important; font-size: 0.78rem; font-weight: 700; border-radius: 4px; display: inline-block; box-shadow: 0 1px 3px rgba(239, 68, 68, 0.3);">
+                                                        {{ number_format($repair->due_amount, 2) }}
+                                                    </span>
+                                                @else
+                                                    <span class="text-muted small" style="font-size: 0.78rem;">0.00</span>
+                                                @endif
                                             </td>
 
                                             {{-- Status Badge --}}
@@ -726,9 +732,7 @@
                                              </label>
                                              <select name="status" class="form-select form-select-sm border-primary-subtle fw-bold" style="font-size: 0.82rem; height: 38px; border-radius: 8px;" required>
                                                  <option value="received" {{ $repair->status === 'received' ? 'selected' : '' }}>📥 Received (Product Intake)</option>
-                                                 <option value="diagnosing" {{ $repair->status === 'diagnosing' ? 'selected' : '' }}>🔍 Diagnosing / Technical Inspection</option>
                                                  <option value="in_progress" {{ $repair->status === 'in_progress' ? 'selected' : '' }}>⚙️ In Progress (Under Repair)</option>
-                                                 <option value="waiting_parts" {{ $repair->status === 'waiting_parts' ? 'selected' : '' }}>⏳ Waiting for Spare Parts</option>
                                                  <option value="completed" {{ $repair->status === 'completed' ? 'selected' : '' }}>✅ Completed (Ready for Pickup)</option>
                                                  <option value="cancelled" {{ $repair->status === 'cancelled' ? 'selected' : '' }}>❌ Cancelled / Unrepairable</option>
                                              </select>
@@ -755,7 +759,7 @@
                          </div>
                      </div>
 
-                     {{-- Modal: Deliver & Collect Payment --}}
+                     {{-- Modal: Deliver Product --}}
                      <div class="modal fade" id="deliverModal{{ $repair->id }}" tabindex="-1" aria-hidden="true">
                          <div class="modal-dialog modal-dialog-centered">
                              <div class="modal-content text-start border-0 shadow-lg" style="border-radius: 14px; overflow: hidden;">
@@ -764,7 +768,7 @@
                                      <div class="modal-header text-white py-3 px-4" style="background: linear-gradient(135deg, #047857 0%, #059669 100%);">
                                          <div>
                                              <h6 class="modal-title font-weight-bold mb-0 text-white" style="font-size: 0.95rem;">
-                                                 <i class="fas fa-handshake me-2"></i> Deliver Product &amp; Collect Payment
+                                                 <i class="fas fa-truck me-2"></i> Deliver Product
                                              </h6>
                                              <small class="text-white-50" style="font-size: 0.72rem;">
                                                  Ticket #<span class="font-monospace text-white fw-bold">{{ $repair->repair_no }}</span>
@@ -777,38 +781,16 @@
                                          <div class="alert alert-success border-success-subtle py-2 px-3 mb-3 rounded-3 small" style="background-color: #ecfdf5; font-size: 0.75rem;">
                                              <div class="fw-bold text-success mb-0.5"><i class="fas fa-check-circle me-1"></i>{{ $repair->item_name }}</div>
                                              <div class="text-secondary"><strong>Customer:</strong> {{ $repair->customer_display_name }} ({{ $repair->customer_display_phone }})</div>
-                                             <div class="text-dark font-monospace fw-bold mt-1">
-                                                 Advance Paid: <span class="text-success">Rs. {{ number_format($repair->advance_paid, 2) }}</span>
-                                             </div>
+                                             @if(($repair->advance_paid ?? 0) > 0)
+                                                 <div class="text-dark font-monospace fw-bold mt-1">
+                                                     Advance Paid: <span class="text-success">Rs. {{ number_format($repair->advance_paid, 2) }}</span>
+                                                 </div>
+                                             @endif
                                          </div>
 
-                                         <div class="row g-3 mb-3">
-                                             <div class="col-6">
-                                                 <label class="form-label small fw-bold text-dark">Service / Labor Charges <span class="text-danger">*</span></label>
-                                                 <input type="number" step="0.01" min="0" name="service_charges" class="form-control form-control-sm font-monospace fw-bold" 
-                                                        value="{{ $repair->estimated_cost > 0 ? $repair->estimated_cost : 0 }}" style="border-radius: 8px; height: 36px;" required>
-                                             </div>
-                                             <div class="col-6">
-                                                 <label class="form-label small fw-bold text-dark">Spare Parts Charges</label>
-                                                 <input type="number" step="0.01" min="0" name="parts_charges" class="form-control form-control-sm font-monospace" value="0" style="border-radius: 8px; height: 36px;">
-                                             </div>
-                                         </div>
-
-                                         <div class="row g-3 mb-3">
-                                             <div class="col-6">
-                                                 <label class="form-label small fw-bold text-success">Final Amount Paid Now</label>
-                                                 <input type="number" step="0.01" min="0" name="final_paid" class="form-control form-control-sm font-monospace fw-bold text-success" 
-                                                        value="{{ max(0, $repair->estimated_cost - $repair->advance_paid) }}" style="border-radius: 8px; height: 36px;">
-                                             </div>
-                                             <div class="col-6">
-                                                 <label class="form-label small fw-bold text-dark">Deposit Account</label>
-                                                 <select name="final_account_id" class="form-select form-select-sm" style="border-radius: 8px; height: 36px;">
-                                                     <option value="">Select Account (Cash/Bank)</option>
-                                                     @foreach($accounts as $acc)
-                                                         <option value="{{ $acc->id }}">{{ $acc->title }} ({{ $acc->account_code }})</option>
-                                                     @endforeach
-                                                 </select>
-                                             </div>
+                                         <div class="mb-3">
+                                             <label class="form-label small fw-bold text-dark">Delivery Date <span class="text-danger">*</span></label>
+                                             <input type="date" name="delivery_date" class="form-control form-control-sm font-monospace fw-bold" value="{{ date('Y-m-d') }}" style="border-radius: 8px; height: 36px;" required>
                                          </div>
 
                                          <div class="mb-1">

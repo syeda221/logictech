@@ -205,16 +205,19 @@
     }
 
     .hr-avatar {
-        width: 56px;
-        height: 56px;
-        border-radius: 14px;
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+        border-radius: 12px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.4rem;
+        font-size: 1.1rem;
         font-weight: 700;
         color: white;
         background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        margin-right: 14px !important;
+        flex-shrink: 0;
     }
 
     .hr-item-info {
@@ -244,13 +247,18 @@
     .hr-actions {
         display: flex;
         gap: 6px;
+        align-items: center;
     }
 
-    .hr-actions .btn {
-        width: 36px;
-        height: 36px;
+    .hr-actions button * {
+        pointer-events: none !important;
+    }
+
+    .hr-actions .btn-action-icon {
+        width: 34px;
+        height: 34px;
         border-radius: 10px;
-        display: flex;
+        display: inline-flex;
         align-items: center;
         justify-content: center;
         padding: 0;
@@ -288,6 +296,88 @@
     .hr-actions .btn-delete:hover {
         background: var(--hr-danger);
         color: white;
+    }
+
+    /* Toggle Status Button */
+    .btn-toggle-status {
+        padding: 4px 12px !important;
+        font-size: 0.78rem !important;
+        font-weight: 600 !important;
+        border-radius: 20px !important;
+        white-space: nowrap !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 5px !important;
+        height: 34px !important;
+        width: auto !important;
+        transition: all 0.2s ease !important;
+        box-shadow: none !important;
+    }
+
+    .btn-toggle-status.active-status {
+        background-color: #ecfdf5 !important;
+        color: #047857 !important;
+        border: 1px solid #a7f3d0 !important;
+    }
+
+    .btn-toggle-status.active-status:hover {
+        background-color: #d1fae5 !important;
+        color: #065f46 !important;
+        box-shadow: 0 2px 6px rgba(16, 185, 129, 0.2) !important;
+    }
+
+    .btn-toggle-status.inactive-status {
+        background-color: #f8fafc !important;
+        color: #64748b !important;
+        border: 1px solid #cbd5e1 !important;
+    }
+
+    .btn-toggle-status.inactive-status:hover {
+        background-color: #f1f5f9 !important;
+        color: #334155 !important;
+        box-shadow: 0 2px 6px rgba(100, 116, 139, 0.15) !important;
+    }
+
+    /* Modern Employee Badges */
+    .emp-badge {
+        font-size: 0.78rem;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        line-height: 1.2;
+    }
+
+    .emp-badge-salary {
+        background: #f8fafc;
+        color: #1e293b;
+        border: 1px solid #e2e8f0;
+    }
+
+    .emp-badge-shift {
+        background: #eff6ff;
+        color: #1d4ed8;
+        border: 1px solid #bfdbfe;
+    }
+
+    .emp-badge-active {
+        background: #dcfce7;
+        color: #15803d;
+        border: 1px solid #bbf7d0;
+    }
+
+    .emp-badge-inactive {
+        background: #fef3c7;
+        color: #b45309;
+        border: 1px solid #fde68a;
+    }
+
+    .emp-badge-terminated {
+        background: #fee2e2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
     }
 
     /* Tags */

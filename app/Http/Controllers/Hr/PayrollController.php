@@ -50,10 +50,12 @@ class PayrollController extends Controller
             ->get()
             ->keyBy('employee_id');
 
-        // Get previous month's payroll records for closing balance carrying
-        $prevPayrolls = Payroll::where('month', $prevMonth)
+        // Get most recent saved monthly payroll before selected $month for each employee
+        $prevPayrolls = Payroll::where('month', '<', $month)
             ->where('payroll_type', 'monthly')
+            ->orderBy('month', 'desc')
             ->get()
+            ->unique('employee_id')
             ->keyBy('employee_id');
 
         $payrollItems = [];
@@ -87,18 +89,20 @@ class PayrollController extends Controller
                 ->get()
                 ->sum(function($l) { return $l->amount - $l->paid_amount; }));
 
+            $baseClosing = ($prevP !== null) ? $prevClosing : ($totalActiveLoans > 0 ? -$totalActiveLoans : 0.0);
+
             if ($p) {
                 $pDays = floatval($p->p_days ?? 30);
                 $salaryCount = floatval($p->salary_count ?? (($basicSalary / 30) * $pDays));
                 $otHours = floatval($p->overtime_hours ?? 0);
                 $otDays = floatval($p->overtime_days ?? ($otHours / 9.0));
-                $otPay = floatval($p->overtime_pay ?? (($basicSalary / 30) * $otDays));
+                $otPay = floatval($p->overtime_pay ?? round(($basicSalary / 30) * 1.5 * $otDays));
                 $totalPay = floatval($p->total_pay ?? ($salaryCount + $otPay));
                 $advances = floatval($p->advances ?? $p->deductions ?? 0);
                 $otherAllowance = floatval($p->other_allowance ?? $p->manual_allowances ?? 0);
                 $netPayable = floatval($p->net_salary ?? ($totalPay - $advances + $otherAllowance));
                 $paymentThisMonth = floatval($p->payment_this_month ?? $netPayable);
-                $closingBalance = floatval($p->closing_balance ?? ($prevClosing != 0 ? ($prevClosing + $advances) : ($totalActiveLoans > 0 ? -($totalActiveLoans - $advances) : 0)));
+                $closingBalance = floatval($p->closing_balance ?? ($baseClosing + $advances + ($netPayable - $paymentThisMonth)));
                 $paymentDate = $p->payment_date ? $p->payment_date->format('Y-m-d') : date('Y-m-04');
                 $accountId = $p->account_id;
                 $status = $p->status;
@@ -116,14 +120,8 @@ class PayrollController extends Controller
                 $netPayable = $totalPay - $advances + $otherAllowance;
                 $paymentThisMonth = $netPayable;
                 
-                // Auto-calculate closing balance: Previous Closing + Advances Deducted/Remaining
-                if ($prevClosing != 0) {
-                    $closingBalance = $prevClosing + $advances;
-                } elseif ($totalActiveLoans > 0) {
-                    $closingBalance = -($totalActiveLoans - $advances);
-                } else {
-                    $closingBalance = 0.0;
-                }
+                // Auto-calculate closing balance: baseClosing + advances + (netPayable - paymentThisMonth)
+                $closingBalance = $baseClosing + $advances + ($netPayable - $paymentThisMonth);
 
                 $paymentDate = date('Y-m-04');
                 $accountId = $accounts->first()?->id;
@@ -216,7 +214,7 @@ class PayrollController extends Controller
                 $salaryCount = floatval($row['salary_count'] ?? (($basicSalary / 30) * $pDays));
                 $otHours = floatval($row['overtime_hours'] ?? 0);
                 $otDays = floatval($row['overtime_days'] ?? ($otHours / 9.0));
-                $otPay = floatval($row['overtime_pay'] ?? (($basicSalary / 30) * $otDays));
+                $otPay = floatval($row['overtime_pay'] ?? round(($basicSalary / 30) * 1.5 * $otDays));
                 $totalPay = floatval($row['total_pay'] ?? ($salaryCount + $otPay));
                 $advances = floatval($row['advances'] ?? 0);
                 $otherAllowance = floatval($row['other_allowance'] ?? 0);
@@ -551,7 +549,7 @@ class PayrollController extends Controller
                 $salaryCount = floatval($p->salary_count ?? (($basicSalary / 30) * $pDays));
                 $otHours = floatval($p->overtime_hours ?? 0);
                 $otDays = floatval($p->overtime_days ?? ($otHours / 9.0));
-                $otPay = floatval($p->overtime_pay ?? (($basicSalary / 30) * $otDays));
+                $otPay = floatval($p->overtime_pay ?? round(($basicSalary / 30) * 1.5 * $otDays));
                 $totalPay = floatval($p->total_pay ?? ($salaryCount + $otPay));
                 $advances = floatval($p->advances ?? $p->deductions ?? 0);
                 $otherAllowance = floatval($p->other_allowance ?? $p->manual_allowances ?? 0);

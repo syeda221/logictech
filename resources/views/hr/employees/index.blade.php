@@ -1,10 +1,6 @@
 @extends('admin_panel.layout.app')
 
 @section('content')
-    <!-- Script for Face API -->
-    <script src="{{ asset('assets/vendors/face-api/js/face-api.min.js') }}"></script>
-
-
     @include('hr.partials.hr-styles')
 
     <div class="main-content">
@@ -17,7 +13,7 @@
                         <p class="page-subtitle">Manage your organization's employee database</p>
                     </div>
                     @can('hr.employees.create')
-                        <button type="button" class="btn btn-create" id="createBtn" data-toggle="modal" data-target="#employeeModal" data-bs-toggle="modal" data-bs-target="#employeeModal">
+                        <button type="button" class="btn btn-create" id="createBtn" data-bs-toggle="modal" data-bs-target="#employeeModal" data-toggle="modal" data-target="#employeeModal">
                             <i class="fa fa-user-plus"></i> Add Employee
                         </button>
                     @endcan
@@ -43,7 +39,7 @@
                     <div class="stat-card warning">
                         <div class="stat-icon"><i class="fa fa-user-clock"></i></div>
                         <div class="stat-value">{{ $nonActiveCount }}</div>
-                        <div class="stat-label">Non-Active</div>
+                        <div class="stat-label">Inactive</div>
                     </div>
                     <div class="stat-card danger">
                         <div class="stat-icon"><i class="fa fa-user-times"></i></div>
@@ -52,7 +48,7 @@
                     </div>
                 </div>
 
-                <!-- Employees Card -->
+                <!-- Row Wise Employees Card / Table -->
                 <div class="hr-card">
                     <div class="hr-header">
                         <div class="d-flex align-items-center gap-3">
@@ -60,143 +56,125 @@
                                 <i class="fa fa-search"></i>
                                 <input type="search" id="empSearch" placeholder="Search employees...">
                             </div>
-                            <!-- Department Filter -->
-                            <select id="deptFilter" class="form-select form-select-sm" style="width: 150px;">
-                                <option value="all">All Departments</option>
-                                @foreach ($departments as $dept)
-                                    <option value="{{ strtolower($dept->name) }}">{{ $dept->name }}</option>
-                                @endforeach
-                            </select>
-                            <!-- Designation Filter -->
-                            <select id="desigFilter" class="form-select form-select-sm" style="width: 150px;">
-                                <option value="all">All Designations</option>
-                                @foreach ($designations as $des)
-                                    <option value="{{ strtolower($des->name) }}">{{ $des->name }}</option>
-                                @endforeach
-                            </select>
                             <!-- Status Filter -->
-                            <select id="statusFilter" class="form-select form-select-sm" style="width: 130px;">
+                            <select id="statusFilter" class="form-select form-select-sm" style="width: 140px;">
                                 <option value="all">All Status</option>
                                 <option value="active">Active</option>
-                                <option value="non-active">Non-Active</option>
+                                <option value="non-active">Inactive</option>
                                 <option value="terminated">Terminated</option>
                             </select>
-
-                            <div class="btn-group">
-                                <button class="btn btn-outline-info btn-sm" data-filter="custom_time"
-                                    title="Show Custom Timings"><i class="fa fa-clock"></i></button>
-                                <button class="btn btn-outline-warning btn-sm" data-filter="default_shift"
-                                    title="Show Default Shift"><i class="fa fa-user-clock"></i></button>
-                                <button class="btn btn-outline-secondary btn-sm active" data-filter="all"
-                                    title="Show All"><i class="fa fa-list"></i></button>
-                                <button class="btn btn-outline-secondary btn-sm" id="refreshBtn"><i
-                                        class="fa fa-sync"></i></button>
-                            </div>
                         </div>
                         <span class="text-muted small" id="empCount">{{ $employees->count() }} employees</span>
                     </div>
 
-                    <div class="hr-grid" id="empGrid">
-                        @forelse($employees as $emp)
-                            <div class="hr-item-card" data-id="{{ $emp->id }}"
-                                data-name="{{ strtolower($emp->full_name) }}" data-email="{{ strtolower($emp->email) }}"
-                                data-dept="{{ strtolower($emp->department->name ?? '') }}">
-                                <div class="hr-item-header">
-                                    <div class="d-flex align-items-center">
-                                        <div class="hr-avatar">
-                                            {{ strtoupper(substr($emp->first_name, 0, 1) . substr($emp->last_name ?: $emp->first_name, 0, 1)) }}
-                                        </div>
-                                        <div class="hr-item-info">
-                                            <h4 class="hr-item-name mb-0">{{ $emp->full_name }}</h4>
-                                            <div class="hr-item-subtitle text-primary fw-semibold" style="font-size: 0.85rem;">
-                                                @if($emp->phone)
-                                                    <i class="fa fa-phone me-1"></i>{{ $emp->phone }}
-                                                @else
-                                                    <i class="fa fa-envelope me-1 text-muted"></i><span class="text-muted">{{ $emp->email }}</span>
-                                                @endif
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" id="empTable">
+                            <thead class="bg-light text-muted uppercase small" style="font-size: 0.78rem; letter-spacing: 0.04em;">
+                                <tr>
+                                    <th class="ps-4 py-3">Employee</th>
+                                    <th class="py-3">Contact</th>
+                                    <th class="py-3">Salary</th>
+                                    <th class="py-3">Timing / Shift</th>
+                                    <th class="py-3">Status</th>
+                                    <th class="pe-4 py-3 text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="empTableBody">
+                                @forelse($employees as $emp)
+                                    <tr class="hr-table-row" data-id="{{ $emp->id }}"
+                                        data-name="{{ strtolower($emp->full_name) }}"
+                                        data-email="{{ strtolower($emp->email) }}">
+                                        <td class="ps-4 py-3">
+                                            <div class="d-flex align-items-center">
+                                                <div class="hr-avatar me-3 mr-3" style="width: 44px; height: 44px; min-width: 44px; border-radius: 10px; font-size: 1.1rem; flex-shrink: 0; margin-right: 14px !important;">
+                                                    {{ strtoupper(substr($emp->first_name, 0, 1) . substr($emp->last_name ?: $emp->first_name, 0, 1)) }}
+                                                </div>
+                                                <div>
+                                                    <div class="fw-bold text-dark mb-0" style="font-size: 0.95rem;">{{ $emp->full_name }}</div>
+                                                    <div class="text-muted small" style="font-size: 0.75rem;">
+                                                        ID: #{{ $emp->id }} @if($emp->joining_date) • Joined {{ \Carbon\Carbon::parse($emp->joining_date)->format('d/m/Y') }} @endif
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div class="hr-item-meta text-muted" style="font-size: 0.75rem;">
-                                                ID: {{ $emp->id }} @if($emp->joining_date) • Joined {{ \Carbon\Carbon::parse($emp->joining_date)->format('d/m/Y') }} @endif
+                                        </td>
+                                        <td class="py-3">
+                                            @if($emp->phone)
+                                                <span class="fw-semibold text-dark" style="font-size: 0.88rem;"><i class="fa fa-phone text-primary me-1"></i>{{ $emp->phone }}</span>
+                                            @else
+                                                <span class="text-muted small"><i class="fa fa-envelope me-1"></i>{{ $emp->email }}</span>
+                                            @endif
+                                        </td>
+                                        <td class="py-3">
+                                            @if($emp->basic_salary > 0)
+                                                <span class="emp-badge emp-badge-salary">
+                                                    <i class="fa fa-money-bill-wave text-success"></i>Rs. {{ number_format($emp->basic_salary, 0) }}
+                                                </span>
+                                            @else
+                                                <span class="text-muted small">-</span>
+                                            @endif
+                                        </td>
+                                        <td class="py-3">
+                                            @if ($emp->custom_start_time)
+                                                <span class="emp-badge emp-badge-shift"><i class="fa fa-clock"></i>Custom Timing</span>
+                                            @elseif($emp->shift)
+                                                <span class="emp-badge emp-badge-shift"><i class="fa fa-clock"></i>{{ $emp->shift->name }}</span>
+                                            @else
+                                                <span class="text-muted small">Standard</span>
+                                            @endif
+                                        </td>
+                                        <td class="py-3">
+                                            <span class="emp-badge {{ $emp->status == 'active' ? 'emp-badge-active' : ($emp->status == 'non-active' ? 'emp-badge-inactive' : 'emp-badge-terminated') }} status-badge">
+                                                {{ $emp->status == 'non-active' ? 'Inactive' : ucfirst($emp->status) }}
+                                            </span>
+                                        </td>
+                                        <td class="pe-4 py-3 text-end">
+                                            <div class="hr-actions d-inline-flex align-items-center gap-1">
+                                                @can('hr.employees.edit')
+                                                    <button type="button" class="btn btn-toggle-status {{ $emp->status == 'active' ? 'active-status' : 'inactive-status' }}"
+                                                        data-url="{{ route('hr.employees.toggle-status', $emp->id) }}"
+                                                        title="Click to toggle Active / Inactive">
+                                                        <i class="fa {{ $emp->status == 'active' ? 'fa-toggle-on text-success' : 'fa-toggle-off text-muted' }}"></i>
+                                                        <span class="status-text">{{ $emp->status == 'active' ? 'Active' : 'Inactive' }}</span>
+                                                    </button>
+                                                    <button type="button" class="btn btn-action-icon btn-edit edit-btn"
+                                                        data-id="{{ $emp->id }}"
+                                                        data-first_name="{{ $emp->first_name }}"
+                                                        data-phone="{{ $emp->phone }}"
+                                                        data-basic_salary="{{ $emp->basic_salary }}"
+                                                        data-status="{{ $emp->status }}"
+                                                        data-bs-toggle="modal" data-bs-target="#employeeModal"
+                                                        data-toggle="modal" data-target="#employeeModal"
+                                                        title="Edit Employee">
+                                                        <i class="fa fa-pen"></i>
+                                                    </button>
+                                                @endcan
+                                                @can('hr.employees.delete')
+                                                    <button type="button" class="btn btn-action-icon btn-delete delete-btn"
+                                                        data-url="{{ route('hr.employees.destroy', $emp->id) }}" title="Delete">
+                                                        <i class="fa fa-trash"></i>
+                                                    </button>
+                                                @endcan
                                             </div>
-                                        </div>
-                                    </div>
-                                    <div class="hr-actions">
-                                        @can('hr.employees.edit')
-                                            <button class="btn btn-success register-face-btn" data-id="{{ $emp->id }}"
-                                                data-name="{{ $emp->full_name }}" title="Register Face ID">
-                                                <i class="fa fa-camera"></i>
-                                            </button>
-                                            <button class="btn btn-edit edit-btn" title="Edit Employee">
-                                                <i class="fa fa-pen"></i>
-                                            </button>
-                                        @endcan
-                                        @can('hr.employees.delete')
-                                            <button class="btn btn-delete delete-btn"
-                                                data-url="{{ route('hr.employees.destroy', $emp->id) }}" title="Delete">
-                                                <i class="fa fa-trash"></i>
-                                            </button>
-                                        @endcan
-                                    </div>
-                                </div>
-                                <div class="hr-tags align-items-center gap-1">
-                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1 mb-1" style="font-size: 0.85rem; font-weight: 600;">
-                                        <i class="fa fa-money-bill-wave me-1"></i>Rs. {{ number_format($emp->basic_salary, 0) }}
-                                    </span>
-                                    @if($emp->department)
-                                        <span class="hr-tag default mb-1"><i
-                                                class="fa fa-building me-1"></i>{{ $emp->department->name }}</span>
-                                    @endif
-                                    @if($emp->designation)
-                                        <span class="hr-tag default mb-1"><i
-                                                class="fa fa-briefcase me-1"></i>{{ $emp->designation->name }}</span>
-                                    @endif
-                                    @if ($emp->custom_start_time)
-                                        <span class="hr-tag warning mb-1"><i class="fa fa-clock me-1"></i>Custom Timing</span>
-                                    @elseif($emp->shift)
-                                        <span class="hr-tag info mb-1"><i
-                                                class="fa fa-clock me-1"></i>{{ $emp->shift->name }}</span>
-                                    @endif
-                                    <span
-                                        class="hr-tag {{ $emp->status == 'active' ? 'success' : ($emp->status == 'non-active' ? 'warning' : 'danger') }} mb-1">
-                                        {{ ucfirst($emp->status) }}
-                                    </span>
-                                    @if (!empty($emp->face_encoding) && is_array($emp->face_encoding) && count($emp->face_encoding) > 0)
-                                        <span class="badge bg-primary p-2 mb-1"><i class="fa fa-smile me-1"></i>Face ID</span>
-                                    @endif
-                                </div>
 
-                                <!-- Hidden fields for edit -->
-                                <input type="hidden" class="first_name" value="{{ $emp->first_name }}">
-                                <input type="hidden" class="last_name" value="{{ $emp->last_name }}">
-                                <input type="hidden" class="email" value="{{ $emp->email }}">
-                                <input type="hidden" class="phone" value="{{ $emp->phone }}">
-                                <input type="hidden" class="address" value="{{ $emp->address }}">
-                                <input type="hidden" class="department_id" value="{{ $emp->department_id }}">
-                                <input type="hidden" class="designation_id" value="{{ $emp->designation_id }}">
-                                <input type="hidden" class="shift_id" value="{{ $emp->shift_id }}">
-                                <input type="hidden" class="custom_start_time" value="{{ $emp->custom_start_time }}">
-                                <input type="hidden" class="custom_end_time" value="{{ $emp->custom_end_time }}">
-                                <input type="hidden" class="joining_date" value="{{ $emp->joining_date }}">
-                                <input type="hidden" class="basic_salary" value="{{ $emp->basic_salary }}">
-                                <input type="hidden" class="status" value="{{ $emp->status }}">
-                                <input type="hidden" class="is_docs_submitted" value="{{ $emp->is_docs_submitted }}">
-                                <input type="hidden" class="doc_degree" value="{{ $emp->getDocument('degree') }}">
-                                <input type="hidden" class="doc_certificate"
-                                    value="{{ $emp->getDocument('certificate') }}">
-                                <input type="hidden" class="doc_hsc_marksheet"
-                                    value="{{ $emp->getDocument('hsc_marksheet') }}">
-                                <input type="hidden" class="doc_ssc_marksheet"
-                                    value="{{ $emp->getDocument('ssc_marksheet') }}">
-                                <input type="hidden" class="doc_cv" value="{{ $emp->getDocument('cv') }}">
-                                <input type="hidden" class="casual_leave_dates"
-                                    value="{{ $emp->leaves->pluck('start_date')->map(fn($d) => \Carbon\Carbon::parse($d)->format('Y-m-d'))->implode(',') }}">
-                            </div>
-                        @empty
-                            <div class="empty-state" style="grid-column: 1/-1;">
-                                <i class="fa fa-users"></i>
-                                <p>No employees found. Add your first employee!</p>
-                            </div>
-                        @endforelse
+                                            <!-- Hidden fields for fallback -->
+                                            <input type="hidden" class="first_name" value="{{ $emp->first_name }}">
+                                            <input type="hidden" class="phone" value="{{ $emp->phone }}">
+                                            <input type="hidden" class="basic_salary" value="{{ $emp->basic_salary }}">
+                                            <input type="hidden" class="status" value="{{ $emp->status }}">
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="6" class="text-center py-5">
+                                            <div class="empty-state">
+                                                <i class="fa fa-users text-muted mb-2" style="font-size: 2rem;"></i>
+                                                <p class="text-muted mb-0">No employees found. Add your first employee!</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
                     </div>
                     <div class="px-4 py-3 border-top">
                         {{ $employees->links() }}
@@ -246,6 +224,16 @@
                                         class="form-control" placeholder="Enter basic salary" required>
                                 </div>
                             </div>
+                            <div class="col-md-6">
+                                <div class="form-group-modern mb-2">
+                                    <label class="form-label fw-bold text-dark"><i class="fa fa-toggle-on me-1 text-info"></i> Status</label>
+                                    <select name="status" id="status" class="form-select">
+                                        <option value="active">Active</option>
+                                        <option value="non-active">Inactive</option>
+                                        <option value="terminated">Terminated</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer-modern">
@@ -262,90 +250,74 @@
         </div>
     </div>
 
+@endsection
+
+@section('js')
     <!-- Scripts -->
-    <style>
-        .casual-day-option.selected {
-            background: #007bff !important;
-            color: #fff !important;
-            border-color: #007bff !important;
-            box-shadow: 0 2px 8px rgba(0, 123, 255, 0.08);
-        }
-
-        .casual-day-option:hover {
-            background: #e3f0ff !important;
-        }
-    </style>
-    <!-- jQuery and Bootstrap are already loaded in the main layout -->
-
-
     <script>
-        // Badge click handler for casual leave days
         $(document).ready(function() {
-            var $container = $('#casual_leave_days_container');
-            var $hiddenInput = $('#casual_leave_days');
+            // Fill Edit Form
+            function fillEditModal(btn) {
+                if (!btn || !btn.length) return;
+                var row = btn.closest('.hr-table-row');
 
-            $container.on('click', '.casual-day-option', function() {
-                $(this).toggleClass('selected');
-                var selected = [];
-                $container.find('.casual-day-option.selected').each(function() {
-                    selected.push($(this).data('value'));
-                });
-                $hiddenInput.val(selected.join(','));
-                console.log('Selected days:', selected);
-            });
-        });
+                var empId = btn.attr('data-id') || btn.data('id') || (row.length ? row.attr('data-id') : '');
+                var firstName = btn.attr('data-first_name') || btn.data('first_name') || (row.length ? row.find('.first_name').val() : '');
+                var phone = btn.attr('data-phone') || btn.data('phone') || (row.length ? row.find('.phone').val() : '');
+                var basicSalary = btn.attr('data-basic_salary') || btn.data('basic_salary') || (row.length ? row.find('.basic_salary').val() : '');
+                var status = btn.attr('data-status') || btn.data('status') || (row.length ? row.find('.status').val() : 'active');
 
-        // Debug: Check if jQuery is loaded
-        console.log('jQuery loaded:', typeof jQuery !== 'undefined');
-        console.log('$ loaded:', typeof $ !== 'undefined');
+                $('#edit_id').val(empId);
+                $('#first_name').val(firstName);
+                $('#phone').val(phone);
+                $('#basic_salary').val(basicSalary);
+                $('#status').val(status || 'active');
 
-        $(document).ready(function() {
-            console.log('Document ready fired');
-            console.log('createBtn exists:', $('#createBtn').length > 0);
-            console.log('employeeModal exists:', $('#employeeModal').length > 0);
+                $('#modalLabel').html('<i class="fa fa-pen me-2"></i><span>Edit Employee</span>');
+            }
 
-            // Toggle custom shift fields
-            $('#shift_id').change(function() {
-                if ($(this).val() === 'custom') {
-                    $('#custom_time_container').slideDown();
-                } else {
-                    $('#custom_time_container').slideUp();
-                    $('#custom_start_time').val('');
-                    $('#custom_end_time').val('');
-                }
-            });
-
-            // Create Employee
-            $(document).on('click', '#createBtn', function() {
+            // Fill Create Form
+            function fillCreateModal() {
                 $('#edit_id').val('');
                 if ($('#employeeForm').length > 0 && $('#employeeForm')[0]) {
                     $('#employeeForm')[0].reset();
                 }
-                $('#modalLabel').html('<i class="fa fa-user-plus"></i><span>Add Employee</span>');
-                $('#employeeModal').modal('show');
+                $('#status').val('active');
+                $('#modalLabel').html('<i class="fa fa-user-plus me-2"></i><span>Add Employee</span>');
+            }
+
+            // Create Employee Click
+            $(document).on('click', '#createBtn', function(e) {
+                fillCreateModal();
             });
 
-            // Edit Employee
-            $(document).on('click', '.edit-btn', function() {
-                var card = $(this).closest('.hr-item-card');
-                $('#edit_id').val(card.data('id'));
-                $('#first_name').val(card.find('.first_name').val());
-                $('#phone').val(card.find('.phone').val());
-                $('#basic_salary').val(card.find('.basic_salary').val());
-
-                $('#modalLabel').html('<i class="fa fa-pen"></i><span>Edit Employee</span>');
-                $('#employeeModal').modal('show');
+            // Edit Employee Click
+            $(document).on('click', '.edit-btn', function(e) {
+                var btn = $(this).closest('.edit-btn');
+                fillEditModal(btn);
             });
 
-            // Toggle documents
-            $('#is_docs_submitted').change(function() {
-                $(this).is(':checked') ? $('#documents_container').slideDown() : $('#documents_container')
-                    .slideUp();
+            // Modal Show Listener (Bootstrap 4 & 5 native data-api hook)
+            $('#employeeModal').on('show.bs.modal', function(e) {
+                var target = e.relatedTarget ? $(e.relatedTarget) : null;
+                if (target && target.length) {
+                    var editBtn = target.hasClass('edit-btn') ? target : target.closest('.edit-btn');
+                    var createBtn = target.is('#createBtn') ? target : target.closest('#createBtn');
+
+                    if (editBtn.length) {
+                        fillEditModal(editBtn);
+                    } else if (createBtn.length) {
+                        fillCreateModal();
+                    }
+                }
             });
 
             // Delete Employee
-            $(document).on('click', '.delete-btn', function() {
-                var url = $(this).data('url');
+            $(document).on('click', '.delete-btn', function(e) {
+                e.preventDefault();
+                var btn = $(this).closest('.delete-btn');
+                var url = btn.attr('data-url') || btn.data('url');
+
                 Swal.fire({
                     title: 'Delete Employee?',
                     text: "This action cannot be undone!",
@@ -365,552 +337,115 @@
                                 if (response.success) {
                                     Swal.fire('Deleted!', response.success, 'success')
                                         .then(() => location.reload());
+                                } else {
+                                    Swal.fire('Error', response.error || 'Failed to delete employee', 'error');
                                 }
+                            },
+                            error: function(err) {
+                                var msg = (err.responseJSON && err.responseJSON.error) ? err.responseJSON.error : 'Failed to delete employee';
+                                Swal.fire('Error', msg, 'error');
                             }
                         });
                     }
                 });
             });
 
-            // Unified Filtering Function
-            function filterEmployees() {
-                var searchText = $('#empSearch').val().toLowerCase();
-                var selectedDept = $('#deptFilter').val();
-                var selectedDesig = $('#desigFilter').val();
-                var selectedStatus = $('#statusFilter').val();
-                var activeToggle = $('.btn-group .active').data('filter');
+            // Toggle Status Button Click
+            $(document).on('click', '.btn-toggle-status', function(e) {
+                e.preventDefault();
+                var btn = $(this).closest('.btn-toggle-status');
+                var url = btn.attr('data-url') || btn.data('url');
+                if (!url) return;
 
-                $('.hr-item-card').each(function() {
-                    var card = $(this);
+                btn.prop('disabled', true);
+                $.ajax({
+                    url: url,
+                    type: 'POST',
+                    data: {
+                        _token: '{{ csrf_token() }}'
+                    },
+                    success: function(response) {
+                        btn.prop('disabled', false);
+                        if (response.status) {
+                            var isNowActive = (response.status === 'active');
+                            var row = btn.closest('.hr-table-row');
+                            
+                            // Update hidden input
+                            row.find('.status').val(response.status);
 
-                    // Safe Data Retrieval
-                    var name = (card.data('name') || '').toString().toLowerCase();
-                    var email = (card.data('email') || '').toString().toLowerCase();
-                    var dept = (card.data('dept') || '').toString().toLowerCase();
-                    var desig = (card.find('.designation_id').val() || '').toString()
-                        .toLowerCase(); // Using hidden input value if data attr missing? No, let's use what we have.
-                    // Actually, I need to ensure data-attributes are present. I added hidden inputs earlier, but let's assume I can match by text content or similar if data attr missing. 
-                    // WAIT, I haven't restored data-attributes on the card container yet! I need to do that too.
-                    // Let's use the hidden inputs I verified are present in Step 986 (lines 117, 118, 121)
-                    var deptId = card.find('.department_id').val();
-                    var desigId = card.find('.designation_id')
-                        .val(); // ID matching might be safer if filter values were IDs. But filter values are names (slugs).
-                    // Let's stick to text matching for now as per my previous implementation, but I need to make sure the dropdown values match what's on the card.
-                    // The dropdowns use `strtolower($name)`. The card text is visible.
+                            // Update button style & text
+                            if (isNowActive) {
+                                btn.removeClass('inactive-status').addClass('active-status');
+                                btn.find('i').attr('class', 'fa fa-toggle-on text-success');
+                                btn.find('.status-text').text('Active');
+                            } else {
+                                btn.removeClass('active-status').addClass('inactive-status');
+                                btn.find('i').attr('class', 'fa fa-toggle-off text-muted');
+                                btn.find('.status-text').text('Inactive');
+                            }
 
-                    // Let's rely on text content for now as it's more robust without data-attr if I missed one.
-                    var deptText = card.find('.hr-tag:has(.fa-building)').text().trim().toLowerCase();
-                    var desigText = card.find('.hr-tag:has(.fa-briefcase)').text().trim().toLowerCase();
-                    var statusText = card.find('.hr-tag:last').text().trim().toLowerCase();
+                            // Update table row status badge
+                            var badge = row.find('.status-badge');
+                            badge.removeClass('emp-badge-active emp-badge-inactive emp-badge-terminated');
+                            if (isNowActive) {
+                                badge.addClass('emp-badge-active').text('Active');
+                            } else if (response.status === 'non-active') {
+                                badge.addClass('emp-badge-inactive').text('Inactive');
+                            } else {
+                                badge.addClass('emp-badge-terminated').text('Terminated');
+                            }
 
-                    var isCustom = card.find('.custom_start_time').val() ? true : false;
-                    var isDefault = !isCustom; // Simplified assumption for toggle
-
-                    // 1. Text Search Check
-                    var matchSearch = (name.indexOf(searchText) !== -1 || email.indexOf(searchText) !== -
-                        1 || deptText.indexOf(searchText) !== -1);
-
-                    // 2. Dropdown Filters Check
-                    var matchDept = (selectedDept === 'all' || deptText === selectedDept || deptText
-                        .includes(selectedDept)); // looser matching
-                    var matchDesig = (selectedDesig === 'all' || desigText === selectedDesig || desigText
-                        .includes(selectedDesig));
-                    var matchStatus = (selectedStatus === 'all' || statusText === selectedStatus);
-
-                    // 3. Toggle Buttons Check
-                    var matchToggle = true;
-                    if (activeToggle === 'custom_time') matchToggle = isCustom;
-                    if (activeToggle === 'default_shift') matchToggle = isDefault;
-
-                    // Final Decision
-                    if (matchSearch && matchDept && matchDesig && matchStatus && matchToggle) {
-                        card.show();
-                    } else {
-                        card.hide();
+                            Swal.fire({
+                                toast: true,
+                                position: 'top-end',
+                                icon: 'success',
+                                title: response.success,
+                                showConfirmButton: false,
+                                timer: 2000
+                            });
+                        } else if (response.error) {
+                            Swal.fire('Error', response.error, 'error');
+                        }
+                    },
+                    error: function(err) {
+                        btn.prop('disabled', false);
+                        var msg = (err.responseJSON && err.responseJSON.error) ? err.responseJSON.error : 'Failed to update status';
+                        Swal.fire('Error', msg, 'error');
                     }
                 });
-                $('#empCount').text($('.hr-item-card:visible').length + ' employees');
+            });
+
+            // Table Search and Filter
+            function filterEmployees() {
+                var searchText = $('#empSearch').val().toLowerCase();
+                var selectedStatus = $('#statusFilter').val();
+
+                $('.hr-table-row').each(function() {
+                    var row = $(this);
+
+                    var name = (row.data('name') || '').toString().toLowerCase();
+                    var email = (row.data('email') || '').toString().toLowerCase();
+                    var phone = (row.find('.phone').val() || '').toString().toLowerCase();
+                    var status = (row.find('.status').val() || '').toString().toLowerCase();
+
+                    // 1. Text Search Check
+                    var matchSearch = (!searchText || name.indexOf(searchText) !== -1 || email.indexOf(searchText) !== -1 || phone.indexOf(searchText) !== -1);
+
+                    // 2. Status Filter Check
+                    var matchStatus = (selectedStatus === 'all' || status === selectedStatus);
+
+                    if (matchSearch && matchStatus) {
+                        row.show();
+                    } else {
+                        row.hide();
+                    }
+                });
+                $('#empCount').text($('.hr-table-row:visible').length + ' employees');
             }
 
             // Event Listeners
             $('#empSearch').on('input', filterEmployees);
-            $('#deptFilter, #desigFilter, #statusFilter').on('change', filterEmployees);
-
-            $('[data-filter]').click(function() {
-                $(this).addClass('active').siblings().removeClass('active');
-                filterEmployees();
-            });
-
-            // Refresh
-            $('#refreshBtn').click(() => location.reload());
-
-            // Password Toggle Show/Hide
-            $(document).on('click', '.toggle-password', function() {
-                var targetId = $(this).data('target');
-                var input = $('#' + targetId);
-                var icon = $(this).find('i');
-
-                if (input.attr('type') === 'password') {
-                    input.attr('type', 'text');
-                    icon.removeClass('fa-eye').addClass('fa-eye-slash');
-                } else {
-                    input.attr('type', 'password');
-                    icon.removeClass('fa-eye-slash').addClass('fa-eye');
-                }
-            });
-
-            // --- Face Registration Logic ---
-            let faceStream = null;
-
-            // Open Modal
-            $(document).on('click', '.register-face-btn', function() {
-                const id = $(this).data('id');
-                const name = $(this).data('name');
-
-                $('#face_employee_id').val(id);
-                $('#faceModalLabel').text('Register Face: ' + name);
-
-                $('#faceModal').modal('show');
-                startFaceCamera();
-            });
-
-            // Start Camera
-            // Start Camera
-            async function startFaceCamera() {
-                try {
-                    if (typeof faceapi === 'undefined') {
-                        throw new Error("Face API not loaded");
-                    }
-
-                    // Check if models are loaded (check params on loaded nets)
-                    if (!faceapi.nets.tinyFaceDetector.params) {
-                        $('#face_status').html(
-                            '<div class="d-inline-block px-3 py-1 rounded-pill bg-info bg-opacity-10 text-info border border-info border-opacity-25"><i class="fa fa-spinner fa-spin me-1"></i> Loading AI Models...</div>'
-                        );
-                        const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
-                        await Promise.all([
-                            faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-                            faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-                            faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
-                        ]);
-                    }
-
-                    if (faceStream) {
-                        faceStream.getTracks().forEach(track => track.stop());
-                    }
-
-                    // Request Camera
-                    faceStream = await navigator.mediaDevices.getUserMedia({
-                        video: {
-                            width: 640,
-                            height: 480,
-                            facingMode: 'user'
-                        }
-                    });
-
-                    const videoEl = document.getElementById('face-video');
-                    if (videoEl) {
-                        videoEl.srcObject = faceStream;
-                        $('#face_status').html(
-                            '<div class="d-inline-block px-3 py-1 rounded-pill bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25"><i class="fa fa-info-circle me-1"></i> Ready. Please look at the camera.</div>'
-                        );
-                        $('#btn-capture-face').prop('disabled', false);
-                    }
-
-                } catch (err) {
-                    let msg = err.message;
-                    if (msg.includes('Permission denied')) msg = "Camera permission denied.";
-
-                    $('#face_status').html(
-                        '<div class="d-inline-block px-3 py-1 rounded-pill bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25"><i class="fa fa-exclamation-circle me-1"></i> Error: ' +
-                        msg + '</div>');
-                    console.error(err);
-                }
-            }
-
-            // Capture & Save
-            $('#btn-capture-face').off('click').on('click', async function() {
-                const btn = $(this);
-                const videoEl = document.getElementById('face-video');
-                const canvasEl = document.getElementById('face-canvas');
-
-                if (!videoEl || !canvasEl) return;
-
-                btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Processing...');
-                $('#face_status').html(
-                    '<div class="d-inline-block px-3 py-1 rounded-pill bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25"><i class="fa fa-search me-1"></i> Detecting face...</div>'
-                );
-
-                try {
-                    // Detect Face
-                    const detections = await faceapi.detectSingleFace(videoEl, new faceapi
-                            .TinyFaceDetectorOptions())
-                        .withFaceLandmarks()
-                        .withFaceDescriptor();
-
-                    if (!detections) {
-                        $('#face_status').html(
-                            '<div class="d-inline-block px-3 py-1 rounded-pill bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25"><i class="fa fa-times-circle me-1"></i> No face detected! Please try again.</div>'
-                        );
-                        btn.prop('disabled', false).html('<i class="fa fa-camera"></i> Capture & Save');
-                        return;
-                    }
-
-                    // Capture Image
-                    const context = canvasEl.getContext('2d');
-                    canvasEl.width = videoEl.videoWidth;
-                    canvasEl.height = videoEl.videoHeight;
-                    context.drawImage(videoEl, 0, 0);
-                    const image = canvasEl.toDataURL('image/jpeg');
-
-                    // Send to Server
-                    $.ajax({
-                        url: '{{ route('hr.employees.face-register') }}',
-                        type: 'POST',
-                        data: {
-                            _token: '{{ csrf_token() }}',
-                            employee_id: $('#face_employee_id').val(),
-                            descriptor: Array.from(detections
-                                .descriptor), // Send array directly, Laravel casts to array
-                            image: image
-                        },
-                        success: function(res) {
-                            $('#face_status').html(
-                                '<div class="d-inline-block px-3 py-1 rounded-pill bg-success bg-opacity-10 text-success border border-success border-opacity-25"><i class="fa fa-check-circle me-1"></i> ' +
-                                res.success + '</div>');
-                            setTimeout(() => {
-                                $('#faceModal').modal('hide');
-                                location.reload();
-                            }, 1000);
-                        },
-                        error: function(err) {
-                            let msg = err.responseJSON && err.responseJSON.errors ? Object
-                                .values(err.responseJSON.errors)[0][0] :
-                                'Error saving face.';
-                            $('#face_status').html(
-                                '<div class="d-inline-block px-3 py-1 rounded-pill bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25"><i class="fa fa-exclamation-circle me-1"></i> ' +
-                                msg + '</div>');
-                            btn.prop('disabled', false).html(
-                                '<i class="fa fa-camera"></i> Capture & Save');
-                        }
-                    });
-                } catch (err) {
-                    console.error(err);
-                    $('#face_status').html(
-                        '<div class="d-inline-block px-3 py-1 rounded-pill bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25"><i class="fa fa-exclamation-circle me-1"></i> Detection Error: ' +
-                        err.message + '</div>');
-                    btn.prop('disabled', false).html(
-                        '<i class="fa fa-camera"></i> Capture & Save');
-                }
-            });
-
-            // Stop Camera on Close
-            $('#faceModal').on('hidden.bs.modal', function() {
-                if (faceStream) {
-                    faceStream.getTracks().forEach(track => track.stop());
-                    faceStream = null; // Clear stream reference
-                }
-                $('#face_status').empty();
-                $('#btn-capture-face').prop('disabled', true).html(
-                    '<i class="fa fa-camera"></i> Capture & Save');
-            });
-
-            // Custom submit handler removed - using data-ajax-validate
-        });
-    </script>
-
-
-
-    <!-- Face Registration Modal -->
-    <div class="modal fade" id="faceModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="faceModalLabel">Register Face</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body text-center">
-                    <input type="hidden" id="face_employee_id">
-                    <div
-                        style="position: relative; width: 100%; border-radius: 8px; overflow: hidden; background: #000; margin-bottom: 15px;">
-                        <video id="face-video" autoplay playsinline style="width: 100%; display: block;"></video>
-                        <canvas id="face-canvas" style="display: none;"></canvas>
-                        <div
-                            style="position: absolute; top:50%; left:50%; transform: translate(-50%, -50%); width: 220px; height: 280px; border: 3px dashed rgba(255,255,255,0.7); border-radius: 50%; pointer-events: none;">
-                        </div>
-                    </div>
-                    <div class="d-flex justify-content-center align-items-center mb-3" style="min-height: 30px;">
-                        <div id="status-indicator" class="status-dot"></div>
-                    </div>
-                    <style>
-                        .status-dot {
-                            width: 16px;
-                            height: 16px;
-                            border-radius: 50%;
-                            background: #e9ecef;
-                            transition: all 0.3s ease;
-                        }
-
-                        .status-dot.yellow {
-                            background: #ffc107;
-                            box-shadow: 0 0 12px #ffc107;
-                            animation: pulse-dot 1.5s infinite;
-                        }
-
-                        .status-dot.green {
-                            background: #198754;
-                            box-shadow: 0 0 12px #198754;
-                            transform: scale(1.1);
-                        }
-
-                        .status-dot.red {
-                            background: #dc3545;
-                            box-shadow: 0 0 12px #dc3545;
-                            animation: shake-dot 0.4s;
-                        }
-
-                        @keyframes pulse-dot {
-                            0% {
-                                opacity: 0.5;
-                                transform: scale(0.8);
-                            }
-
-                            50% {
-                                opacity: 1;
-                                transform: scale(1.2);
-                            }
-
-                            100% {
-                                opacity: 0.5;
-                                transform: scale(0.8);
-                            }
-                        }
-
-                        @keyframes shake-dot {
-
-                            0%,
-                            100% {
-                                transform: translateX(0);
-                            }
-
-                            25% {
-                                transform: translateX(-4px);
-                            }
-
-                            75% {
-                                transform: translateX(4px);
-                            }
-                        }
-                    </style>
-                    <button type="button" class="btn btn-primary w-100" id="btn-capture-face" disabled>
-                        <i class="fa fa-camera"></i> Capture & Save
-                    </button>
-                    <small class="text-muted mt-2 d-block">Wait for camera to load, then ensure only one face is
-                        visible.</small>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- Isolated Face Logic -->
-    <script>
-        $(document).ready(function() {
-            // Unbind any previous handlers
-            $(document).off('click', '.register-face-btn');
-            $('#btn-capture-face').off('click');
-            $('#faceModal').off('hidden.bs.modal');
-
-            // Global variables
-            let faceStream = null;
-            let isModelsLoaded = false;
-
-            // UI Helper
-            function setStatus(state) {
-                const indicator = $('#status-indicator');
-                indicator.removeClass('yellow green red');
-
-                if (state === 'loading' || state === 'detecting') {
-                    indicator.addClass('yellow');
-                } else if (state === 'ready' || state === 'success') {
-                    indicator.addClass('green');
-                } else if (state === 'error') {
-                    indicator.addClass('red');
-                }
-            }
-
-            // Preload Models
-            const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
-            (async function loadModels() {
-                try {
-                    setStatus('loading');
-                    await Promise.all([
-                        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-                        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-                        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
-                    ]);
-                    isModelsLoaded = true;
-                    console.log("FaceAPI Models Pre-loaded");
-                    setStatus('ready'); // Or reset
-                    setTimeout(() => setStatus('reset'), 1000); // Hide after load
-                } catch (err) {
-                    console.error("Failed to load FaceAPI models", err);
-                    setStatus('error');
-                }
-            })();
-
-            // Open Modal
-            $(document).on('click', '.register-face-btn', function(e) {
-                e.preventDefault();
-                const id = $(this).data('id');
-                const name = $(this).data('name');
-
-                $('#face_employee_id').val(id);
-                $('#faceModalLabel').text('Register Face: ' + name);
-
-                setStatus('loading');
-                $('#faceModal').modal('show');
-
-                startFaceCamera();
-            });
-
-            // Start Camera
-            window.startFaceCamera = async function() {
-                try {
-                    setStatus('loading');
-                    if (typeof faceapi === 'undefined') {
-                        throw new Error("Face API library not loaded!");
-                    }
-
-                    // Check if models are loaded
-                    if (!isModelsLoaded) {
-                        await Promise.all([
-                            faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-                            faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-                            faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
-                        ]);
-                        isModelsLoaded = true;
-                    }
-
-                    if (faceStream) {
-                        faceStream.getTracks().forEach(track => track.stop());
-                    }
-
-                    faceStream = await navigator.mediaDevices.getUserMedia({
-                        video: {
-                            width: 640,
-                            height: 480,
-                            facingMode: 'user'
-                        }
-                    });
-
-                    const videoEl = document.getElementById('face-video');
-                    if (videoEl) {
-                        videoEl.srcObject = faceStream;
-                        setStatus('ready');
-                        $('#btn-capture-face').prop('disabled', false);
-                    }
-
-                } catch (err) {
-                    let msg = err.message;
-                    if (msg.includes('Permission denied')) msg = "Camera permission denied.";
-
-                    $('#face_status').html(
-                        '<div class="d-inline-block px-3 py-1 rounded-pill bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25"><i class="fa fa-exclamation-circle me-1"></i> Error: ' +
-                        msg + '</div>');
-                    setStatus('error');
-                    console.error(err);
-                }
-            };
-
-            // Capture & Save
-            $('#btn-capture-face').on('click', async function() {
-                const btn = $(this);
-                const videoEl = document.getElementById('face-video');
-                const canvasEl = document.getElementById('face-canvas');
-
-                if (!videoEl || !canvasEl) return;
-
-                btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Processing...');
-                setStatus('detecting');
-
-                try {
-                    const detections = await faceapi.detectSingleFace(videoEl, new faceapi
-                            .TinyFaceDetectorOptions())
-                        .withFaceLandmarks()
-                        .withFaceDescriptor();
-
-                    if (!detections) {
-                        $('#face_status').html(
-                            '<div class="d-inline-block px-3 py-1 rounded-pill bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25"><i class="fa fa-times-circle me-1"></i> No face detected! Please try again.</div>'
-                        );
-                        setStatus('error');
-                        // Optional: Shake effect or red flash?
-                        setTimeout(() => setStatus('ready'), 1000);
-
-                        btn.prop('disabled', false).html('<i class="fa fa-camera"></i> Capture & Save');
-                        return;
-                    }
-
-                    const context = canvasEl.getContext('2d');
-                    canvasEl.width = videoEl.videoWidth;
-                    canvasEl.height = videoEl.videoHeight;
-                    context.drawImage(videoEl, 0, 0);
-                    const image = canvasEl.toDataURL('image/jpeg');
-
-                    $.ajax({
-                        url: '{{ route('hr.employees.face-register') }}',
-                        type: 'POST',
-                        data: {
-                            _token: '{{ csrf_token() }}',
-                            employee_id: $('#face_employee_id').val(),
-                            descriptor: Array.from(detections
-                                .descriptor),
-                            image: image
-                        },
-                        success: function(res) {
-                            $('#face_status').html(
-                                '<div class="d-inline-block px-3 py-1 rounded-pill bg-success bg-opacity-10 text-success border border-success border-opacity-25"><i class="fa fa-check-circle me-1"></i> ' +
-                                res.success + '</div>');
-                            setStatus('success');
-                            btn.html('<i class="fa fa-check"></i> Saved');
-                            setTimeout(() => {
-                                $('#faceModal').modal('hide');
-                                location.reload();
-                            }, 1000);
-                        },
-                        error: function(err) {
-                            let msg = err.responseJSON && err.responseJSON.errors ? Object
-                                .values(err.responseJSON.errors)[0][0] :
-                                'Error saving face.';
-                            $('#face_status').html(
-                                '<div class="d-inline-block px-3 py-1 rounded-pill bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25"><i class="fa fa-exclamation-circle me-1"></i> ' +
-                                msg + '</div>');
-                            setStatus('error');
-                            btn.prop('disabled', false).html(
-                                '<i class="fa fa-camera"></i> Capture & Save');
-                        }
-                    });
-                } catch (err) {
-                    console.error(err);
-                    $('#face_status').html(
-                        '<div class="d-inline-block px-3 py-1 rounded-pill bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25"><i class="fa fa-exclamation-circle me-1"></i> Detection Error: ' +
-                        err.message + '</div>');
-                    setStatus('error');
-                    btn.prop('disabled', false).html(
-                        '<i class="fa fa-camera"></i> Capture & Save');
-                }
-            });
-
-            // Stop Camera on Close
-            document.getElementById('faceModal').addEventListener('hidden.bs.modal', function() {
-                if (faceStream) {
-                    faceStream.getTracks().forEach(track => track.stop());
-                    faceStream = null;
-                }
-                setStatus('reset');
-                $('#face_status').empty();
-                $('#btn-capture-face').prop('disabled', true).html(
-                    '<i class="fa fa-camera"></i> Capture & Save');
-            });
+            $('#statusFilter').on('change', filterEmployees);
         });
     </script>
 @endsection

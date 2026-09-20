@@ -148,17 +148,22 @@
     {{-- Desktop Table Row (≥ 768px) --}}
     <tr class="border-bottom-0 d-none d-md-table-row">
         <td>
-            <div class="d-flex align-items-center gap-1.5" style="max-width: 140px;">
-                <div class="erp-avatar {{ $isWalkin ? 'erp-avatar-walkin' : 'erp-avatar-registered' }}">
+            <div class="d-flex align-items-center gap-1.5" style="min-width: 140px;">
+                <div class="erp-avatar {{ $isWalkin ? 'erp-avatar-walkin' : 'erp-avatar-registered' }} flex-shrink-0">
                     {{ $custInitial }}
                 </div>
-                <div class="d-flex flex-column text-truncate">
-                    <span class="fw-bold text-dark text-truncate" style="font-size: 0.78rem;" title="{{ $custDisplayName }}">{{ $custDisplayName }}</span>
+                <div class="d-flex flex-column" style="white-space: normal; word-break: break-word;">
+                    <span class="fw-bold text-dark" style="font-size: 0.78rem; line-height: 1.25;" title="{{ $custDisplayName }}">{{ $custDisplayName }}</span>
                     @if ($isWalkin && !empty($sale->walkin_name))
-                        <span class="text-muted text-truncate" style="font-size: 0.65rem; font-weight: 500;">Walk-in</span>
+                        <span class="text-muted" style="font-size: 0.65rem; font-weight: 500;">Walk-in</span>
                     @endif
                 </div>
             </div>
+        </td>
+        <td class="align-middle">
+            <a href="{{ route('sales.invoice', $sale->id) }}" target="_blank" class="erp-bill-tag text-decoration-none" title="View Invoice">
+                #{{ $sale->invoice_no ?? $sale->reference ?? $sale->id }}
+            </a>
         </td>
         <td class="sale-serial-cell" data-sale-id="{{ $sale->id }}">
             @if ($ordStatus === 'delivered' && $serialNumbers->isNotEmpty())
@@ -175,9 +180,9 @@
                 <span class="font-monospace text-muted" style="font-size: 0.75rem;">-</span>
             @endif
         </td>
-        <td title="{{ $pNames }}" class="text-muted small" style="max-width: 120px;">
-            <div class="text-truncate" style="max-width: 120px;">
-                {{ \Illuminate\Support\Str::limit($pNames, 22) }}
+        <td title="{{ $pNames }}" class="text-dark small" style="min-width: 140px; white-space: normal; word-break: break-word;">
+            <div class="fw-medium text-dark" style="font-size: 0.78rem; line-height: 1.3;" title="{{ $pNames }}">
+                {{ $pNames }}
             </div>
         </td>
         <td class="text-center font-monospace fw-semibold text-dark" style="font-size: 0.78rem;">

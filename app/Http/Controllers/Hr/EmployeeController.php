@@ -304,4 +304,20 @@ class EmployeeController extends Controller
 
         return response()->json(['success' => 'Face registered successfully for '.$employee->full_name]);
     }
+
+    public function toggleStatus(Employee $employee)
+    {
+        if (! auth()->user()->can('hr.employees.edit')) {
+            return response()->json(['error' => 'Unauthorized action.'], 403);
+        }
+
+        $newStatus = ($employee->status === 'active') ? 'non-active' : 'active';
+        $employee->update(['status' => $newStatus]);
+
+        return response()->json([
+            'success' => 'Employee status updated to ' . ($newStatus === 'non-active' ? 'Inactive' : ucfirst($newStatus)),
+            'status' => $newStatus,
+            'status_label' => $newStatus === 'non-active' ? 'Inactive' : ucfirst($newStatus)
+        ]);
+    }
 }

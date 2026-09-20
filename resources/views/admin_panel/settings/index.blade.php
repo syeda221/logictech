@@ -64,6 +64,10 @@
                                     @php
                                         $companyLogo = \App\Models\Setting::getLogoUrl();
                                         $hasLogo = !empty($companyLogo);
+                                        $companyStamp = \App\Models\Setting::getStampUrl();
+                                        $hasStamp = !empty($companyStamp);
+                                        $companySignature = \App\Models\Setting::getSignatureUrl();
+                                        $hasSignature = !empty($companySignature);
                                     @endphp
                                     <div class="card mb-4 border shadow-sm" style="background-color: #f8fafc;">
                                         <div class="card-header bg-white font-weight-bold d-flex align-items-center">
@@ -97,7 +101,82 @@
                                                         <button type="button" class="btn btn-sm btn-outline-danger" id="btnRemoveLogo" style="{{ $hasLogo ? '' : 'display: none;' }}" {{ !$canEditSettings ? 'disabled' : '' }}>
                                                             <i class="fas fa-trash-alt mr-1"></i> Remove Logo
                                                         </button>
-                                                        <small class="text-muted ml-md-2">Formats: PNG, JPG, WebP, SVG (Max: 4MB). Transparent PNG is recommended.</small>
+                                                        <small class="text-muted ml-md-2">Formats: PNG, JPG, WebP, SVG (Max: 4MB). Transparent PNG recommended.</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Company E-Stamp & E-Signature Section -->
+                                    <div class="row">
+                                        <div class="col-md-6 mb-4">
+                                            <div class="card h-100 border shadow-sm" style="background-color: #f8fafc;">
+                                                <div class="card-header bg-white font-weight-bold d-flex align-items-center">
+                                                    <i class="fas fa-stamp text-danger mr-2"></i> Official Company E-Stamp
+                                                </div>
+                                                <div class="card-body">
+                                                    <p class="text-muted small mb-3">
+                                                        Upload digital rubber stamp image (PNG with transparent background recommended) for auto-stamping invoices.
+                                                    </p>
+                                                    <div class="text-center mb-3">
+                                                        <div id="stampPreviewContainer" class="p-3 bg-white border rounded shadow-sm d-inline-flex align-items-center justify-content-center" style="min-width: 150px; min-height: 100px; width: 100%; max-width: 200px; height: 100px;">
+                                                            <img id="stampPreview" 
+                                                                 src="{{ $hasStamp ? $companyStamp : '' }}" 
+                                                                 alt="Company Stamp Preview" 
+                                                                 style="max-width: 100%; max-height: 80px; object-fit: contain; {{ !$hasStamp ? 'display: none;' : '' }}" />
+                                                            <div id="noStampText" class="text-muted text-center" style="{{ $hasStamp ? 'display: none;' : '' }}">
+                                                                <i class="fas fa-stamp fa-2x d-block mb-1 text-secondary"></i>
+                                                                <small>No Stamp Uploaded</small>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="custom-file mb-2">
+                                                        <input type="file" name="company_stamp" id="companyStampInput" class="custom-file-input" accept="image/png, image/jpeg, image/jpg, image/webp" {{ !$canEditSettings ? 'disabled' : '' }}>
+                                                        <label class="custom-file-label text-truncate" for="companyStampInput" id="companyStampLabel">Choose stamp image...</label>
+                                                    </div>
+                                                    <input type="hidden" name="remove_company_stamp" id="removeCompanyStampInput" value="0">
+                                                    <div class="d-flex align-items-center justify-content-between mt-2">
+                                                        <button type="button" class="btn btn-sm btn-outline-danger" id="btnRemoveStamp" style="{{ $hasStamp ? '' : 'display: none;' }}" {{ !$canEditSettings ? 'disabled' : '' }}>
+                                                            <i class="fas fa-trash-alt mr-1"></i> Remove Stamp
+                                                        </button>
+                                                        <small class="text-muted">Transparent PNG</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-6 mb-4">
+                                            <div class="card h-100 border shadow-sm" style="background-color: #f8fafc;">
+                                                <div class="card-header bg-white font-weight-bold d-flex align-items-center">
+                                                    <i class="fas fa-signature text-success mr-2"></i> Authorized E-Signature
+                                                </div>
+                                                <div class="card-body">
+                                                    <p class="text-muted small mb-3">
+                                                        Upload authorized signature image (PNG with transparent background recommended) for auto-signing invoices.
+                                                    </p>
+                                                    <div class="text-center mb-3">
+                                                        <div id="sigPreviewContainer" class="p-3 bg-white border rounded shadow-sm d-inline-flex align-items-center justify-content-center" style="min-width: 150px; min-height: 100px; width: 100%; max-width: 200px; height: 100px;">
+                                                            <img id="sigPreview" 
+                                                                 src="{{ $hasSignature ? $companySignature : '' }}" 
+                                                                 alt="E-Signature Preview" 
+                                                                 style="max-width: 100%; max-height: 80px; object-fit: contain; {{ !$hasSignature ? 'display: none;' : '' }}" />
+                                                            <div id="noSigText" class="text-muted text-center" style="{{ $hasSignature ? 'display: none;' : '' }}">
+                                                                <i class="fas fa-signature fa-2x d-block mb-1 text-secondary"></i>
+                                                                <small>No Signature Uploaded</small>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="custom-file mb-2">
+                                                        <input type="file" name="company_signature" id="companySignatureInput" class="custom-file-input" accept="image/png, image/jpeg, image/jpg, image/webp" {{ !$canEditSettings ? 'disabled' : '' }}>
+                                                        <label class="custom-file-label text-truncate" for="companySignatureInput" id="companySignatureLabel">Choose signature image...</label>
+                                                    </div>
+                                                    <input type="hidden" name="remove_company_signature" id="removeCompanySignatureInput" value="0">
+                                                    <div class="d-flex align-items-center justify-content-between mt-2">
+                                                        <button type="button" class="btn btn-sm btn-outline-danger" id="btnRemoveSignature" style="{{ $hasSignature ? '' : 'display: none;' }}" {{ !$canEditSettings ? 'disabled' : '' }}>
+                                                            <i class="fas fa-trash-alt mr-1"></i> Remove Signature
+                                                        </button>
+                                                        <small class="text-muted">Transparent PNG</small>
                                                     </div>
                                                 </div>
                                             </div>
@@ -232,6 +311,56 @@
                     $(this).hide();
                 });
 
+                // Stamp preview & remove
+                $('#companyStampInput').on('change', function(e) {
+                    var file = e.target.files[0];
+                    if (file) {
+                        $('#companyStampLabel').text(file.name);
+                        $('#removeCompanyStampInput').val('0');
+                        var reader = new FileReader();
+                        reader.onload = function(evt) {
+                            $('#stampPreview').attr('src', evt.target.result).show();
+                            $('#noStampText').hide();
+                            $('#btnRemoveStamp').show();
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+
+                $('#btnRemoveStamp').on('click', function() {
+                    $('#companyStampInput').val('');
+                    $('#companyStampLabel').text('Choose stamp image...');
+                    $('#removeCompanyStampInput').val('1');
+                    $('#stampPreview').attr('src', '').hide();
+                    $('#noStampText').show();
+                    $(this).hide();
+                });
+
+                // Signature preview & remove
+                $('#companySignatureInput').on('change', function(e) {
+                    var file = e.target.files[0];
+                    if (file) {
+                        $('#companySignatureLabel').text(file.name);
+                        $('#removeCompanySignatureInput').val('0');
+                        var reader = new FileReader();
+                        reader.onload = function(evt) {
+                            $('#sigPreview').attr('src', evt.target.result).show();
+                            $('#noSigText').hide();
+                            $('#btnRemoveSignature').show();
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+
+                $('#btnRemoveSignature').on('click', function() {
+                    $('#companySignatureInput').val('');
+                    $('#companySignatureLabel').text('Choose signature image...');
+                    $('#removeCompanySignatureInput').val('1');
+                    $('#sigPreview').attr('src', '').hide();
+                    $('#noSigText').show();
+                    $(this).hide();
+                });
+
                 $('#settingsForm').on('submit', function(e) {
                     e.preventDefault();
 
@@ -268,6 +397,32 @@
                                 $('#logoPreview').attr('src', '').hide();
                                 $('#noLogoText').show();
                                 $('#btnRemoveLogo').hide();
+                            }
+
+                            if (response.stamp_url) {
+                                $('#stampPreview').attr('src', response.stamp_url).show();
+                                $('#noStampText').hide();
+                                $('#btnRemoveStamp').show();
+                                $('#removeCompanyStampInput').val('0');
+                                $('#companyStampInput').val('');
+                                $('#companyStampLabel').text('Choose stamp image...');
+                            } else if ($('#removeCompanyStampInput').val() === '1') {
+                                $('#stampPreview').attr('src', '').hide();
+                                $('#noStampText').show();
+                                $('#btnRemoveStamp').hide();
+                            }
+
+                            if (response.signature_url) {
+                                $('#sigPreview').attr('src', response.signature_url).show();
+                                $('#noSigText').hide();
+                                $('#btnRemoveSignature').show();
+                                $('#removeCompanySignatureInput').val('0');
+                                $('#companySignatureInput').val('');
+                                $('#companySignatureLabel').text('Choose signature image...');
+                            } else if ($('#removeCompanySignatureInput').val() === '1') {
+                                $('#sigPreview').attr('src', '').hide();
+                                $('#noSigText').show();
+                                $('#btnRemoveSignature').hide();
                             }
                         },
                         error: function(xhr) {

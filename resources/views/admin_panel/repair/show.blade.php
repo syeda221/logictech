@@ -546,9 +546,7 @@
                             </label>
                             <select name="status" class="form-select form-select-sm border-primary-subtle" style="border-radius: 8px; font-weight: 600;" required>
                                 <option value="received" {{ $repair->status === 'received' ? 'selected' : '' }}>Received (Intake)</option>
-                                <option value="diagnosing" {{ $repair->status === 'diagnosing' ? 'selected' : '' }}>Under Diagnosis</option>
                                 <option value="in_progress" {{ $repair->status === 'in_progress' ? 'selected' : '' }}>In Progress / Repairing</option>
-                                <option value="waiting_parts" {{ $repair->status === 'waiting_parts' ? 'selected' : '' }}>Waiting for Parts</option>
                                 <option value="completed" {{ $repair->status === 'completed' ? 'selected' : '' }}>Repaired &amp; Ready</option>
                                 <option value="cancelled" {{ $repair->status === 'cancelled' ? 'selected' : '' }}>Cancelled / Returned</option>
                             </select>
@@ -575,7 +573,7 @@
         </div>
     </div>
 
-    {{-- MODAL 2: DELIVER & COLLECT FINAL PAYMENT --}}
+    {{-- MODAL 2: DELIVER PRODUCT --}}
     <div class="modal fade" id="deliverModal" tabindex="-1" aria-labelledby="deliverModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content text-start border-0 shadow-lg" style="border-radius: 14px; overflow: hidden;">
@@ -584,7 +582,7 @@
                     <div class="modal-header text-white py-3 px-4" style="background: linear-gradient(135deg, #047857 0%, #059669 100%);">
                         <div>
                             <h6 class="modal-title font-weight-bold mb-0 text-white" id="deliverModalLabel" style="font-size: 0.95rem;">
-                                <i class="fas fa-handshake me-2"></i> Deliver Product &amp; Collect Payment
+                                <i class="fas fa-truck me-2"></i> Deliver Product
                             </h6>
                             <small class="text-white-50" style="font-size: 0.72rem;">
                                 Ticket #<span class="font-monospace text-white fw-bold">{{ $repair->repair_no }}</span>
@@ -597,71 +595,27 @@
                         <div class="alert alert-success border-success-subtle py-2 px-3 mb-3 rounded-3 small" style="background-color: #ecfdf5; font-size: 0.75rem;">
                             <div class="fw-bold text-success mb-0.5"><i class="fas fa-check-circle me-1"></i> {{ $repair->item_name }}</div>
                             <div class="text-secondary"><strong>Customer:</strong> {{ $repair->customer_display_name }} ({{ $repair->customer_display_phone }})</div>
+                            @if(($repair->advance_paid ?? 0) > 0)
                             <div class="text-dark font-monospace fw-bold mt-1">
                                 Advance Paid: <span class="text-success" id="modalAdvDisp">Rs. {{ number_format($repair->advance_paid, 2) }}</span>
                             </div>
-                        </div>
-
-                        <div class="row g-3 mb-3">
-                            <div class="col-6">
-                                <label class="form-label small fw-bold text-dark mb-1">Service / Labor Charges <span class="text-danger">*</span></label>
-                                <input type="number" step="0.01" min="0" name="service_charges" id="modalServiceCharges"
-                                    class="form-control form-control-sm font-monospace fw-bold" value="{{ $repair->service_charges > 0 ? $repair->service_charges : $repair->estimated_cost }}" style="border-radius: 8px; height: 36px;" required>
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label small fw-bold text-dark mb-1">Spare Parts Cost</label>
-                                <input type="number" step="0.01" min="0" name="parts_charges" id="modalPartsCharges"
-                                    class="form-control form-control-sm font-monospace fw-bold" value="{{ $repair->parts_charges }}" style="border-radius: 8px; height: 36px;">
-                            </div>
-                        </div>
-
-                        <div class="p-3 rounded-3 bg-white border border-primary-subtle shadow-sm mb-3">
-                            <div class="d-flex justify-content-between align-items-center mb-1" style="font-size: 0.80rem;">
-                                <span class="text-muted fw-semibold">Total Final Bill:</span>
-                                <span class="font-monospace fw-bold text-dark fs-6" id="modalTotalBill">Rs. 0.00</span>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center mb-1 text-success" style="font-size: 0.80rem;">
-                                <span class="fw-semibold">Less: Advance Paid:</span>
-                                <span class="font-monospace fw-bold">-Rs. {{ number_format($repair->advance_paid, 2) }}</span>
-                            </div>
-                            <hr class="my-1.5 opacity-25">
-                            <div class="d-flex justify-content-between align-items-center fw-bold text-danger" style="font-size: 0.88rem;">
-                                <span>Net Remaining Due:</span>
-                                <span class="font-monospace fs-6" id="modalNetDue">Rs. 0.00</span>
-                            </div>
+                            @endif
                         </div>
 
                         <div class="mb-3">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <label class="form-label small fw-bold text-success mb-0">Final Payment Collected Now <span class="text-danger">*</span></label>
-                                <a href="javascript:void(0)" id="modalFillDueBtn" class="badge bg-success-subtle text-success border border-success-subtle text-decoration-none px-2 py-1" style="font-size: 0.70rem; border-radius: 6px;">Auto-fill Net Due</a>
-                            </div>
-                            <input type="number" step="0.01" min="0" name="final_paid" id="modalFinalPaid"
-                                class="form-control form-control-sm font-monospace fw-bold text-success" value="0.00" style="border-radius: 8px; height: 36px;">
+                            <label class="form-label small fw-bold text-dark mb-1">Delivery Date <span class="text-danger">*</span></label>
+                            <input type="date" name="delivery_date" class="form-control form-control-sm font-monospace fw-bold" value="{{ date('Y-m-d') }}" style="border-radius: 8px; height: 36px;" required>
                         </div>
 
                         <div class="mb-1">
-                            <label class="form-label small fw-bold text-dark mb-1">Deposit In Account (Cash / Bank)</label>
-                            <select name="final_account_id" id="modalFinalAccount" class="form-select form-select-sm" style="border-radius: 8px; height: 36px;">
-                                <option value="" selected>-- Select Deposit Account --</option>
-                                @foreach ($accounts as $acc)
-                                    <option value="{{ $acc->id }}" data-balance="{{ $acc->current_balance ?? 0 }}">
-                                        {{ $acc->title }} ({{ $acc->account_code }})
-                                    </option>
-                                @endforeach
-                            </select>
-
-                            <div class="account-balance-badge-wrap mt-1" id="modalAccBalWrap" style="display: none;">
-                                <span class="account-balance-badge" id="modalAccBalBadge">
-                                    <i class="fas fa-wallet"></i> Current Bal: Rs. <span id="modalAccBalVal">0.00</span> <span id="modalAccBalType">DR</span>
-                                </span>
-                            </div>
+                            <label class="form-label small fw-bold text-dark mb-1">Delivery Remarks</label>
+                            <input type="text" name="delivery_notes" class="form-control form-control-sm" placeholder="e.g. Tested in front of customer, handed over safely" style="border-radius: 8px; font-size: 0.78rem;">
                         </div>
                     </div>
                     <div class="modal-footer py-2.5 px-4 bg-light border-top d-flex justify-content-between align-items-center">
                         <button type="button" class="btn btn-sm btn-outline-secondary px-3" data-dismiss="modal" data-bs-dismiss="modal" style="border-radius: 6px; font-size: 0.78rem;">Cancel</button>
                         <button type="submit" class="btn btn-sm btn-success px-4 fw-bold shadow-sm" style="border-radius: 6px; font-size: 0.78rem;">
-                            <i class="fas fa-check-circle me-1"></i> Confirm Delivery &amp; Settle
+                            <i class="fas fa-check-circle me-1"></i> Complete Delivery &amp; Save
                         </button>
                     </div>
                 </form>

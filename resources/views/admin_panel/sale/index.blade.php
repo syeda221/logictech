@@ -759,9 +759,10 @@
                             <table id="sales-table" class="table erp-table datanew" style="width:100%">
                                 <thead>
                                     <tr>
-                                        <th style="min-width: 120px;">Customer</th>
+                                        <th style="min-width: 140px;">Customer</th>
+                                        <th style="min-width: 90px;">Invoice No.</th>
                                         <th style="min-width: 75px;">Serial No</th>
-                                        <th style="min-width: 100px;">Products</th>
+                                        <th style="min-width: 150px;">Products</th>
                                         <th class="text-center" style="width: 38px;">Qty</th>
                                         <th class="text-end" style="width: 80px;">Gross</th>
                                         <th class="text-end" style="width: 80px;">Add. Disc</th>

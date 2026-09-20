@@ -38,6 +38,7 @@ Route::middleware(['auth'])->prefix('hr')->name('hr.')->group(function () {
         Route::get('employees', [EmployeeController::class, 'index'])->name('employees.index');
     });
     Route::post('employees', [EmployeeController::class, 'store'])->name('employees.store')->middleware('permission:hr.employees.create|hr.employees.edit');
+    Route::post('employees/{employee}/toggle-status', [EmployeeController::class, 'toggleStatus'])->name('employees.toggle-status')->middleware('permission:hr.employees.edit');
     Route::delete('employees/{employee}', [EmployeeController::class, 'destroy'])->name('employees.destroy')->middleware('permission:hr.employees.delete');
 
     // Face Recognition Routes

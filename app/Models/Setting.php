@@ -123,6 +123,96 @@ class Setting extends Model
     }
 
     /**
+     * Get company stamp image source (Base64 data URI or asset URL)
+     */
+    public static function getStampUrl(): ?string
+    {
+        $stamp = self::get('company_stamp');
+        if (empty($stamp)) {
+            return null;
+        }
+
+        if (str_starts_with($stamp, 'data:') || str_starts_with($stamp, 'http://') || str_starts_with($stamp, 'https://')) {
+            return $stamp;
+        }
+
+        $cleanPath = ltrim($stamp, '/');
+
+        $candidates = array_unique([
+            public_path($cleanPath),
+            base_path($cleanPath),
+            base_path('public/' . $cleanPath),
+            public_path('uploads/settings/' . basename($cleanPath)),
+            base_path('uploads/settings/' . basename($cleanPath)),
+        ]);
+
+        foreach ($candidates as $candidate) {
+            if (!empty($candidate) && file_exists($candidate) && is_file($candidate)) {
+                $ext = strtolower(pathinfo($candidate, PATHINFO_EXTENSION));
+                $mime = match($ext) {
+                    'png' => 'image/png',
+                    'jpg', 'jpeg' => 'image/jpeg',
+                    'svg' => 'image/svg+xml',
+                    'webp' => 'image/webp',
+                    'gif' => 'image/gif',
+                    default => @mime_content_type($candidate) ?: 'image/png'
+                };
+                $content = @file_get_contents($candidate);
+                if ($content !== false && strlen($content) > 0) {
+                    return 'data:' . $mime . ';base64,' . base64_encode($content);
+                }
+            }
+        }
+
+        return asset($cleanPath);
+    }
+
+    /**
+     * Get company signature image source (Base64 data URI or asset URL)
+     */
+    public static function getSignatureUrl(): ?string
+    {
+        $signature = self::get('company_signature');
+        if (empty($signature)) {
+            return null;
+        }
+
+        if (str_starts_with($signature, 'data:') || str_starts_with($signature, 'http://') || str_starts_with($signature, 'https://')) {
+            return $signature;
+        }
+
+        $cleanPath = ltrim($signature, '/');
+
+        $candidates = array_unique([
+            public_path($cleanPath),
+            base_path($cleanPath),
+            base_path('public/' . $cleanPath),
+            public_path('uploads/settings/' . basename($cleanPath)),
+            base_path('uploads/settings/' . basename($cleanPath)),
+        ]);
+
+        foreach ($candidates as $candidate) {
+            if (!empty($candidate) && file_exists($candidate) && is_file($candidate)) {
+                $ext = strtolower(pathinfo($candidate, PATHINFO_EXTENSION));
+                $mime = match($ext) {
+                    'png' => 'image/png',
+                    'jpg', 'jpeg' => 'image/jpeg',
+                    'svg' => 'image/svg+xml',
+                    'webp' => 'image/webp',
+                    'gif' => 'image/gif',
+                    default => @mime_content_type($candidate) ?: 'image/png'
+                };
+                $content = @file_get_contents($candidate);
+                if ($content !== false && strlen($content) > 0) {
+                    return 'data:' . $mime . ';base64,' . base64_encode($content);
+                }
+            }
+        }
+
+        return asset($cleanPath);
+    }
+
+    /**
      * Cast value to appropriate type
      */
     private static function castValue($value, string $type)
