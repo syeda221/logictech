@@ -167,14 +167,16 @@
                 <th style="width: 35px;">#</th>
                 <th>Raw Material Item</th>
                 <th>Item Code</th>
-                <th>Category</th>
+                <th class="text-right" style="width: 120px;">Opening Stock</th>
                 <th class="text-right" style="width: 110px;">Qty Issued</th>
-                <th class="text-right" style="width: 95px;">Unit Cost</th>
-                <th class="text-right" style="width: 115px;">Total Cost</th>
+                <th class="text-right" style="width: 130px;">Remaining Stock</th>
             </tr>
         </thead>
         <tbody>
             @foreach($usage->items as $index => $item)
+                @php
+                    $remStock = max(0, $item->available_stock_at_time - $item->qty_used);
+                @endphp
                 <tr>
                     <td class="text-muted">{{ $index + 1 }}</td>
                     <td>
@@ -184,29 +186,25 @@
                         @endif
                     </td>
                     <td class="text-muted small">{{ $item->product->item_code ?? '-' }}</td>
-                    <td class="text-muted small">{{ $item->product->category_relation->category_name ?? '-' }}</td>
+                    <td class="text-right text-primary font-weight-bold">
+                        {{ number_format($item->available_stock_at_time, 2) }} {{ $item->unit_name }}
+                    </td>
                     <td class="text-right font-weight-bold text-danger">
                         {{ number_format($item->qty_used, 2) }} {{ $item->unit_name }}
                     </td>
-                    <td class="text-right text-muted">
-                        Rs. {{ number_format($item->unit_cost, 2) }}
-                    </td>
-                    <td class="text-right font-weight-bold text-dark">
-                        Rs. {{ number_format($item->total_cost, 2) }}
+                    <td class="text-right font-weight-bold text-success">
+                        {{ number_format($remStock, 2) }} {{ $item->unit_name }}
                     </td>
                 </tr>
             @endforeach
         </tbody>
         <tfoot>
             <tr style="border-top: 2px solid #cbd5e1; background: #f8fafc;">
-                <td colspan="4" class="text-right font-weight-bold py-2">Grand Total:</td>
+                <td colspan="4" class="text-right font-weight-bold py-2">Total Qty Issued:</td>
                 <td class="text-right font-weight-bold text-danger py-2" style="font-size: 14px;">
                     {{ number_format($usage->total_qty, 2) }}
                 </td>
-                <td class="text-right py-2"></td>
-                <td class="text-right font-weight-bold text-dark py-2" style="font-size: 14px;">
-                    Rs. {{ number_format($usage->total_cost, 2) }}
-                </td>
+                <td></td>
             </tr>
         </tfoot>
     </table>

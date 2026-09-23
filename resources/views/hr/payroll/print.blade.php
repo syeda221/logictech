@@ -71,25 +71,6 @@
             background-color: #f2f2f2;
         }
 
-        .ot-table {
-            width: auto;
-            min-width: 60%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-        .ot-table th, .ot-table td {
-            border: 1px solid #000;
-            padding: 4px 8px;
-            text-align: center;
-            font-size: 10px;
-        }
-        .ot-header {
-            background-color: #8db4e2;
-            font-weight: bold;
-            text-align: center;
-            padding: 4px;
-        }
-        
         .no-print {
             margin-bottom: 15px;
         }
@@ -108,10 +89,10 @@
     <table class="excel-table">
         <thead>
             <tr>
-                <th colspan="14" class="main-header">Payroll Summary</th>
+                <th colspan="15" class="main-header">Payroll Summary</th>
             </tr>
             <tr>
-                <th colspan="14" class="sub-header">{{ \Carbon\Carbon::parse($month.'-01')->format('M-y') }}</th>
+                <th colspan="15" class="sub-header">{{ \Carbon\Carbon::parse($month.'-01')->format('M-y') }}</th>
             </tr>
             <tr style="background-color: #f2f2f2;">
                 <th style="width: 30px;">SN</th>
@@ -122,11 +103,12 @@
                 <th>Overtime Days</th>
                 <th>Overtime Pay</th>
                 <th class="bg-total-pay">Total Pay</th>
+                <th>Previous Balance</th>
                 <th>Advances this month</th>
                 <th>Other Allowance /Eidi</th>
                 <th class="bg-net-payable">Net Payable this month</th>
                 <th>Payment this month</th>
-                <th>Closing Balance/previous advances</th>
+                <th>Closing Balance</th>
                 <th>Payment Date</th>
             </tr>
         </thead>
@@ -141,11 +123,12 @@
                     <td>{{ $item['overtime_days'] > 0 ? number_format($item['overtime_days'], 1) : '' }}</td>
                     <td class="text-right">{{ $item['overtime_pay'] > 0 ? number_format($item['overtime_pay'], 0) : '-' }}</td>
                     <td class="bg-total-pay text-right">{{ number_format($item['total_pay'], 0) }}</td>
+                    <td class="text-right fw-bold">@if($item['prev_closing'] > 0)<span style="color: #16a34a;">+{{ number_format($item['prev_closing'], 0) }}</span>@elseif($item['prev_closing'] < 0)<span style="color: #dc2626;">-{{ number_format(abs($item['prev_closing']), 0) }}</span>@else-@endif</td>
                     <td class="text-right">{{ $item['advances'] > 0 ? '-' . number_format($item['advances'], 0) : '-0' }}</td>
                     <td class="text-right">{{ $item['other_allowance'] > 0 ? number_format($item['other_allowance'], 0) : '-' }}</td>
                     <td class="bg-net-payable text-right">{{ number_format($item['net_payable'], 0) }}</td>
                     <td class="text-right fw-bold">{{ number_format($item['payment_this_month'], 0) }}</td>
-                    <td class="text-right">{{ $item['closing_balance'] != 0 ? '-' . number_format(abs($item['closing_balance']), 0) : '-' }}</td>
+                    <td class="text-right">{{ $item['closing_balance'] != 0 ? number_format($item['closing_balance'], 0) : '-' }}</td>
                     <td>{{ $item['payment_date'] }}</td>
                 </tr>
             @endforeach
@@ -157,52 +140,18 @@
                 <td></td>
                 <td class="text-right">{{ number_format($totals['overtime_pay'], 0) }}</td>
                 <td class="bg-total-pay text-right">{{ number_format($totals['total_pay'], 0) }}</td>
+                <td class="text-right fw-bold">@if($totals['prev_closing'] > 0)<span style="color: #16a34a;">+{{ number_format($totals['prev_closing'], 0) }}</span>@elseif($totals['prev_closing'] < 0)<span style="color: #dc2626;">-{{ number_format(abs($totals['prev_closing']), 0) }}</span>@else-@endif</td>
                 <td class="text-right">{{ number_format($totals['advances'], 0) }}</td>
                 <td class="text-right">{{ number_format($totals['other_allowance'], 0) }}</td>
                 <td class="bg-net-payable text-right">{{ number_format($totals['net_payable'], 0) }}</td>
                 <td class="text-right">{{ number_format($totals['payment_this_month'], 0) }}</td>
-                <td class="text-right">{{ $totals['closing_balance'] != 0 ? '-' . number_format(abs($totals['closing_balance']), 0) : '-' }}</td>
+                <td class="text-right">{{ $totals['closing_balance'] != 0 ? number_format($totals['closing_balance'], 0) : '-' }}</td>
                 <td></td>
             </tr>
         </tbody>
     </table>
 
-    <!-- OVERTIME DETAILS SUB-TABLE -->
-    <div style="margin-top: 25px;">
-        <table class="ot-table">
-            <thead>
-                <tr>
-                    <th colspan="{{ count($payrollItems) + 1 }}" class="ot-header">OVERTIME DETAILS</th>
-                </tr>
-                <tr style="background: #f2f2f2;">
-                    <th class="text-left">NAME</th>
-                    @foreach($payrollItems as $item)
-                        <th>{{ strtok($item['employee_name'], ' ') }}</th>
-                    @endforeach
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td class="fw-bold text-left">HEAD</td>
-                    @foreach($payrollItems as $item)
-                        <td>OT</td>
-                    @endforeach
-                </tr>
-                <tr>
-                    <td class="fw-bold text-left">OVERTIME HOURS</td>
-                    @foreach($payrollItems as $item)
-                        <td>{{ number_format($item['overtime_hours'], 1) }}</td>
-                    @endforeach
-                </tr>
-                <tr>
-                    <td class="fw-bold text-left">OVERTIME DAYS</td>
-                    @foreach($payrollItems as $item)
-                        <td>{{ number_format($item['overtime_days'], 2) }}</td>
-                    @endforeach
-                </tr>
-            </tbody>
-        </table>
-    </div>
+
 
 </body>
 </html>

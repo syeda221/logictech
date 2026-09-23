@@ -417,18 +417,18 @@
                 <div class="col-6 col-md-3">
                     <div class="erp-kpi-card">
                         <div>
-                            <div class="erp-kpi-label">Total Net Value</div>
-                            <div class="erp-kpi-value text-success">Rs. {{ number_format($kpiMetrics['total_cost'], 2) }}</div>
+                            <div class="erp-kpi-label">Stock Remaining</div>
+                            <div class="erp-kpi-value text-success">{{ number_format($kpiMetrics['total_remaining_stock'], 2) }}</div>
                         </div>
                         <div class="erp-kpi-icon" style="background-color: #ecfdf5; color: #059669;">
-                            <i class="fas fa-coins"></i>
+                            <i class="fas fa-boxes-stacked"></i>
                         </div>
                     </div>
                 </div>
                 <div class="col-6 col-md-3">
                     <div class="erp-kpi-card">
                         <div>
-                            <div class="erp-kpi-label">Total Quantity</div>
+                            <div class="erp-kpi-label">Total Quantity Issued</div>
                             <div class="erp-kpi-value text-warning" style="color: #d97706 !important;">{{ number_format($kpiMetrics['total_qty'], 2) }}</div>
                         </div>
                         <div class="erp-kpi-icon" style="background-color: #fffbeb; color: #d97706;">
@@ -534,9 +534,9 @@
                                     <th style="min-width: 140px;">ISSUED BY</th>
                                     <th style="width: 130px;">M.BILL / REF</th>
                                     <th style="min-width: 180px;">PRODUCTS</th>
-                                    <th class="text-center" style="width: 50px;">QTY</th>
-                                    <th class="text-end" style="width: 90px;">AVG RATE</th>
-                                    <th class="text-end" style="width: 100px;">NET TOTAL</th>
+                                    <th class="text-center" style="width: 110px;">OPENING STOCK</th>
+                                    <th class="text-center" style="width: 90px;">QTY ISSUED</th>
+                                    <th class="text-center" style="width: 120px;">REMAINING STOCK</th>
                                     <th class="text-center" style="width: 80px;">DATE</th>
                                     <th class="text-center" style="width: 80px;">STATUS</th>
                                     <th class="pe-2 text-center" style="width: 80px;">ACTION</th>
@@ -549,9 +549,17 @@
                                             return ($it->product->item_name ?? 'Item') . ' (' . number_format($it->qty_used, 1) . ' ' . $it->unit_name . ')';
                                         })->implode(', ');
 
+                                        $openingStocks = $u->items->map(function($it) {
+                                            return number_format($it->available_stock_at_time, 2) . ' ' . $it->unit_name;
+                                        })->implode(', ');
+
+                                        $remainingStocks = $u->items->map(function($it) {
+                                            $rem = max(0, $it->available_stock_at_time - $it->qty_used);
+                                            return number_format($rem, 2) . ' ' . $it->unit_name;
+                                        })->implode(', ');
+
                                         $issuedBy = $u->user->name ?? 'Admin';
                                         $initial = strtoupper(substr($issuedBy, 0, 1));
-                                        $avgRate = $u->total_qty > 0 ? ($u->total_cost / $u->total_qty) : 0;
                                     @endphp
                                     <tr class="border-bottom-0">
                                         {{-- Bill Tag --}}
@@ -586,19 +594,19 @@
                                             </div>
                                         </td>
 
-                                        {{-- Qty --}}
-                                        <td class="text-center font-monospace fw-semibold text-dark" style="font-size: 0.78rem;">
+                                        {{-- Opening Stock --}}
+                                        <td class="text-center font-monospace fw-semibold text-primary" style="font-size: 0.78rem;" title="{{ $openingStocks }}">
+                                            {{ $openingStocks }}
+                                        </td>
+
+                                        {{-- Qty Issued --}}
+                                        <td class="text-center font-monospace fw-bold text-danger" style="font-size: 0.78rem;">
                                             {{ number_format($u->total_qty, 2) }}
                                         </td>
 
-                                        {{-- Avg Rate / Gross --}}
-                                        <td class="text-end fw-bold text-dark font-monospace" style="font-size: 0.78rem;">
-                                            Rs. {{ number_format($avgRate, 2) }}
-                                        </td>
-
-                                        {{-- Net Total --}}
-                                        <td class="text-end fw-bold font-monospace" style="color: #047857; font-size: 0.80rem;">
-                                            Rs. {{ number_format($u->total_cost, 2) }}
+                                        {{-- Remaining Stock --}}
+                                        <td class="text-center font-monospace fw-bold text-success" style="font-size: 0.78rem;" title="{{ $remainingStocks }}">
+                                            {{ $remainingStocks }}
                                         </td>
 
                                         {{-- Date --}}

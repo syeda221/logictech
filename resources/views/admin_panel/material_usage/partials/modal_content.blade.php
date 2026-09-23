@@ -28,14 +28,16 @@
                     <th class="py-2 pl-3">#</th>
                     <th class="py-2">Raw Material</th>
                     <th class="py-2">Code</th>
-                    <th class="py-2 text-right">Available Then</th>
+                    <th class="py-2 text-right">Opening Stock</th>
                     <th class="py-2 text-right">Qty Used</th>
-                    <th class="py-2 text-right">Unit Cost</th>
-                    <th class="py-2 text-right pr-3">Total Cost</th>
+                    <th class="py-2 text-right pr-3">Remaining Stock</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($usage->items as $index => $item)
+                    @php
+                        $remStock = max(0, $item->available_stock_at_time - $item->qty_used);
+                    @endphp
                     <tr>
                         <td class="pl-3 align-middle text-muted">{{ $index + 1 }}</td>
                         <td class="align-middle">
@@ -45,19 +47,17 @@
                             @endif
                         </td>
                         <td class="align-middle text-muted small">{{ $item->product->item_code ?? '-' }}</td>
-                        <td class="align-middle text-right text-muted small">{{ number_format($item->available_stock_at_time, 2) }} {{ $item->unit_name }}</td>
+                        <td class="align-middle text-right text-primary font-weight-bold small">{{ number_format($item->available_stock_at_time, 2) }} {{ $item->unit_name }}</td>
                         <td class="align-middle text-right font-weight-bold text-danger">{{ number_format($item->qty_used, 2) }} {{ $item->unit_name }}</td>
-                        <td class="align-middle text-right text-muted">Rs. {{ number_format($item->unit_cost, 2) }}</td>
-                        <td class="align-middle text-right font-weight-bold text-dark pr-3">Rs. {{ number_format($item->total_cost, 2) }}</td>
+                        <td class="align-middle text-right font-weight-bold text-success pr-3">{{ number_format($remStock, 2) }} {{ $item->unit_name }}</td>
                     </tr>
                 @endforeach
             </tbody>
             <tfoot class="bg-light font-weight-bold">
                 <tr>
-                    <td colspan="4" class="text-right py-2">Total:</td>
+                    <td colspan="4" class="text-right py-2">Total Qty Used:</td>
                     <td class="text-right py-2 text-danger font-weight-bold">{{ number_format($usage->total_qty, 2) }}</td>
-                    <td class="text-right py-2"></td>
-                    <td class="text-right py-2 pr-3 text-dark">Rs. {{ number_format($usage->total_cost, 2) }}</td>
+                    <td class="py-2"></td>
                 </tr>
             </tfoot>
         </table>

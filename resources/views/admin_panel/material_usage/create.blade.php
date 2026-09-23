@@ -439,18 +439,18 @@
                 <div class="col-6 col-md-3">
                     <div class="erp-kpi-card">
                         <div>
-                            <div class="erp-kpi-label">Total Net Value</div>
-                            <div class="erp-kpi-value text-success" id="kpiNetTotal">Rs. 0.00</div>
+                            <div class="erp-kpi-label">Est. Stock Remaining</div>
+                            <div class="erp-kpi-value text-success" id="kpiNetTotal">0.00</div>
                         </div>
                         <div class="erp-kpi-icon" style="background-color: #ecfdf5; color: #059669;">
-                            <i class="fas fa-coins"></i>
+                            <i class="fas fa-boxes-stacked"></i>
                         </div>
                     </div>
                 </div>
                 <div class="col-6 col-md-3">
                     <div class="erp-kpi-card">
                         <div>
-                            <div class="erp-kpi-label">Total Quantity</div>
+                            <div class="erp-kpi-label">Total Qty to Issue</div>
                             <div class="erp-kpi-value text-warning" style="color: #d97706 !important;" id="kpiTotalQty">0.00</div>
                         </div>
                         <div class="erp-kpi-icon" style="background-color: #fffbeb; color: #d97706;">
@@ -536,13 +536,12 @@
                             <thead>
                                 <tr>
                                     <th style="width: 40px;" class="text-center">#</th>
-                                    <th style="min-width: 280px;" class="text-start ps-3">RAW MATERIAL / COMPONENT <span class="text-danger">*</span></th>
-                                    <th style="width: 110px;" class="text-center">CODE</th>
-                                    <th style="width: 140px;" class="text-center">AVAILABLE STOCK</th>
+                                    <th style="min-width: 250px;" class="text-start ps-3">RAW MATERIAL / COMPONENT <span class="text-danger">*</span></th>
+                                    <th style="width: 100px;" class="text-center">CODE</th>
+                                    <th style="width: 130px;" class="text-center">OPENING STOCK</th>
                                     <th style="width: 110px;" class="text-center">QTY TO ISSUE <span class="text-danger">*</span></th>
                                     <th style="width: 70px;" class="text-center">UNIT</th>
-                                    <th style="width: 110px;" class="text-end pe-3">UNIT COST</th>
-                                    <th style="width: 130px;" class="text-end pe-3">TOTAL VALUE</th>
+                                    <th style="width: 130px;" class="text-center">REMAINING STOCK</th>
                                     <th style="min-width: 160px;" class="text-start ps-2">NOTES / STAGE</th>
                                     <th style="width: 45px;" class="text-center">×</th>
                                 </tr>
@@ -557,13 +556,11 @@
                                                 @php
                                                     $stk = (float)($rm->warehouse_stocks_sum_total_pieces ?? 0);
                                                     $u = $rm->unit->name ?? $rm->unit->unit_name ?? 'Pcs';
-                                                    $c = (float)($rm->purchase_price_per_piece ?? 0);
                                                 @endphp
                                                 <option value="{{ $rm->id }}" 
                                                         data-code="{{ $rm->item_code ?? '-' }}" 
                                                         data-stock="{{ $stk }}" 
-                                                        data-unit="{{ $u }}" 
-                                                        data-cost="{{ $c }}">
+                                                        data-unit="{{ $u }}">
                                                     {{ $rm->item_name }} &nbsp;—&nbsp; [ Stock: {{ number_format($stk, 2) }} {{ $u }} ]
                                                 </option>
                                             @endforeach
@@ -585,10 +582,7 @@
                                         <input type="text" class="form-control form-control-row input-readonly text-center row-unit" readonly tabindex="-1" value="Pcs">
                                     </td>
                                     <td>
-                                        <input type="text" class="form-control form-control-row input-readonly text-end row-cost" readonly tabindex="-1" value="0.00">
-                                    </td>
-                                    <td>
-                                        <input type="text" class="form-control form-control-row input-readonly text-end font-weight-bold row-total" style="color: #047857 !important;" readonly tabindex="-1" value="0.00">
+                                        <input type="text" class="form-control form-control-row input-readonly text-center font-weight-bold row-rem-stock" style="color: #059669 !important;" readonly tabindex="-1" value="0.00">
                                     </td>
                                     <td>
                                         <input type="text" name="notes[]" class="form-control form-control-row row-notes" placeholder="Notes (optional)...">
@@ -605,8 +599,7 @@
                                     <td colspan="4" class="text-end font-weight-bold pe-3">Grand Total:</td>
                                     <td class="text-center font-weight-bold text-dark font-monospace" id="footerTotalQty" style="font-size: 0.85rem;">0.00</td>
                                     <td></td>
-                                    <td class="text-end font-weight-bold pe-3">Total Cost:</td>
-                                    <td class="text-end font-weight-bold font-monospace pe-3" id="footerTotalCost" style="color: #047857; font-size: 0.88rem;">Rs. 0.00</td>
+                                    <td class="text-center font-weight-bold font-monospace text-success" id="footerTotalRemStock" style="font-size: 0.85rem;">0.00</td>
                                     <td colspan="2"></td>
                                 </tr>
                             </tfoot>
@@ -625,7 +618,7 @@
                             Total Qty: <strong class="text-warning" style="color: #d97706 !important;" id="summaryQty">0.00</strong>
                         </span>
                         <span class="badge bg-light border px-2 py-1.5 text-secondary" style="font-size: 0.8rem; border-radius: 6px;">
-                            Net Cost: <strong class="text-success" style="color: #059669 !important;" id="summaryCost">Rs. 0.00</strong>
+                            Est. Stock Remaining: <strong class="text-success" style="color: #059669 !important;" id="summaryCost">0.00</strong>
                         </span>
                     </div>
                     <div class="d-flex align-items-center gap-2">
@@ -714,10 +707,7 @@ $(document).ready(function() {
                     <input type="text" class="form-control form-control-row input-readonly text-center row-unit" readonly tabindex="-1" value="Pcs">
                 </td>
                 <td>
-                    <input type="text" class="form-control form-control-row input-readonly text-right row-cost" readonly tabindex="-1" value="0.00">
-                </td>
-                <td>
-                    <input type="text" class="form-control form-control-row input-readonly text-right font-weight-bold text-dark row-total" readonly tabindex="-1" value="0.00">
+                    <input type="text" class="form-control form-control-row input-readonly text-center font-weight-bold row-rem-stock" style="color: #059669 !important;" readonly tabindex="-1" value="0.00">
                 </td>
                 <td>
                     <input type="text" name="notes[]" class="form-control form-control-row row-notes" placeholder="Notes (optional)...">
@@ -765,8 +755,7 @@ $(document).ready(function() {
             row.find('.row-stock-badge').removeClass('badge-stock-has').addClass('badge-stock-zero').html('<i class="fas fa-minus-circle mr-1"></i> --');
             row.find('.row-stock-val').val(0);
             row.find('.row-unit').val('Pcs');
-            row.find('.row-cost').val('0.00');
-            row.find('.row-total').val('0.00');
+            row.find('.row-rem-stock').val('0.00');
             row.find('.row-qty').removeAttr('max');
             recalculateTotals();
             return;
@@ -775,12 +764,10 @@ $(document).ready(function() {
         let code = selectedOption.attr('data-code') || selectedOption.data('code') || '-';
         let stock = parseFloat(selectedOption.attr('data-stock') !== undefined ? selectedOption.attr('data-stock') : (selectedOption.data('stock') || 0));
         let unit = selectedOption.attr('data-unit') || selectedOption.data('unit') || 'Pcs';
-        let cost = parseFloat(selectedOption.attr('data-cost') !== undefined ? selectedOption.attr('data-cost') : (selectedOption.data('cost') || 0));
 
         row.find('.row-code').val(code);
         row.find('.row-stock-val').val(stock);
         row.find('.row-unit').val(unit);
-        row.find('.row-cost').val(cost.toFixed(2));
         row.find('.row-qty').attr('max', stock);
 
         // Update Stock Badge in Row
@@ -831,7 +818,6 @@ $(document).ready(function() {
     function calculateRowTotal(row) {
         let qty = parseFloat(row.find('.row-qty').val()) || 0;
         let stock = parseFloat(row.find('.row-stock-val').val()) || 0;
-        let cost = parseFloat(row.find('.row-cost').val()) || 0;
         let qtyInput = row.find('.row-qty');
 
         if (stock > 0 && qty > stock) {
@@ -842,37 +828,37 @@ $(document).ready(function() {
             qtyInput.removeAttr('title');
         }
 
-        let total = qty * cost;
-        row.find('.row-total').val(total.toFixed(2));
+        let remStock = Math.max(0, stock - qty);
+        row.find('.row-rem-stock').val(remStock.toFixed(2));
         recalculateTotals();
     }
 
     // Recalculate Table Footer, KPI Cards & Summary Bar
     function recalculateTotals() {
         let sumQty = 0;
-        let sumCost = 0;
+        let sumRemStock = 0;
 
         $('#usageTableBody tr.item-row').each(function() {
             let q = parseFloat($(this).find('.row-qty').val()) || 0;
-            let t = parseFloat($(this).find('.row-total').val()) || 0;
+            let r = parseFloat($(this).find('.row-rem-stock').val()) || 0;
             sumQty += q;
-            sumCost += t;
+            sumRemStock += r;
         });
 
-        let formattedCost = 'Rs. ' + sumCost.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
         let formattedQty = sumQty.toFixed(2);
+        let formattedRemStock = sumRemStock.toFixed(2);
 
         // Footer
         $('#footerTotalQty').text(formattedQty);
-        $('#footerTotalCost').text(formattedCost);
+        $('#footerTotalRemStock').text(formattedRemStock);
 
         // Summary Bar
         $('#summaryQty').text(formattedQty);
-        $('#summaryCost').text(formattedCost);
+        $('#summaryCost').text(formattedRemStock);
 
         // Top KPI Cards
         $('#kpiTotalQty').text(formattedQty);
-        $('#kpiNetTotal').text(formattedCost);
+        $('#kpiNetTotal').text(formattedRemStock);
     }
 
     // Re-index rows

@@ -114,11 +114,17 @@ class MaterialUsageController extends Controller
 
         // Summary KPI Metrics
         $metricQuery = clone $query;
+        $usageIds = $metricQuery->pluck('id');
+        $totalOpeningStock = DB::table('material_usage_items')->whereIn('material_usage_id', $usageIds)->sum('available_stock_at_time');
+        $totalQtyUsed = $metricQuery->sum('total_qty');
+        $totalRemainingStock = max(0, $totalOpeningStock - $totalQtyUsed);
+
         $kpiMetrics = [
-            'total_usages' => $metricQuery->count(),
-            'total_items'  => $metricQuery->sum('total_items'),
-            'total_qty'    => $metricQuery->sum('total_qty'),
-            'total_cost'   => $metricQuery->sum('total_cost'),
+            'total_usages'          => $metricQuery->count(),
+            'total_items'           => $metricQuery->sum('total_items'),
+            'total_qty'             => $totalQtyUsed,
+            'total_opening_stock'   => $totalOpeningStock,
+            'total_remaining_stock' => $totalRemainingStock,
         ];
 
         $usages = $query->orderBy('date', 'desc')->orderBy('id', 'desc')->paginate(25)->withQueryString();

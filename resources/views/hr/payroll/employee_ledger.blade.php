@@ -162,10 +162,12 @@
                     <div class="stat-val text-info">Rs. {{ number_format($summary['opening_balance'], 0) }}</div>
                 </div>
 
-                <div class="stat-pill border-warning">
-                    <div class="stat-label text-warning">Total Advances Given</div>
-                    <div class="stat-val text-warning">Rs. {{ number_format($summary['total_advances_given'], 0) }}</div>
-                </div>
+                @if($summary['total_advances_given'] > 0)
+                    <div class="stat-pill border-warning">
+                        <div class="stat-label text-warning">Total Advances Given</div>
+                        <div class="stat-val text-warning">Rs. {{ number_format($summary['total_advances_given'], 0) }}</div>
+                    </div>
+                @endif
 
                 <div class="stat-pill border-danger">
                     <div class="stat-label text-danger">Advances Deducted</div>
@@ -183,7 +185,7 @@
                 </div>
 
                 <div class="stat-pill border-dark bg-light">
-                    <div class="stat-label text-dark">Closing Advance Balance</div>
+                    <div class="stat-label text-dark">Closing Balance</div>
                     <div class="stat-val text-dark">Rs. {{ number_format($summary['closing_balance'], 0) }}</div>
                 </div>
             </div>

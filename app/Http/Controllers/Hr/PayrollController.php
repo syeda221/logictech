@@ -66,6 +66,7 @@ class PayrollController extends Controller
             'overtime_days' => 0,
             'overtime_pay' => 0,
             'total_pay' => 0,
+            'prev_closing' => 0,
             'advances' => 0,
             'other_allowance' => 0,
             'net_payable' => 0,
@@ -89,7 +90,7 @@ class PayrollController extends Controller
                 ->get()
                 ->sum(function($l) { return $l->amount - $l->paid_amount; }));
 
-            $baseClosing = ($prevP !== null) ? $prevClosing : ($totalActiveLoans > 0 ? -$totalActiveLoans : 0.0);
+            $prevAdvanceBalance = ($prevP !== null) ? $prevClosing : $totalActiveLoans;
 
             if ($p) {
                 $pDays = floatval($p->p_days ?? 30);
@@ -102,7 +103,11 @@ class PayrollController extends Controller
                 $otherAllowance = floatval($p->other_allowance ?? $p->manual_allowances ?? 0);
                 $netPayable = floatval($p->net_salary ?? ($totalPay - $advances + $otherAllowance));
                 $paymentThisMonth = floatval($p->payment_this_month ?? $netPayable);
-                $closingBalance = floatval($p->closing_balance ?? ($baseClosing + $advances + ($netPayable - $paymentThisMonth)));
+                
+                $remAdvance = max(0, $prevAdvanceBalance - $advances);
+                $paymentDiff = $paymentThisMonth - $netPayable;
+                $closingBalance = $remAdvance + $paymentDiff;
+
                 $paymentDate = $p->payment_date ? $p->payment_date->format('Y-m-d') : date('Y-m-04');
                 $accountId = $p->account_id;
                 $status = $p->status;
@@ -120,8 +125,9 @@ class PayrollController extends Controller
                 $netPayable = $totalPay - $advances + $otherAllowance;
                 $paymentThisMonth = $netPayable;
                 
-                // Auto-calculate closing balance: baseClosing + advances + (netPayable - paymentThisMonth)
-                $closingBalance = $baseClosing + $advances + ($netPayable - $paymentThisMonth);
+                $remAdvance = max(0, $prevAdvanceBalance - $advances);
+                $paymentDiff = $paymentThisMonth - $netPayable;
+                $closingBalance = $remAdvance + $paymentDiff;
 
                 $paymentDate = date('Y-m-04');
                 $accountId = $accounts->first()?->id;
@@ -161,6 +167,7 @@ class PayrollController extends Controller
             $totals['overtime_days'] += $otDays;
             $totals['overtime_pay'] += $otPay;
             $totals['total_pay'] += $totalPay;
+            $totals['prev_closing'] += $prevAdvanceBalance;
             $totals['advances'] += $advances;
             $totals['other_allowance'] += $otherAllowance;
             $totals['net_payable'] += $netPayable;
@@ -227,7 +234,19 @@ class PayrollController extends Controller
                 // Update employee basic salary if changed
                 $employee = Employee::find($employeeId);
                 if ($employee && $basicSalary > 0 && $employee->basic_salary != $basicSalary) {
-                    $employee->update(['basic_salary' => $basicSalary]);
+                    if (\Illuminate\Support\Facades\Schema::hasColumn('hr_employees', 'basic_salary')) {
+                        $employee->update(['basic_salary' => $basicSalary]);
+                    }
+                    $structure = $employee->salaryStructure;
+                    if ($structure) {
+                        $structure->update(['base_salary' => $basicSalary]);
+                    } else {
+                        SalaryStructure::create([
+                            'employee_id' => $employee->id,
+                            'base_salary' => $basicSalary,
+                            'salary_type' => 'monthly',
+                        ]);
+                    }
                 }
 
                 // Create or Update Payroll Record
@@ -681,7 +700,11 @@ class PayrollController extends Controller
 
             foreach ($ledgerEntries as $entry) {
                 $eDate = $entry['date'];
-                $balanceChange = $entry['advance_given'] - $entry['advance_deducted'];
+                if ($entry['advance_given'] > 0) {
+                    $balanceChange = $entry['advance_given'];
+                } else {
+                    $balanceChange = $entry['net_paid'] - $entry['salary_earned'];
+                }
 
                 if ($eDate < $startDate) {
                     $summary['opening_balance'] += $balanceChange;
@@ -783,7 +806,11 @@ class PayrollController extends Controller
 
             foreach ($ledgerEntries as $entry) {
                 $eDate = $entry['date'];
-                $balanceChange = $entry['advance_given'] - $entry['advance_deducted'];
+                if ($entry['advance_given'] > 0) {
+                    $balanceChange = $entry['advance_given'];
+                } else {
+                    $balanceChange = $entry['net_paid'] - $entry['salary_earned'];
+                }
 
                 if ($eDate < $startDate) {
                     $summary['opening_balance'] += $balanceChange;

@@ -83,6 +83,16 @@
             transition: all 0.2s;
         }
 
+        /* Hide spin buttons on number inputs */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+
         .table-payroll-excel input.form-control-sheet:hover,
         .table-payroll-excel input.form-control-sheet:focus {
             background: #ffffff;
@@ -96,36 +106,6 @@
             font-weight: 800 !important;
             font-size: 0.9rem;
             border-top: 2px solid #1f497d !important;
-        }
-
-        /* Overtime Section */
-        .ot-section {
-            background: #ffffff;
-            border-radius: 12px;
-            border: 1px solid #e2e8f0;
-            padding: 20px;
-            margin-top: 24px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        }
-
-        .ot-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.85rem;
-            margin-top: 10px;
-        }
-
-        .ot-table th, .ot-table td {
-            border: 1px solid #cbd5e1;
-            padding: 8px 12px;
-            text-align: center;
-        }
-
-        .ot-table-header {
-            background-color: #8db4e2;
-            color: #000000;
-            font-weight: 700;
-            text-align: center;
         }
 
         .btn-sheet-action {
@@ -217,11 +197,12 @@
                                     <th style="width: 80px;">Overtime Days</th>
                                     <th style="min-width: 100px;">Overtime Pay</th>
                                     <th style="min-width: 110px;" class="col-total-pay">Total Pay</th>
+                                     <th style="min-width: 110px;">Previous Balance</th>
                                     <th style="min-width: 110px;">Advances this month</th>
                                     <th style="min-width: 110px;">Other Allowance /Eidi</th>
                                     <th style="min-width: 120px;" class="col-net-payable">Net Payable this month</th>
                                     <th style="min-width: 110px;">Payment this month</th>
-                                    <th style="min-width: 120px;">Closing Balance/previous advances</th>
+                                    <th style="min-width: 120px;">Closing Balance</th>
                                     <th style="min-width: 110px;">Payment Date</th>
                                 </tr>
                             </thead>
@@ -261,7 +242,7 @@
                                             {{ number_format($item['total_pay'], 0) }}
                                         </td>
                                         <td>
-                                            <input type="number" step="1" class="form-control-sheet inp-advances text-danger"
+                                            @if($item['prev_closing'] > 0)<span class="text-success" title="Unsy lyny hain (Advance Owed)">+{{ number_format($item['prev_closing'], 0) }}</span>@elseif($item['prev_closing'] < 0)<span class="text-danger" title="Humny dyny hain (Payable)">-{{ number_format(abs($item['prev_closing']), 0) }}</span>@else<span class="text-muted">-</span>@endif</td><td><input type="number" step="1" class="form-control-sheet inp-advances text-danger"
                                                 value="{{ $item['advances'] != 0 ? $item['advances'] : '' }}" placeholder="-0">
                                         </td>
                                         <td>
@@ -286,7 +267,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="14" class="py-4 text-muted italic">No active employees found for payroll.</td>
+                                        <td colspan="15" class="py-4 text-muted italic">No active employees found for payroll.</td>
                                     </tr>
                                 @endforelse
 
@@ -299,7 +280,7 @@
                                     <td id="totOTDays">-</td>
                                     <td id="totOTPay" class="text-end pe-2">{{ number_format($totals['overtime_pay'], 0) }}</td>
                                     <td id="totTotalPay" class="col-total-pay text-end pe-2">{{ number_format($totals['total_pay'], 0) }}</td>
-                                    <td id="totAdvances" class="text-end pe-2 text-danger">{{ number_format($totals['advances'], 0) }}</td>
+                                    <td id="totPrevBalance" class="text-end pe-2 fw-bold">@if($totals['prev_closing'] > 0)<span class="text-success">+{{ number_format($totals['prev_closing'], 0) }}</span>@elseif($totals['prev_closing'] < 0)<span class="text-danger">-{{ number_format(abs($totals['prev_closing']), 0) }}</span>@else-@endif</td><td id="totAdvances" class="text-end pe-2 text-danger">{{ number_format($totals['advances'], 0) }}</td>
                                     <td id="totOtherAllowance" class="text-end pe-2">{{ number_format($totals['other_allowance'], 0) }}</td>
                                     <td id="totNetPayable" class="col-net-payable text-end pe-2">{{ number_format($totals['net_payable'], 0) }}</td>
                                     <td id="totPaymentMonth" class="text-end pe-2">{{ number_format($totals['payment_this_month'], 0) }}</td>
@@ -311,53 +292,6 @@
                     </div>
                 </div>
 
-                <!-- OVERTIME DETAILS SECTION -->
-                <div class="ot-section">
-                    <h5 class="fw-bold mb-3 text-dark">
-                        <i class="fa fa-clock text-primary me-2"></i> OVERTIME DETAILS
-                    </h5>
-                    <div class="table-responsive">
-                        <table class="ot-table" id="otTable">
-                            <thead>
-                                <tr>
-                                    <th colspan="{{ count($payrollItems) + 1 }}" class="ot-table-header">OVERTIME DETAILS</th>
-                                </tr>
-                                <tr>
-                                    <th class="text-start ps-3" style="width: 140px;">NAME</th>
-                                    @foreach($payrollItems as $item)
-                                        <th>{{ strtok($item['employee_name'], ' ') }}</th>
-                                    @endforeach
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td class="text-start ps-3 fw-bold">HEAD</td>
-                                    @foreach($payrollItems as $item)
-                                        <td>OT</td>
-                                    @endforeach
-                                </tr>
-                                <tr>
-                                    <td class="text-start ps-3 fw-bold">OVERTIME HOURS</td>
-                                    @foreach($payrollItems as $item)
-                                        <td>
-                                            <input type="number" step="0.1" class="form-control-sheet inp-ot-hours-sec"
-                                                data-emp-id="{{ $item['employee_id'] }}"
-                                                value="{{ $item['overtime_hours'] > 0 ? $item['overtime_hours'] : 0 }}">
-                                        </td>
-                                    @endforeach
-                                </tr>
-                                <tr>
-                                    <td class="text-start ps-3 fw-bold">OVERTIME DAYS</td>
-                                    @foreach($payrollItems as $item)
-                                        <td class="td-ot-days-sec" data-emp-id="{{ $item['employee_id'] }}">
-                                            {{ number_format($item['overtime_days'], 2) }}
-                                        </td>
-                                    @endforeach
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
 
             </div>
         </div>
@@ -464,14 +398,18 @@
                 // Overtime Days & Pay (1.5x Multiplier)
                 var otDays = parseFloat(tr.querySelector('.inp-ot-days').value) || 0;
                 var otPayInput = tr.querySelector('.inp-ot-pay');
-                var otPay = parseFloat(otPayInput.value);
 
-                if (isNaN(otPay) && otDays > 0) {
-                    otPay = Math.round((basicSalary / 30) * 1.5 * otDays);
-                    otPayInput.value = otPay;
-                } else if (isNaN(otPay)) {
-                    otPay = 0;
+                if (otDays > 0) {
+                    if (!otPayInput.dataset.userEdited) {
+                        var calculatedOtPay = Math.round((basicSalary / 30) * 1.5 * otDays);
+                        otPayInput.value = calculatedOtPay > 0 ? calculatedOtPay : '';
+                    }
+                } else {
+                    if (!otPayInput.dataset.userEdited) {
+                        otPayInput.value = '';
+                    }
                 }
+                var otPay = parseFloat(otPayInput.value) || 0;
 
                 // Total Pay = Salary Count + Overtime Pay
                 var totalPay = salaryCount + otPay;
@@ -492,14 +430,17 @@
                 }
                 var paymentThisMonth = parseFloat(paymentInput.value) || 0;
 
-                // Auto-calculate Closing Balance based on Previous Closing / Active Loans + Advances + (Net Payable - Payment)
+                // Auto-calculate Closing Balance for Next Month
                 var prevClosing = parseFloat(tr.dataset.prevClosing) || 0;
                 var activeLoans = parseFloat(tr.dataset.activeLoans) || 0;
-                var baseClosing = prevClosing !== 0 ? prevClosing : (activeLoans > 0 ? -activeLoans : 0);
+                var prevAdvanceBalance = prevClosing !== 0 ? prevClosing : activeLoans;
+
+                var remAdvance = Math.max(0, prevAdvanceBalance - advances);
+                var paymentDiff = paymentThisMonth - netPayable;
+                var computedClosing = remAdvance + paymentDiff;
 
                 var closingInput = tr.querySelector('.inp-closing-balance');
                 if (!closingInput.dataset.userEdited) {
-                    var computedClosing = baseClosing + advances + (netPayable - paymentThisMonth);
                     closingInput.value = computedClosing !== 0 ? computedClosing : '';
                 }
 
@@ -508,16 +449,22 @@
 
             // Function to calculate all column totals
             function calculateTotals() {
-                var totBasic = 0, totSalaryCount = 0, totOTPay = 0, totTotalPay = 0;
-                var totAdvances = 0, totOtherAllowance = 0, totNetPayable = 0;
+                var totBasic = 0, totSalaryCount = 0, totOTDays = 0, totOTPay = 0, totTotalPay = 0;
+                var totPrevBal = 0, totAdvances = 0, totOtherAllowance = 0, totNetPayable = 0;
                 var totPaymentMonth = 0, totClosingBalance = 0;
 
                 document.querySelectorAll('#payrollTable tbody tr[data-emp-id]').forEach(function(tr) {
                     var basic = parseFloat(tr.querySelector('.inp-basic-salary').value) || 0;
                     var pDays = parseFloat(tr.querySelector('.inp-p-days').value) || 0;
                     var salCount = Math.round((basic / 30) * pDays);
+                    var otDays = parseFloat(tr.querySelector('.inp-ot-days').value) || 0;
                     var otPay = parseFloat(tr.querySelector('.inp-ot-pay').value) || 0;
                     var totPay = salCount + otPay;
+
+                    var prevClosing = parseFloat(tr.dataset.prevClosing) || 0;
+                    var activeLoans = parseFloat(tr.dataset.activeLoans) || 0;
+                    var prevBal = prevClosing !== 0 ? prevClosing : activeLoans;
+
                     var adv = Math.abs(parseFloat(tr.querySelector('.inp-advances').value) || 0);
                     var allow = parseFloat(tr.querySelector('.inp-other-allowance').value) || 0;
                     var net = totPay - adv + allow;
@@ -526,8 +473,10 @@
 
                     totBasic += basic;
                     totSalaryCount += salCount;
+                    totOTDays += otDays;
                     totOTPay += otPay;
                     totTotalPay += totPay;
+                    totPrevBal += prevBal;
                     totAdvances += adv;
                     totOtherAllowance += allow;
                     totNetPayable += net;
@@ -537,8 +486,22 @@
 
                 document.getElementById('totBasicSalary').textContent = totBasic.toLocaleString('en-US');
                 document.getElementById('totSalaryCount').textContent = totSalaryCount.toLocaleString('en-US');
+                var elTotOTDays = document.getElementById('totOTDays');
+                if (elTotOTDays) elTotOTDays.textContent = totOTDays > 0 ? totOTDays.toFixed(1) : '-';
                 document.getElementById('totOTPay').textContent = totOTPay.toLocaleString('en-US');
                 document.getElementById('totTotalPay').textContent = totTotalPay.toLocaleString('en-US');
+
+                var elTotPrev = document.getElementById('totPrevBalance');
+                if (elTotPrev) {
+                    if (totPrevBal > 0) {
+                        elTotPrev.innerHTML = '<span class="text-success">+' + totPrevBal.toLocaleString('en-US') + '</span>';
+                    } else if (totPrevBal < 0) {
+                        elTotPrev.innerHTML = '<span class="text-danger">-' + Math.abs(totPrevBal).toLocaleString('en-US') + '</span>';
+                    } else {
+                        elTotPrev.textContent = '-';
+                    }
+                }
+
                 document.getElementById('totAdvances').textContent = totAdvances > 0 ? '-' + totAdvances.toLocaleString('en-US') : '0';
                 document.getElementById('totOtherAllowance').textContent = totOtherAllowance.toLocaleString('en-US');
                 document.getElementById('totNetPayable').textContent = totNetPayable.toLocaleString('en-US');
@@ -546,42 +509,26 @@
                 document.getElementById('totClosingBalance').textContent = totClosingBalance.toLocaleString('en-US');
             }
 
+            // Run initial calculation for all rows on page load
+            document.querySelectorAll('#payrollTable tbody tr[data-emp-id]').forEach(function(tr) {
+                calculateRow(tr);
+            });
+
             // Event Listeners on inputs
             document.querySelectorAll('#payrollTable input').forEach(function(input) {
                 input.addEventListener('input', function() {
-                    if (this.classList.contains('inp-payment-month') || this.classList.contains('inp-closing-balance')) {
+                    if (this.classList.contains('inp-payment-month') || this.classList.contains('inp-closing-balance') || this.classList.contains('inp-ot-pay')) {
                         this.dataset.userEdited = "true";
+                    }
+                    if (this.classList.contains('inp-ot-days') || this.classList.contains('inp-basic-salary')) {
+                        var tr = this.closest('tr');
+                        if (tr) {
+                            var otPayInput = tr.querySelector('.inp-ot-pay');
+                            if (otPayInput) delete otPayInput.dataset.userEdited;
+                        }
                     }
                     var tr = this.closest('tr');
                     if (tr && tr.dataset.empId) {
-                        calculateRow(tr);
-                    }
-                });
-            });
-
-            // Overtime hours section listener
-            document.querySelectorAll('.inp-ot-hours-sec').forEach(function(input) {
-                input.addEventListener('input', function() {
-                    var empId = this.dataset.empId;
-                    var hours = parseFloat(this.value) || 0;
-                    var days = (hours / 9.0).toFixed(2);
-
-                    // Update OT Days in OT section
-                    var tdOtDays = document.querySelector('.td-ot-days-sec[data-emp-id="' + empId + '"]');
-                    if (tdOtDays) {
-                        tdOtDays.textContent = days;
-                    }
-
-                    // Update main table row
-                    var tr = document.querySelector('#payrollTable tr[data-emp-id="' + empId + '"]');
-                    if (tr) {
-                        var inpOtDays = tr.querySelector('.inp-ot-days');
-                        inpOtDays.value = days > 0 ? days : '';
-                        
-                        var basicSalary = parseFloat(tr.querySelector('.inp-basic-salary').value) || 0;
-                        var otPay = Math.round((basicSalary / 30) * 1.5 * days);
-                        tr.querySelector('.inp-ot-pay').value = otPay > 0 ? otPay : '';
-
                         calculateRow(tr);
                     }
                 });
@@ -645,11 +592,9 @@
                         var pDays = parseFloat(tr.querySelector('.inp-p-days').value) || 0;
                         var salaryCount = Math.round((basicSalary / 30) * pDays);
 
-                        var otHoursSec = document.querySelector('.inp-ot-hours-sec[data-emp-id="' + empId + '"]');
-                        var otHours = otHoursSec ? (parseFloat(otHoursSec.value) || 0) : 0;
-
-                        var otDays = parseFloat(tr.querySelector('.inp-ot-days').value) || (otHours / 9.0);
+                        var otDays = parseFloat(tr.querySelector('.inp-ot-days').value) || 0;
                         var otPay = parseFloat(tr.querySelector('.inp-ot-pay').value) || Math.round((basicSalary / 30) * 1.5 * otDays);
+                        var otHours = otDays * 9.0;
 
                         var totalPay = salaryCount + otPay;
                         var advances = Math.abs(parseFloat(tr.querySelector('.inp-advances').value) || 0);
