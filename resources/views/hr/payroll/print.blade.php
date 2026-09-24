@@ -123,8 +123,8 @@
                     <td>{{ $item['overtime_days'] > 0 ? number_format($item['overtime_days'], 1) : '' }}</td>
                     <td class="text-right">{{ $item['overtime_pay'] > 0 ? number_format($item['overtime_pay'], 0) : '-' }}</td>
                     <td class="bg-total-pay text-right">{{ number_format($item['total_pay'], 0) }}</td>
-                    <td class="text-right fw-bold">@if($item['prev_closing'] > 0)<span style="color: #16a34a;">+{{ number_format($item['prev_closing'], 0) }}</span>@elseif($item['prev_closing'] < 0)<span style="color: #dc2626;">-{{ number_format(abs($item['prev_closing']), 0) }}</span>@else-@endif</td>
-                    <td class="text-right">{{ $item['advances'] > 0 ? '-' . number_format($item['advances'], 0) : '-0' }}</td>
+                    <td class="text-right fw-bold">@if($item['prev_balance'] > 0)<span style="color: #16a34a;">+{{ number_format($item['prev_balance'], 0) }}</span>@elseif($item['prev_balance'] < 0)<span style="color: #dc2626;">-{{ number_format(abs($item['prev_balance']), 0) }}</span>@else-@endif</td>
+                    <td class="text-right" style="color: #dc2626; font-weight: bold;">{{ $item['advances'] > 0 ? '-' . number_format($item['advances'], 0) : '-0' }}</td>
                     <td class="text-right">{{ $item['other_allowance'] > 0 ? number_format($item['other_allowance'], 0) : '-' }}</td>
                     <td class="bg-net-payable text-right">{{ number_format($item['net_payable'], 0) }}</td>
                     <td class="text-right fw-bold">{{ number_format($item['payment_this_month'], 0) }}</td>
@@ -140,8 +140,8 @@
                 <td></td>
                 <td class="text-right">{{ number_format($totals['overtime_pay'], 0) }}</td>
                 <td class="bg-total-pay text-right">{{ number_format($totals['total_pay'], 0) }}</td>
-                <td class="text-right fw-bold">@if($totals['prev_closing'] > 0)<span style="color: #16a34a;">+{{ number_format($totals['prev_closing'], 0) }}</span>@elseif($totals['prev_closing'] < 0)<span style="color: #dc2626;">-{{ number_format(abs($totals['prev_closing']), 0) }}</span>@else-@endif</td>
-                <td class="text-right">{{ number_format($totals['advances'], 0) }}</td>
+                <td class="text-right fw-bold">@if($totals['prev_balance'] > 0)<span style="color: #16a34a;">+{{ number_format($totals['prev_balance'], 0) }}</span>@elseif($totals['prev_balance'] < 0)<span style="color: #dc2626;">-{{ number_format(abs($totals['prev_balance']), 0) }}</span>@else-@endif</td>
+                <td class="text-right" style="color: #dc2626; font-weight: bold;">{{ number_format($totals['advances'], 0) }}</td>
                 <td class="text-right">{{ number_format($totals['other_allowance'], 0) }}</td>
                 <td class="bg-net-payable text-right">{{ number_format($totals['net_payable'], 0) }}</td>
                 <td class="text-right">{{ number_format($totals['payment_this_month'], 0) }}</td>

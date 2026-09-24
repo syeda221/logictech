@@ -362,6 +362,7 @@ class PurchaseController extends Controller
                 'paid_amount' => 0,
                 'due_amount' => 0,
                 'status_purchase' => 'approved',
+                'po_status' => 'complete',
             ]);
 
             $subtotal = 0;
@@ -639,7 +640,10 @@ class PurchaseController extends Controller
             $this->approvePurchase($purchase);
 
             // Update status
-            $purchase->update(['status_purchase' => 'approved']);
+            $purchase->update([
+                'status_purchase' => 'approved',
+                'po_status' => 'complete',
+            ]);
         });
 
         if (request()->ajax()) {
@@ -810,6 +814,7 @@ class PurchaseController extends Controller
 
             // Status Logic
             $status = ($request->action === 'save_only') ? 'draft' : 'approved';
+            $poStatus = ($status === 'approved') ? 'complete' : 'pending';
 
             // create header
             $purchase = Purchase::create([
@@ -826,6 +831,7 @@ class PurchaseController extends Controller
                 'paid_amount' => 0,
                 'due_amount' => 0,
                 'status_purchase' => $status,
+                'po_status' => $poStatus,
             ]);
 
             $subtotal = 0;
@@ -1492,6 +1498,7 @@ class PurchaseController extends Controller
                     'delivery_terms' => $request->delivery_terms ?? $purchase->delivery_terms,
                     'expected_delivery_date' => $request->expected_delivery_date ?? $purchase->expected_delivery_date,
                     'status_purchase' => $targetStatus,
+                    'po_status' => ($targetStatus === 'approved') ? 'complete' : 'pending',
                 ]);
 
                 // 3. Delete old items and re-create updated items

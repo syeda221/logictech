@@ -134,7 +134,7 @@
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
         }
-        .no-print, header, .sidebar, .navbar, footer, .d-md-none, #ledgerMobileContainer, .mob-card, .summary-pill-bar, #ledgerHeader { 
+        .no-print, nav, .rt_nav_header, .top_nav, header, .sidebar, .navbar, footer, .d-md-none, #ledgerMobileContainer, .mob-card, .summary-pill-bar, #ledgerHeader, .card.no-print, #ledgerFormDesk, #ledgerFormMob, form, input, select, button, .btn { 
             display: none !important; 
         }
         .sale-report-container { 
@@ -410,32 +410,34 @@
         
         {{-- PRINT ONLY HEADER --}}
         <div class="d-none d-print-block print-header-box mb-3" id="printHeaderBox">
-            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
+            <div class="d-flex justify-content-between align-items-start border-bottom pb-2 mb-2">
                 <div>
                     <h3 class="fw-bold text-dark mb-0" style="letter-spacing: -0.5px;">LOGICTECH</h3>
-                    <div class="text-uppercase fw-bold text-secondary" style="font-size: 13px; letter-spacing: 1px;">Vendor Ledger Statement</div>
+                    <div class="text-uppercase fw-bold text-secondary mb-1" style="font-size: 12px; letter-spacing: 0.8px;">Vendor Ledger Statement</div>
+                    <div class="small text-dark" style="font-size: 11px;">
+                        <strong>Vendor:</strong> <span id="printVendorName">-</span>
+                    </div>
                 </div>
                 <div class="text-end">
-                    <h5 class="fw-bold text-primary mb-0" id="printVendorName">-</h5>
-                    <div class="small text-muted" id="printReportPeriod">Period: - to -</div>
+                    <div class="small text-dark fw-bold mb-1" id="printReportPeriod">Period: - to -</div>
                     <div class="small text-muted" style="font-size: 10px;">Printed: {{ date('d-M-Y h:i A') }}</div>
                 </div>
             </div>
-            <div class="row g-2 text-center p-2 rounded mb-2" style="background: #f8fafc; border: 1px solid #cbd5e1; font-size: 11px;">
+            <div class="row g-2 text-center p-2 rounded mb-2" style="background: #f8fafc; border: 1px solid #cbd5e1; font-size: 10.5px;">
                 <div class="col-3 border-end">
-                    <span class="text-muted d-block small" style="font-size: 10px;">OPENING BALANCE</span>
+                    <span class="text-muted d-block small" style="font-size: 9.5px;">OPENING BALANCE</span>
                     <strong class="text-dark" id="printOpeningBal">Rs 0.00</strong>
                 </div>
                 <div class="col-3 border-end">
-                    <span class="text-muted d-block small" style="font-size: 10px;">TOTAL DEBIT (DR)</span>
+                    <span class="text-muted d-block small" style="font-size: 9.5px;">TOTAL DEBIT (DR)</span>
                     <strong class="text-success" id="printTotalDebit">Rs 0.00</strong>
                 </div>
                 <div class="col-3 border-end">
-                    <span class="text-muted d-block small" style="font-size: 10px;">TOTAL CREDIT (CR)</span>
+                    <span class="text-muted d-block small" style="font-size: 9.5px;">TOTAL CREDIT (CR)</span>
                     <strong class="text-danger" id="printTotalCredit">Rs 0.00</strong>
                 </div>
                 <div class="col-3">
-                    <span class="text-muted d-block small" style="font-size: 10px;">CLOSING BALANCE</span>
+                    <span class="text-muted d-block small" style="font-size: 9.5px;">CLOSING BALANCE</span>
                     <strong class="text-primary" id="printClosingBal">Rs 0.00</strong>
                 </div>
             </div>

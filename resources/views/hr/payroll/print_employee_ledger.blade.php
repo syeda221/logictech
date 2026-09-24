@@ -123,7 +123,6 @@
                     <th style="width: 70px;">Ref #</th>
                     <th style="width: 130px;">Type</th>
                     <th>Description</th>
-                    <th style="width: 90px;">Advances Given</th>
                     <th style="width: 90px;">Salary Earned</th>
                     <th style="width: 90px;">Advances Deducted</th>
                     <th style="width: 90px;">Net Paid</th>
@@ -139,7 +138,6 @@
                     <td class="text-right">-</td>
                     <td class="text-right">-</td>
                     <td class="text-right">-</td>
-                    <td class="text-right">-</td>
                     <td class="text-right">Rs. {{ number_format($summary['opening_balance'], 0) }}</td>
                 </tr>
 
@@ -149,7 +147,6 @@
                         <td class="fw-bold">{{ $entry['ref'] }}</td>
                         <td class="fw-bold">{{ $entry['type'] }}</td>
                         <td>{{ $entry['description'] }}</td>
-                        <td class="text-right">{{ $entry['advance_given'] > 0 ? number_format($entry['advance_given'], 0) : '-' }}</td>
                         <td class="text-right">{{ $entry['salary_earned'] > 0 ? number_format($entry['salary_earned'], 0) : '-' }}</td>
                         <td class="text-right">{{ $entry['advance_deducted'] > 0 ? number_format($entry['advance_deducted'], 0) : '-' }}</td>
                         <td class="text-right fw-bold">{{ $entry['net_paid'] > 0 ? number_format($entry['net_paid'], 0) : '-' }}</td>
@@ -159,7 +156,6 @@
 
                 <tr class="total-row">
                     <td colspan="4" class="text-left">TOTALS</td>
-                    <td class="text-right">{{ number_format($summary['total_advances_given'], 0) }}</td>
                     <td class="text-right">{{ number_format($summary['total_salary_earned'], 0) }}</td>
                     <td class="text-right">{{ number_format($summary['total_advances_deducted'], 0) }}</td>
                     <td class="text-right">{{ number_format($summary['total_net_paid'], 0) }}</td>

@@ -414,6 +414,14 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04) !important;
         }
 
+        /* Global Print Rules: Hide Top Nav Header, Online Pill, Settings Icons & Footer on Print */
+        @media print {
+            nav, .rt_nav_header, .top_nav, header, .navbar, .sidebar, footer,
+            .header-online-pill, .header-support-btn, #notificationLi, .no-print {
+                display: none !important;
+            }
+        }
+
         /* Prevent menu items from ever wrapping onto a second line on desktop */
         @media (min-width: 992px) {
             .rt_nav_header.horizontal-layout .nav-bottom .page-navigation {

@@ -162,13 +162,6 @@
                     <div class="stat-val text-info">Rs. {{ number_format($summary['opening_balance'], 0) }}</div>
                 </div>
 
-                @if($summary['total_advances_given'] > 0)
-                    <div class="stat-pill border-warning">
-                        <div class="stat-label text-warning">Total Advances Given</div>
-                        <div class="stat-val text-warning">Rs. {{ number_format($summary['total_advances_given'], 0) }}</div>
-                    </div>
-                @endif
-
                 <div class="stat-pill border-danger">
                     <div class="stat-label text-danger">Advances Deducted</div>
                     <div class="stat-val text-danger">Rs. {{ number_format($summary['total_advances_deducted'], 0) }}</div>
@@ -199,7 +192,6 @@
                             <th style="width: 100px;">Ref #</th>
                             <th style="width: 180px;">Transaction Type</th>
                             <th>Description</th>
-                            <th class="text-right text-warning">Advances Given (+)</th>
                             <th class="text-right text-primary">Salary Earned (+)</th>
                             <th class="text-right text-danger">Advances Deducted (-)</th>
                             <th class="text-right text-success">Net Amount Paid</th>
@@ -213,7 +205,6 @@
                             <td class="text-muted">-</td>
                             <td><span class="badge badge-secondary px-2 py-1">Opening</span></td>
                             <td>Opening Advance Balance Owed</td>
-                            <td class="text-right">-</td>
                             <td class="text-right">-</td>
                             <td class="text-right">-</td>
                             <td class="text-right">-</td>
@@ -231,11 +222,6 @@
                                     </span>
                                 </td>
                                 <td>{{ $entry['description'] }}</td>
-
-                                <!-- Advances Given (+) -->
-                                <td class="text-right font-weight-bold {{ $entry['advance_given'] > 0 ? 'text-warning' : 'text-muted' }}">
-                                    {{ $entry['advance_given'] > 0 ? 'Rs. ' . number_format($entry['advance_given'], 0) : '-' }}
-                                </td>
 
                                 <!-- Salary Earned (+) -->
                                 <td class="text-right font-weight-semibold {{ $entry['salary_earned'] > 0 ? 'text-primary' : 'text-muted' }}">
@@ -259,7 +245,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="text-center py-4 text-muted font-italic">
+                                <td colspan="8" class="text-center py-4 text-muted font-italic">
                                     No advance or salary transactions found for this period.
                                 </td>
                             </tr>
@@ -268,7 +254,6 @@
                         <!-- Summary Total Row -->
                         <tr class="bg-light font-weight-bold" style="border-top: 2px solid #1e40af;">
                             <td colspan="4" class="pl-3 font-weight-bold">STATEMENT TOTALS</td>
-                            <td class="text-right text-warning">Rs. {{ number_format($summary['total_advances_given'], 0) }}</td>
                             <td class="text-right text-primary">Rs. {{ number_format($summary['total_salary_earned'], 0) }}</td>
                             <td class="text-right text-danger">Rs. {{ number_format($summary['total_advances_deducted'], 0) }}</td>
                             <td class="text-right text-success">Rs. {{ number_format($summary['total_net_paid'], 0) }}</td>

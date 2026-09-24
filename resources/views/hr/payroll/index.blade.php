@@ -208,7 +208,7 @@
                             </thead>
                             <tbody>
                                 @forelse($payrollItems as $item)
-                                    <tr data-emp-id="{{ $item['employee_id'] }}" data-prev-closing="{{ $item['prev_closing'] }}" data-active-loans="{{ $item['active_loans'] }}">
+                                    <tr data-emp-id="{{ $item['employee_id'] }}" data-prev-balance="{{ $item['prev_balance'] }}" data-active-loans="{{ $item['active_loans'] }}">
                                         <td>{{ $item['sn'] }}</td>
                                         <td class="text-start ps-3 fw-bold text-uppercase">
                                             {{ $item['employee_name'] }}
@@ -242,14 +242,14 @@
                                             {{ number_format($item['total_pay'], 0) }}
                                         </td>
                                         <td>
-                                            @if($item['prev_closing'] > 0)<span class="text-success" title="Unsy lyny hain (Advance Owed)">+{{ number_format($item['prev_closing'], 0) }}</span>@elseif($item['prev_closing'] < 0)<span class="text-danger" title="Humny dyny hain (Payable)">-{{ number_format(abs($item['prev_closing']), 0) }}</span>@else<span class="text-muted">-</span>@endif</td><td><input type="number" step="1" class="form-control-sheet inp-advances text-danger"
+                                            @if($item['prev_balance'] > 0)<span class="text-success fw-bold" title="Add to Net Payable (Company Underpaid)">+{{ number_format($item['prev_balance'], 0) }}</span>@elseif($item['prev_balance'] < 0)<span class="text-danger fw-bold" title="Deduct from Net Payable (Advance Owed / Overpaid)">-{{ number_format(abs($item['prev_balance']), 0) }}</span>@else<span class="text-muted">-</span>@endif</td><td><input type="number" step="1" class="form-control-sheet inp-advances text-danger fw-bold"
                                                 value="{{ $item['advances'] != 0 ? $item['advances'] : '' }}" placeholder="-0">
                                         </td>
                                         <td>
                                             <input type="number" step="1" class="form-control-sheet inp-other-allowance"
                                                 value="{{ $item['other_allowance'] > 0 ? $item['other_allowance'] : '' }}" placeholder="-">
                                         </td>
-                                        <td class="col-net-payable td-net-payable">
+                                        <td class="col-net-payable td-net-payable fw-bold">
                                             {{ number_format($item['net_payable'], 0) }}
                                         </td>
                                         <td>
@@ -257,7 +257,7 @@
                                                 value="{{ $item['payment_this_month'] }}">
                                         </td>
                                         <td>
-                                            <input type="number" step="1" class="form-control-sheet inp-closing-balance"
+                                            <input type="number" step="1" class="form-control-sheet inp-closing-balance fw-bold"
                                                 value="{{ $item['closing_balance'] != 0 ? $item['closing_balance'] : '' }}" placeholder="-">
                                         </td>
                                         <td>
@@ -280,11 +280,11 @@
                                     <td id="totOTDays">-</td>
                                     <td id="totOTPay" class="text-end pe-2">{{ number_format($totals['overtime_pay'], 0) }}</td>
                                     <td id="totTotalPay" class="col-total-pay text-end pe-2">{{ number_format($totals['total_pay'], 0) }}</td>
-                                    <td id="totPrevBalance" class="text-end pe-2 fw-bold">@if($totals['prev_closing'] > 0)<span class="text-success">+{{ number_format($totals['prev_closing'], 0) }}</span>@elseif($totals['prev_closing'] < 0)<span class="text-danger">-{{ number_format(abs($totals['prev_closing']), 0) }}</span>@else-@endif</td><td id="totAdvances" class="text-end pe-2 text-danger">{{ number_format($totals['advances'], 0) }}</td>
+                                    <td id="totPrevBalance" class="text-end pe-2 fw-bold">@if($totals['prev_balance'] > 0)<span class="text-success">+{{ number_format($totals['prev_balance'], 0) }}</span>@elseif($totals['prev_balance'] < 0)<span class="text-danger">-{{ number_format(abs($totals['prev_balance']), 0) }}</span>@else-@endif</td><td id="totAdvances" class="text-end pe-2 text-danger fw-bold">{{ number_format($totals['advances'], 0) }}</td>
                                     <td id="totOtherAllowance" class="text-end pe-2">{{ number_format($totals['other_allowance'], 0) }}</td>
-                                    <td id="totNetPayable" class="col-net-payable text-end pe-2">{{ number_format($totals['net_payable'], 0) }}</td>
-                                    <td id="totPaymentMonth" class="text-end pe-2">{{ number_format($totals['payment_this_month'], 0) }}</td>
-                                    <td id="totClosingBalance" class="text-end pe-2">{{ number_format($totals['closing_balance'], 0) }}</td>
+                                    <td id="totNetPayable" class="col-net-payable text-end pe-2 fw-bold">{{ number_format($totals['net_payable'], 0) }}</td>
+                                    <td id="totPaymentMonth" class="text-end pe-2 fw-bold">{{ number_format($totals['payment_this_month'], 0) }}</td>
+                                    <td id="totClosingBalance" class="text-end pe-2 fw-bold">{{ number_format($totals['closing_balance'], 0) }}</td>
                                     <td></td>
                                 </tr>
                             </tbody>
@@ -415,12 +415,15 @@
                 var totalPay = salaryCount + otPay;
                 tr.querySelector('.td-total-pay').textContent = totalPay.toLocaleString('en-US');
 
+                // Previous Balance (from data-prev-balance)
+                var prevBal = parseFloat(tr.dataset.prevBalance) || 0;
+
                 // Advances & Other Allowances
                 var advances = Math.abs(parseFloat(tr.querySelector('.inp-advances').value) || 0);
                 var otherAllowance = parseFloat(tr.querySelector('.inp-other-allowance').value) || 0;
 
-                // Net Payable = Total Pay - Advances + Other Allowance
-                var netPayable = totalPay - advances + otherAllowance;
+                // Net Payable = Total Pay + Previous Balance - Advances + Other Allowance
+                var netPayable = totalPay + prevBal - advances + otherAllowance;
                 tr.querySelector('.td-net-payable').textContent = netPayable.toLocaleString('en-US');
 
                 // Sync payment this month default if unmodified
@@ -430,14 +433,8 @@
                 }
                 var paymentThisMonth = parseFloat(paymentInput.value) || 0;
 
-                // Auto-calculate Closing Balance for Next Month
-                var prevClosing = parseFloat(tr.dataset.prevClosing) || 0;
-                var activeLoans = parseFloat(tr.dataset.activeLoans) || 0;
-                var prevAdvanceBalance = prevClosing !== 0 ? prevClosing : activeLoans;
-
-                var remAdvance = Math.max(0, prevAdvanceBalance - advances);
-                var paymentDiff = paymentThisMonth - netPayable;
-                var computedClosing = remAdvance + paymentDiff;
+                // Auto-calculate Closing Balance = Net Payable - Payment This Month
+                var computedClosing = netPayable - paymentThisMonth;
 
                 var closingInput = tr.querySelector('.inp-closing-balance');
                 if (!closingInput.dataset.userEdited) {
@@ -461,15 +458,13 @@
                     var otPay = parseFloat(tr.querySelector('.inp-ot-pay').value) || 0;
                     var totPay = salCount + otPay;
 
-                    var prevClosing = parseFloat(tr.dataset.prevClosing) || 0;
-                    var activeLoans = parseFloat(tr.dataset.activeLoans) || 0;
-                    var prevBal = prevClosing !== 0 ? prevClosing : activeLoans;
+                    var prevBal = parseFloat(tr.dataset.prevBalance) || 0;
 
                     var adv = Math.abs(parseFloat(tr.querySelector('.inp-advances').value) || 0);
                     var allow = parseFloat(tr.querySelector('.inp-other-allowance').value) || 0;
-                    var net = totPay - adv + allow;
+                    var net = totPay + prevBal - adv + allow;
                     var payMonth = parseFloat(tr.querySelector('.inp-payment-month').value) || 0;
-                    var closing = parseFloat(tr.querySelector('.inp-closing-balance').value) || 0;
+                    var closing = net - payMonth;
 
                     totBasic += basic;
                     totSalaryCount += salCount;
@@ -597,9 +592,10 @@
                         var otHours = otDays * 9.0;
 
                         var totalPay = salaryCount + otPay;
+                        var prevBal = parseFloat(tr.dataset.prevBalance) || 0;
                         var advances = Math.abs(parseFloat(tr.querySelector('.inp-advances').value) || 0);
                         var otherAllowance = parseFloat(tr.querySelector('.inp-other-allowance').value) || 0;
-                        var netPayable = totalPay - advances + otherAllowance;
+                        var netPayable = totalPay + prevBal - advances + otherAllowance;
                         var paymentThisMonth = parseFloat(tr.querySelector('.inp-payment-month').value) || netPayable;
                         var closingBalance = parseFloat(tr.querySelector('.inp-closing-balance').value) || 0;
                         var paymentDate = tr.querySelector('.inp-payment-date').value || '';
@@ -613,6 +609,7 @@
                             overtime_days: otDays,
                             overtime_pay: otPay,
                             total_pay: totalPay,
+                            previous_balance: prevBal,
                             advances: advances,
                             other_allowance: otherAllowance,
                             net_payable: netPayable,
