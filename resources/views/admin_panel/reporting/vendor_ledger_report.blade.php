@@ -123,11 +123,86 @@
     }
 
     @media print {
-        body { background: #ffffff !important; font-size: 11px; }
-        .no-print, header, .sidebar, .navbar, footer { display: none !important; }
-        .sale-report-container { padding: 0 !important; background: #fff !important; }
-        .card { border: 1px solid #dee2e6 !important; box-shadow: none !important; margin-bottom: 10px !important; }
-        .ledger-total-strip td { background-color: #0f172a !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        @page {
+            size: A4 portrait;
+            margin: 8mm;
+        }
+        body { 
+            background: #ffffff !important; 
+            font-size: 10.5px !important; 
+            color: #000000 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        .no-print, header, .sidebar, .navbar, footer, .d-md-none, #ledgerMobileContainer, .mob-card, .summary-pill-bar, #ledgerHeader { 
+            display: none !important; 
+        }
+        .sale-report-container { 
+            padding: 0 !important; 
+            background: #fff !important; 
+            min-height: auto !important;
+        }
+        .card { 
+            border: none !important; 
+            box-shadow: none !important; 
+            margin-bottom: 0 !important; 
+            padding: 0 !important;
+            background: transparent !important;
+        }
+        .card-body {
+            padding: 0 !important;
+        }
+        .d-none.d-md-block, .d-print-block, .print-header-box { 
+            display: block !important; 
+        }
+        .sale-table-wrap { 
+            height: auto !important; 
+            max-height: none !important; 
+            min-height: auto !important;
+            overflow: visible !important; 
+            border: none !important; 
+            border-radius: 0 !important;
+            background: #fff !important;
+        }
+        .report-table { 
+            width: 100% !important; 
+            border-collapse: collapse !important;
+            font-size: 10px !important; 
+            margin-bottom: 0 !important;
+            table-layout: auto !important;
+        }
+        .report-table th, .report-table td { 
+            border: 1px solid #94a3b8 !important; 
+            padding: 5px 6px !important; 
+            vertical-align: middle !important;
+            color: #000000 !important;
+        }
+        .report-table thead th { 
+            background-color: #f1f5f9 !important; 
+            color: #0f172a !important; 
+            font-weight: 700 !important;
+            position: static !important;
+            border-bottom: 2px solid #475569 !important;
+        }
+        .report-table tr {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+        }
+        .ledger-total-strip td { 
+            background-color: #0f172a !important; 
+            color: #ffffff !important; 
+            -webkit-print-color-adjust: exact !important; 
+            print-color-adjust: exact !important; 
+            font-weight: bold !important;
+        }
+        .badge {
+            border: none !important;
+            padding: 0 !important;
+            background: transparent !important;
+            color: #000000 !important;
+            font-weight: normal !important;
+            font-size: 10px !important;
+        }
     }
 </style>
 
@@ -333,8 +408,41 @@
 
     <div id="ledgerBox" style="display:none;">
         
+        {{-- PRINT ONLY HEADER --}}
+        <div class="d-none d-print-block print-header-box mb-3" id="printHeaderBox">
+            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
+                <div>
+                    <h3 class="fw-bold text-dark mb-0" style="letter-spacing: -0.5px;">LOGICTECH</h3>
+                    <div class="text-uppercase fw-bold text-secondary" style="font-size: 13px; letter-spacing: 1px;">Vendor Ledger Statement</div>
+                </div>
+                <div class="text-end">
+                    <h5 class="fw-bold text-primary mb-0" id="printVendorName">-</h5>
+                    <div class="small text-muted" id="printReportPeriod">Period: - to -</div>
+                    <div class="small text-muted" style="font-size: 10px;">Printed: {{ date('d-M-Y h:i A') }}</div>
+                </div>
+            </div>
+            <div class="row g-2 text-center p-2 rounded mb-2" style="background: #f8fafc; border: 1px solid #cbd5e1; font-size: 11px;">
+                <div class="col-3 border-end">
+                    <span class="text-muted d-block small" style="font-size: 10px;">OPENING BALANCE</span>
+                    <strong class="text-dark" id="printOpeningBal">Rs 0.00</strong>
+                </div>
+                <div class="col-3 border-end">
+                    <span class="text-muted d-block small" style="font-size: 10px;">TOTAL DEBIT (DR)</span>
+                    <strong class="text-success" id="printTotalDebit">Rs 0.00</strong>
+                </div>
+                <div class="col-3 border-end">
+                    <span class="text-muted d-block small" style="font-size: 10px;">TOTAL CREDIT (CR)</span>
+                    <strong class="text-danger" id="printTotalCredit">Rs 0.00</strong>
+                </div>
+                <div class="col-3">
+                    <span class="text-muted d-block small" style="font-size: 10px;">CLOSING BALANCE</span>
+                    <strong class="text-primary" id="printClosingBal">Rs 0.00</strong>
+                </div>
+            </div>
+        </div>
+
         {{-- Report Sub-Header --}}
-        <div class="card border-0 shadow-sm mb-2 rounded-3 bg-white">
+        <div class="card border-0 shadow-sm mb-2 rounded-3 bg-white no-print">
             <div class="card-body p-3 d-flex justify-content-between align-items-center flex-wrap gap-2" id="ledgerHeader">
             </div>
         </div>
@@ -608,7 +716,7 @@
                     $("#ledgerBody").html(html);
                     $("#ledgerMobileContainer").html(mobHtml);
 
-                    // Update Top Summary Pills (Desktop & Mobile)
+                    // Update Top Summary Pills (Desktop & Mobile & Print Header)
                     let formattedDebit   = 'Rs ' + totalDebit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
                     let formattedCredit  = 'Rs ' + totalCredit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
                     let formattedClosing = 'Rs ' + Math.abs(lastBalance).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ' + (lastBalance >= 0 ? 'Cr' : 'Dr');
@@ -616,6 +724,14 @@
                     $('#pillTotalDebit, #mobPillTotalDebit').text(formattedDebit);
                     $('#pillTotalCredit, #mobPillTotalCredit').text(formattedCredit);
                     $('#pillClosingBalance, #mobPillClosingBalance').text(formattedClosing);
+
+                    // Update Print Header
+                    $('#printVendorName').text(res.vendor.name);
+                    $('#printReportPeriod').html(`Period: <strong>${displayStart}</strong> to <strong>${displayEnd}</strong>`);
+                    $('#printOpeningBal').text(formattedOpening);
+                    $('#printTotalDebit').text(formattedDebit);
+                    $('#printTotalCredit').text(formattedCredit);
+                    $('#printClosingBal').text(formattedClosing);
                 }).fail(function() {
                     $("#loader").hide();
                     alert("Error loading report data.");
