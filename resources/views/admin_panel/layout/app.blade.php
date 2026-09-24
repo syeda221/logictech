@@ -1023,6 +1023,7 @@
                                         @can('item.stock.report.view')
                                             <li><a href="{{ route('report.item_stock') }}"><i class="fa-solid fa-users"></i>
                                                     Item Stock Report</a></li>
+                                             <li><a href="{{ route('report.item_stock', ['mode' => 'expenses']) }}"><i class="fa-solid fa-receipt text-danger"></i> Expense Report</a></li>
                                         @endcan
                                         @can('material.usage.report.view')
                                             <li><a href="{{ route('report.material_usage') }}"><i class="fa-solid fa-clipboard-check text-success"></i>

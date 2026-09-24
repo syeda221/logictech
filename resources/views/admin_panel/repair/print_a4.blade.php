@@ -312,6 +312,7 @@
         <button onclick="removeLastRow()" class="btn-del">🗑️ Remove Last Row</button>
         <button onclick="toggleGstAll()" class="btn-gst" id="btnGstToggle">⚡ Apply 18% GST</button>
         <a href="{{ route('repair.show', $repair->id) }}" class="btn-back">← Back to Repair Details</a>
+        <a href="{{ route('repair.index') }}" class="btn-back" style="background: linear-gradient(135deg, #1e293b, #0f172a); border: 1px solid rgba(255,255,255,0.2);">📋 Back to List</a>
     </div>
 </div>
 
@@ -342,6 +343,17 @@
         </div>
 
         {{-- Meta Information Lines --}}
+        @php
+            $descTitle = $repair->item_name;
+            $descExtra = [];
+            if (!empty($repair->brand_model)) $descExtra[] = 'Model: ' . $repair->brand_model;
+            if (!empty($repair->serial_no)) $descExtra[] = 'SN: ' . $repair->serial_no;
+            if (!empty($repair->problem_description) && !is_array(json_decode($repair->problem_description, true)) && $repair->problem_description !== $descTitle) {
+                $descExtra[] = $repair->problem_description;
+            }
+            $defaultSubject = $descTitle . (!empty($descExtra) ? ' (' . implode(' | ', $descExtra) . ')' : '');
+            $subjectText = !empty($repair->subject) ? $repair->subject : $defaultSubject;
+        @endphp
         <div class="meta-lines">
             <div class="meta-line-row">
                 <div>
@@ -351,10 +363,13 @@
                     Date. <span class="line-field" contenteditable="true" style="min-width: 140px;">{{ date('d-M-Y', strtotime($repair->received_date ?? now())) }}</span>
                 </div>
             </div>
-            <div>
+            <div style="margin-bottom: 6px;">
                 M/s. <span class="line-field" contenteditable="true" style="width: calc(100% - 45px); font-weight: 800;">
                     {{ $repair->customer_display_name }} @if($repair->customer_display_phone) ({{ $repair->customer_display_phone }}) @endif @if($repair->customer_display_address) - {{ $repair->customer_display_address }} @endif
                 </span>
+            </div>
+            <div>
+                Sub: <span class="line-field" id="subjectLineField" contenteditable="true" style="width: calc(100% - 40px); font-weight: 800;">{{ $subjectText }}</span>
             </div>
         </div>
 
@@ -398,60 +413,10 @@
                                     'gst_amt' => $gst_amt,
                                     'total' => $total,
                                 ];
-                            } else {
-                                // Initial intake format
-                                $rate = (float)($it['estimated_cost'] ?? 0);
-                                if ($rate == 0 && count($itemsData) == 1 && $totalBill > 0) {
-                                    $rate = $totalBill;
-                                }
-                                $descTitle = $it['item_name'] ?? $repair->item_name;
-                                $descExtra = [];
-                                if (!empty($it['brand_model'])) $descExtra[] = 'Model: ' . $it['brand_model'];
-                                if (!empty($it['serial_no'])) $descExtra[] = 'SN: ' . $it['serial_no'];
-                                if (!empty($it['problem_description']) && $it['problem_description'] !== $descTitle) $descExtra[] = $it['problem_description'];
-                                $fullDesc = $descTitle . (!empty($descExtra) ? ' (' . implode(' | ', $descExtra) . ')' : '');
-
-                                $rows[] = [
-                                    'no' => $it['sn'] ?? ($idx + 1),
-                                    'desc' => $fullDesc,
-                                    'qty' => 1,
-                                    'rate' => $rate,
-                                    'gross' => $rate,
-                                    'gst_pct' => 0,
-                                    'gst_amt' => 0,
-                                    'total' => $rate,
-                                ];
                             }
                         }
-                    } else {
-                        // Single Repair Item Format
-                        $serviceCharges = (float)($repair->service_charges > 0 ? $repair->service_charges : $repair->estimated_cost);
-                        $partsCharges   = (float)($repair->parts_charges ?? 0);
-
-                        $rows[] = [
-                            'no' => 1,
-                            'desc' => "Repair & Servicing: " . $repair->item_name . ($repair->brand_model ? ' ('.$repair->brand_model.')' : '') . ($repair->serial_no ? ' [S/N: '.$repair->serial_no.']' : ''),
-                            'qty' => 1,
-                            'rate' => $serviceCharges,
-                            'gross' => $serviceCharges,
-                            'gst_pct' => 0,
-                            'gst_amt' => 0,
-                            'total' => $serviceCharges,
-                        ];
-
-                        if ($partsCharges > 0) {
-                            $rows[] = [
-                                'no' => 2,
-                                'desc' => "Replacement Spare Parts / Components Charges",
-                                'qty' => 1,
-                                'rate' => $partsCharges,
-                                'gross' => $partsCharges,
-                                'gst_pct' => 0,
-                                'gst_amt' => 0,
-                                'total' => $partsCharges,
-                            ];
-                        }
                     }
+                    // Note: If opening fresh (not saved from A4 screen), $rows remains empty [], leaving 1st row empty.
 
                     // Total initial rows in pad grid: 10 rows
                     $totalRowsToFill = 10;
@@ -815,10 +780,14 @@
             const dateCell = document.querySelector('.meta-lines .meta-line-row div:nth-child(2) .line-field');
             const receivedDate = dateCell ? dateCell.innerText.trim() : '';
 
+            const subjectCell = document.getElementById('subjectLineField');
+            const subjectText = subjectCell ? (subjectCell.innerText || subjectCell.textContent || '').trim() : '';
+
             const payload = {
                 _token: '{{ csrf_token() }}',
                 doc_type: currentDocType,
                 items: rows,
+                subject: subjectText,
                 total_charges: grandTotalVal,
                 advance_paid: advanceVal,
                 due_amount: balanceVal,

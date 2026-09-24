@@ -2,7 +2,7 @@
 
 @section('content')
 <style>
-    /* ── ERP Item Stock & Movement Ledger System ── */
+    /* ── ERP Item Stock & Expense Reporting System ── */
     :root {
         --rpt-primary:    #4f46e5;
         --rpt-primary-lt: #eef2ff;
@@ -26,13 +26,14 @@
     .rpt-page { background: var(--rpt-bg); min-height: calc(100vh - 80px); padding: 20px 0; }
 
     /* Report Mode Selector Pills */
-    .mode-pills { display: flex; gap: 8px; margin-bottom: 16px; }
+    .mode-pills { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
     .mode-pill {
         padding: 8px 18px; border-radius: 20px; border: 1px solid var(--rpt-border);
         background: #fff; font-size: .82rem; font-weight: 700; color: var(--rpt-muted);
         cursor: pointer; transition: all .15s ease; display: inline-flex; align-items: center; gap: 6px;
     }
     .mode-pill.active, .mode-pill:hover { background: var(--rpt-primary); color: #fff; border-color: var(--rpt-primary); box-shadow: 0 4px 12px rgba(79,70,229,.2); }
+    .mode-pill.mode-expense.active { background: #dc2626 !important; border-color: #dc2626 !important; box-shadow: 0 4px 12px rgba(220,38,38,.25) !important; }
 
     /* Filter Card */
     .rpt-filter-card {
@@ -78,8 +79,10 @@
     {{-- Page Header & Mode Switcher --}}
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
         <div>
-            <h4 class="fw-bold text-dark mb-0"><i class="fas fa-industry text-primary me-2"></i>Raw Material Stock &amp; Ledger Report</h4>
-            <small class="text-muted">Raw material inventory — purchases, material usage consumption, and stock valuation summary</small>
+            <h4 class="fw-bold text-dark mb-0" id="reportHeaderTitle">
+                <i class="fas fa-industry text-primary me-2" id="reportHeaderIcon"></i>Raw Material Stock &amp; Ledger Report
+            </h4>
+            <small class="text-muted" id="reportHeaderSub">Raw material inventory — purchases, material usage consumption, and stock valuation summary</small>
         </div>
 
         {{-- Mode Pills --}}
@@ -90,41 +93,44 @@
             <div class="mode-pill" data-mode="ledger">
                 <i class="fas fa-file-invoice-dollar"></i> Detailed Movement Ledger
             </div>
+            <div class="mode-pill mode-expense" data-mode="expenses" style="border-left: 3px solid #dc2626;">
+                <i class="fas fa-wallet text-danger"></i> Expenses Summary &amp; Report
+            </div>
         </div>
     </div>
 
     {{-- KPI Summary Cards --}}
-    <div class="kpi-grid">
-        <div class="kpi-card" style="background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);">
+    <div class="kpi-grid" id="kpiGrid">
+        <div class="kpi-card" id="kpiCard1" style="background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);">
             <div>
-                <div style="font-size:.7rem; font-weight:700; text-transform:uppercase; opacity:.85;">Grand Stock Value</div>
-                <div class="fs-4 fw-bold mt-1" id="kpiGrandStockValue">Rs 0.00</div>
+                <div style="font-size:.7rem; font-weight:700; text-transform:uppercase; opacity:.85;" id="kpiTitle1">Grand Stock Value</div>
+                <div class="fs-4 fw-bold mt-1" id="kpiValue1">Rs 0.00</div>
             </div>
-            <div style="font-size:24px; opacity:.8;"><i class="fas fa-coins"></i></div>
+            <div style="font-size:24px; opacity:.8;" id="kpiIcon1"><i class="fas fa-coins"></i></div>
         </div>
 
-        <div class="kpi-card" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+        <div class="kpi-card" id="kpiCard2" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
             <div>
-                <div class="text-uppercase fw-bold text-muted" style="font-size: 0.75rem; letter-spacing: 0.5px;">Current Total Stock</div>
-                <div class="fs-4 fw-bold mt-1" id="kpiTotalStock">0 Units</div>
+                <div class="text-uppercase fw-bold text-muted" style="font-size: 0.75rem; letter-spacing: 0.5px;" id="kpiTitle2">Current Total Stock</div>
+                <div class="fs-4 fw-bold mt-1" id="kpiValue2">0 Units</div>
             </div>
-            <div style="font-size:24px; opacity:.8;"><i class="fas fa-cubes"></i></div>
+            <div style="font-size:24px; opacity:.8;" id="kpiIcon2"><i class="fas fa-cubes"></i></div>
         </div>
 
-        <div class="kpi-card" style="background: linear-gradient(135deg, #d97706 0%, #b45309 100%);">
+        <div class="kpi-card" id="kpiCard3" style="background: linear-gradient(135deg, #d97706 0%, #b45309 100%);">
             <div>
-                <div class="text-uppercase fw-bold" style="font-size: 0.75rem; letter-spacing: 0.5px; opacity:.85;">Total Purchased (Qty)</div>
-                <div class="fs-4 fw-bold mt-1" id="kpiTotalPurchased">0 Units</div>
+                <div class="text-uppercase fw-bold" style="font-size: 0.75rem; letter-spacing: 0.5px; opacity:.85;" id="kpiTitle3">Total Purchased (Qty)</div>
+                <div class="fs-4 fw-bold mt-1" id="kpiValue3">0 Units</div>
             </div>
-            <div style="font-size:24px; opacity:.8;"><i class="fas fa-truck-loading"></i></div>
+            <div style="font-size:24px; opacity:.8;" id="kpiIcon3"><i class="fas fa-truck-loading"></i></div>
         </div>
 
-        <div class="kpi-card" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);">
+        <div class="kpi-card" id="kpiCard4" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);">
             <div>
-                <div style="font-size:.7rem; font-weight:700; text-transform:uppercase; opacity:.85;">Material Used (Consumed)</div>
-                <div class="fs-4 fw-bold mt-1" id="kpiMaterialUsed">0 Units</div>
+                <div style="font-size:.7rem; font-weight:700; text-transform:uppercase; opacity:.85;" id="kpiTitle4">Material Used (Consumed)</div>
+                <div class="fs-4 fw-bold mt-1" id="kpiValue4">0 Units</div>
             </div>
-            <div style="font-size:24px; opacity:.8;"><i class="fas fa-fire-alt"></i></div>
+            <div style="font-size:24px; opacity:.8;" id="kpiIcon4"><i class="fas fa-fire-alt"></i></div>
         </div>
     </div>
 
@@ -132,13 +138,23 @@
     <div class="rpt-filter-card">
         <form id="stockFilterForm" class="row g-2 align-items-end">
             <input type="hidden" name="report_mode" id="report_mode" value="summary">
-
-            {{-- Warehouse (Hidden & Auto-selected to Main Store) --}}
             <input type="hidden" name="warehouse_id" id="warehouse_id" value="1">
 
-            {{-- Category (Single) --}}
-            <div class="col-md-3">
-                <label class="rpt-flabel">Category</label>
+            {{-- Date From --}}
+            <div class="col-md-2">
+                <label class="rpt-flabel">Date From</label>
+                <input type="date" name="date_from" id="date_from" class="rpt-finput">
+            </div>
+
+            {{-- Date To --}}
+            <div class="col-md-2">
+                <label class="rpt-flabel">Date To</label>
+                <input type="date" name="date_to" id="date_to" class="rpt-finput">
+            </div>
+
+            {{-- Stock Product Category (Single) --}}
+            <div class="col-md-2" id="category_id_wrapper">
+                <label class="rpt-flabel">Stock Category</label>
                 <select name="category_id" id="category_id" class="rpt-finput">
                     <option value="all">-- All Categories --</option>
                     @foreach($categories as $cat)
@@ -147,8 +163,21 @@
                 </select>
             </div>
 
+            {{-- Expense Category (Single - Shown in Expenses Mode) --}}
+            <div class="col-md-2" id="expense_category_id_wrapper" style="display:none;">
+                <label class="rpt-flabel">Expense Category</label>
+                <select name="expense_category_id" id="expense_category_id" class="rpt-finput">
+                    <option value="all">-- All Expense Heads --</option>
+                    @if(isset($expenseCategories))
+                        @foreach($expenseCategories as $ecat)
+                            <option value="{{ $ecat->id }}">{{ $ecat->name }}</option>
+                        @endforeach
+                    @endif
+                </select>
+            </div>
+
             {{-- Unit Mode Filter --}}
-            <div class="col-md-2">
+            <div class="col-md-2" id="unit_type_wrapper">
                 <label class="rpt-flabel">Unit / Size Type</label>
                 <select name="unit_type" id="unit_type" class="rpt-finput">
                     <option value="all">All Units (Pcs / Kg / M²)</option>
@@ -158,8 +187,8 @@
                 </select>
             </div>
 
-            {{-- Product (Compact width) --}}
-            <div class="col-md-3">
+            {{-- Product Search --}}
+            <div class="col-md-2" id="product_id_wrapper">
                 <label class="rpt-flabel">Search Product</label>
                 <select name="product_id" id="product_id" class="form-control select2">
                     <option value="all">-- All Products --</option>
@@ -167,7 +196,7 @@
             </div>
 
             {{-- Buttons --}}
-            <div class="col-md-4 text-end d-flex gap-3 align-items-center">
+            <div class="col-md-2 text-end d-flex gap-2 align-items-center ms-auto">
                 <button type="button" id="btnSearch" class="btn btn-primary btn-sm flex-fill fw-bold shadow-sm" style="height:38px; border-radius:8px; font-size:.85rem;">
                     <i class="fas fa-search me-1.5"></i> Apply Filter
                 </button>
@@ -184,13 +213,13 @@
             
             <div id="loader" style="display:none; text-align:center; padding:30px;">
                 <div class="spinner-border text-primary" role="status"></div>
-                <p class="mt-2 text-muted small">Generating detailed stock report...</p>
+                <p class="mt-2 text-muted small">Generating report...</p>
             </div>
 
             <div class="table-responsive">
                 <table id="stockTable" class="table table-hover align-middle mb-0 nowrap" style="width:100%;">
                     <thead id="tableHeader">
-                        {{-- Rendered dynamically based on Summary vs Ledger mode --}}
+                        {{-- Rendered dynamically based on Summary, Ledger or Expense mode --}}
                     </thead>
                     <tbody id="reportBody">
                         {{-- Filled by AJAX --}}
@@ -207,9 +236,7 @@
 </div>
 </div>
 
-{{-- ══════════════════════════════════════════════════════════════
-     PRODUCT MOVEMENT HISTORY TIMELINE MODAL
-══════════════════════════════════════════════════════════════ --}}
+{{-- PRODUCT MOVEMENT HISTORY TIMELINE MODAL --}}
 <div class="modal fade" id="productHistoryModal" tabindex="-1" aria-labelledby="productHistoryModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg" style="border-radius:14px; overflow:hidden;">
@@ -296,16 +323,85 @@ $(document).ready(function() {
     $('.mode-pill').on('click', function () {
         $('.mode-pill').removeClass('active');
         $(this).addClass('active');
-        $('#report_mode').val($(this).data('mode'));
+        let mode = $(this).data('mode');
+        $('#report_mode').val(mode);
+        
+        updateUIForMode(mode);
         fetchStockReport();
     });
+
+    function updateUIForMode(mode) {
+        if (mode === 'expenses') {
+            // Expenses Mode UI
+            $('#reportHeaderTitle').html('<i class="fas fa-receipt text-danger me-2"></i>Operational &amp; Business Expense Report');
+            $('#reportHeaderSub').text('Comprehensive audit breakdown of all operational expenses, category wise vouchers, and total spending');
+            
+            // Toggle Filter Inputs
+            $('#category_id_wrapper').hide();
+            $('#expense_category_id_wrapper').show();
+            $('#unit_type_wrapper').hide();
+            $('#product_id_wrapper').hide();
+
+            // Set KPI Styles & Titles for Expenses
+            $('#kpiCard1').css('background', 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)');
+            $('#kpiTitle1').text('Total Expenses Amount');
+            $('#kpiIcon1').html('<i class="fas fa-receipt"></i>');
+
+            $('#kpiCard2').css('background', 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)');
+            $('#kpiTitle2').text('Total Expense Vouchers');
+            $('#kpiIcon2').html('<i class="fas fa-file-invoice-dollar"></i>');
+
+            $('#kpiCard3').css('background', 'linear-gradient(135deg, #d97706 0%, #b45309 100%)');
+            $('#kpiTitle3').text('Top Expense Category');
+            $('#kpiIcon3').html('<i class="fas fa-tags"></i>');
+
+            $('#kpiCard4').css('background', 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)');
+            $('#kpiTitle4').text('Avg Per Voucher');
+            $('#kpiIcon4').html('<i class="fas fa-calculator"></i>');
+        } else {
+            // Stock Modes UI
+            $('#reportHeaderTitle').html('<i class="fas fa-industry text-primary me-2"></i>Raw Material Stock &amp; Ledger Report');
+            $('#reportHeaderSub').text('Raw material inventory — purchases, material usage consumption, and stock valuation summary');
+
+            // Toggle Filter Inputs
+            $('#category_id_wrapper').show();
+            $('#expense_category_id_wrapper').hide();
+            $('#unit_type_wrapper').show();
+            $('#product_id_wrapper').show();
+
+            // Set Stock KPI Styles & Titles
+            $('#kpiCard1').css('background', 'linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)');
+            $('#kpiTitle1').text('Grand Stock Value');
+            $('#kpiIcon1').html('<i class="fas fa-coins"></i>');
+
+            $('#kpiCard2').css('background', 'linear-gradient(135deg, #10b981 0%, #059669 100%)');
+            $('#kpiTitle2').text('Current Total Stock');
+            $('#kpiIcon2').html('<i class="fas fa-cubes"></i>');
+
+            $('#kpiCard3').css('background', 'linear-gradient(135deg, #d97706 0%, #b45309 100%)');
+            $('#kpiTitle3').text('Total Purchased (Qty)');
+            $('#kpiIcon3').html('<i class="fas fa-truck-loading"></i>');
+
+            $('#kpiCard4').css('background', 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)');
+            $('#kpiTitle4').text('Material Used (Consumed)');
+            $('#kpiIcon4').html('<i class="fas fa-fire-alt"></i>');
+        }
+    }
 
     // Search Click
     $('#btnSearch').on('click', function () {
         fetchStockReport();
     });
 
-    // Initial Load
+    // Initial Load (Check URL param 'mode')
+    const urlParams = new URLSearchParams(window.location.search);
+    let initialMode = urlParams.get('mode') || 'summary';
+    if (['summary', 'ledger', 'expenses'].includes(initialMode)) {
+        $('.mode-pill').removeClass('active');
+        $('.mode-pill[data-mode="' + initialMode + '"]').addClass('active');
+        $('#report_mode').val(initialMode);
+        updateUIForMode(initialMode);
+    }
     fetchStockReport();
 
     function fetchStockReport() {
@@ -321,32 +417,53 @@ $(document).ready(function() {
             data: {
                 _token: "{{ csrf_token() }}",
                 category_id: $('#category_id').val(),
+                expense_category_id: $('#expense_category_id').val(),
                 product_id:  $('#product_id').val(),
                 warehouse_id: $('#warehouse_id').val(),
                 unit_type:   $('#unit_type').val(),
+                date_from:   $('#date_from').val(),
+                date_to:     $('#date_to').val(),
                 report_mode: mode
             },
             success: function (res) {
                 $('#loader').hide();
                 currentReportData = res.data || [];
 
-                // Update KPIs
-                $('#kpiGrandStockValue').text('Rs ' + (res.grand_total || 0).toLocaleString(undefined, {minimumFractionDigits: 2}));
+                if (mode === 'expenses') {
+                    // Update Expense KPIs
+                    let totalAmt = res.total_expense_amount || 0;
+                    $('#kpiValue1').text('Rs ' + totalAmt.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
 
-                let totalStock = res.total_current_stock || 0;
-                $('#kpiTotalStock').text(totalStock.toLocaleString() + ' Units');
+                    let vCount = res.total_vouchers_count || 0;
+                    $('#kpiValue2').text(vCount.toLocaleString() + ' Vouchers');
 
-                let totalPurchased = res.total_purchased_qty || 0;
-                $('#kpiTotalPurchased').text(totalPurchased.toLocaleString() + ' Units');
+                    let topCat = res.top_category_name || 'N/A';
+                    let topAmt = res.top_category_amount || 0;
+                    $('#kpiValue3').text(topCat !== 'N/A' ? topCat + ' (Rs ' + topAmt.toLocaleString(undefined, {maximumFractionDigits:0}) + ')' : 'N/A');
 
-                let materialUsed = res.total_material_used || 0;
-                $('#kpiMaterialUsed').text(materialUsed.toLocaleString() + ' Units');
+                    let avgAmt = res.avg_expense_voucher || 0;
+                    $('#kpiValue4').text('Rs ' + avgAmt.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
 
-                renderTableBody(res.data, mode);
+                    renderTableBody(res.data, mode, totalAmt);
+                } else {
+                    // Update Stock KPIs
+                    $('#kpiValue1').text('Rs ' + (res.grand_total || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+
+                    let totalStock = res.total_current_stock || 0;
+                    $('#kpiValue2').text(totalStock.toLocaleString() + ' Units');
+
+                    let totalPurchased = res.total_purchased_qty || 0;
+                    $('#kpiValue3').text(totalPurchased.toLocaleString() + ' Units');
+
+                    let materialUsed = res.total_material_used || 0;
+                    $('#kpiValue4').text(materialUsed.toLocaleString() + ' Units');
+
+                    renderTableBody(res.data, mode);
+                }
             },
             error: function () {
                 $('#loader').hide();
-                alert('Error loading stock report data.');
+                alert('Error loading report data.');
             }
         });
     }
@@ -372,7 +489,7 @@ $(document).ready(function() {
                     <th class="text-center" style="width:80px;">History</th>
                 </tr>
             `);
-        } else {
+        } else if (mode === 'ledger') {
             // Detailed Movement Ledger Columns
             thead.append(`
                 <tr>
@@ -388,17 +505,57 @@ $(document).ready(function() {
                     <th class="text-center" style="width:70px;">History</th>
                 </tr>
             `);
+        } else if (mode === 'expenses') {
+            // Operational Expense Report Columns
+            thead.append(`
+                <tr>
+                    <th style="width:40px;">#</th>
+                    <th style="width:110px;">Voucher #</th>
+                    <th style="width:110px;">Date</th>
+                    <th>Expense Category / Head</th>
+                    <th>Paid To / Party Name</th>
+                    <th>Narration &amp; Remarks</th>
+                    <th style="width:120px;">Source</th>
+                    <th class="text-end" style="width:140px;">Amount (Rs)</th>
+                </tr>
+            `);
         }
     }
 
-    function renderTableBody(data, mode) {
+    function renderTableBody(data, mode, totalExpenseAmt) {
         let tbody  = $('#reportBody');
         let tfooter= $('#tableFooter');
         tbody.empty();
         tfooter.empty();
 
         if (!data || data.length === 0) {
-            tbody.append(`<tr><td colspan="12" class="text-center py-5 text-muted">No stock data found for the selected filters.</td></tr>`);
+            tbody.append(`<tr><td colspan="12" class="text-center py-5 text-muted">No data found for the selected filters.</td></tr>`);
+            return;
+        }
+
+        if (mode === 'expenses') {
+            $.each(data, function (i, row) {
+                let rowHtml = `
+                <tr>
+                    <td class="text-muted fw-bold" style="font-size:.80rem;">${i + 1}</td>
+                    <td><span class="item-code-badge">${row.voucher_no || ''}</span></td>
+                    <td class="fw-semibold text-secondary" style="font-size:.84rem;">${row.date}</td>
+                    <td><span class="badge bg-danger text-white px-2 py-1" style="font-size:.80rem; border-radius:6px;">${row.category_name}</span></td>
+                    <td class="fw-bold text-dark" style="font-size:.88rem;">${row.party_name}</td>
+                    <td class="text-muted" style="font-size:.84rem;">${row.narration} ${row.remarks && row.remarks !== '-' ? '<span class="text-secondary ms-1">('+row.remarks+')</span>' : ''}</td>
+                    <td><span class="item-unit-badge">${row.source}</span></td>
+                    <td class="text-end fw-bold text-danger" style="font-size:.92rem;">Rs ${parseFloat(row.amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                </tr>`;
+                tbody.append(rowHtml);
+            });
+
+            tfooter.append(`
+                <tr class="bg-light fw-bold" style="border-top: 2px solid #cbd5e1;">
+                    <td colspan="7" class="text-end text-dark fs-6">Grand Total Expenses:</td>
+                    <td class="text-end text-danger fs-6 fw-bolder">Rs ${(totalExpenseAmt || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                </tr>
+            `);
+
             return;
         }
 
@@ -464,7 +621,7 @@ $(document).ready(function() {
             }
         });
 
-        // Table Footer Summary
+        // Table Footer Summary for Stock Modes
         if (mode === 'summary') {
             tfooter.append(`
                 <tr class="bg-light fw-bold" style="border-top: 2px solid #cbd5e1;">
@@ -525,15 +682,25 @@ $(document).ready(function() {
             return;
         }
 
-        let csv = 'Item Code,Item Name,Category,Unit,Opening Stock,Purchased (+),Material Used (-),Adjustments,Closing Stock,Stock Value (Rs)\n';
-        $.each(currentReportData, function (i, r) {
-            csv += `"${r.item_code || ''}","${r.item_name}","${r.category_name}","${r.unit_name}","${r.initial_stock}","${r.purchased}","${r.material_used || 0}","${r.adjustments}","${r.balance}","${r.stock_value}"\n`;
-        });
+        let mode = $('#report_mode').val();
+        let csv = '';
+
+        if (mode === 'expenses') {
+            csv = 'Voucher No,Date,Expense Category,Paid To / Party,Narration,Remarks,Source,Amount (Rs)\n';
+            $.each(currentReportData, function (i, r) {
+                csv += `"${r.voucher_no || ''}","${r.date || ''}","${r.category_name || ''}","${r.party_name || ''}","${r.narration || ''}","${r.remarks || ''}","${r.source || ''}","${r.amount || 0}"\n`;
+            });
+        } else {
+            csv = 'Item Code,Item Name,Category,Unit,Opening Stock,Purchased (+),Material Used (-),Adjustments,Closing Stock,Stock Value (Rs)\n';
+            $.each(currentReportData, function (i, r) {
+                csv += `"${r.item_code || ''}","${r.item_name}","${r.category_name}","${r.unit_name}","${r.initial_stock}","${r.purchased}","${r.material_used || 0}","${r.adjustments}","${r.balance}","${r.stock_value}"\n`;
+            });
+        }
 
         let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         let link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
-        link.download = "Item_Stock_Report_" + new Date().toISOString().slice(0,10) + ".csv";
+        link.download = (mode === 'expenses' ? "Expenses_Report_" : "Item_Stock_Report_") + new Date().toISOString().slice(0,10) + ".csv";
         link.click();
     });
 

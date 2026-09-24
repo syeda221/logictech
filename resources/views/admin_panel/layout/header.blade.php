@@ -379,6 +379,7 @@
                             <div class="submenu">
                                 <ul class="submenu-item">
                                     <li class="nav-item"><a class="nav-link" href="{{ route('report.item_stock') }}"><i class="fa-solid fa-boxes-stacked mr-2"></i><span>Item Stock</span></a></li>
+                                     <li class="nav-item"><a class="nav-link" href="{{ route('report.item_stock', ['mode' => 'expenses']) }}"><i class="fa-solid fa-receipt mr-2 text-danger"></i><span>Expense Report</span></a></li>
                                     @can('material.usage.report.view')
                                         <li class="nav-item"><a class="nav-link" href="{{ route('report.material_usage') }}"><i class="fa-solid fa-clipboard-check mr-2 text-primary"></i><span>Material Usage Report</span></a></li>
                                     @endcan

@@ -89,7 +89,7 @@
     <table class="excel-table">
         <thead>
             <tr>
-                <th colspan="15" class="main-header">Payroll Summary</th>
+                <th colspan="15" class="main-header">LOGIC TECH ENGINEERING — Payroll Summary</th>
             </tr>
             <tr>
                 <th colspan="15" class="sub-header">{{ \Carbon\Carbon::parse($month.'-01')->format('M-y') }}</th>

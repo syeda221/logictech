@@ -90,9 +90,25 @@
     </div>
 
     @if($selectedEmployee)
-        <div class="header">
-            <h2>LOGICTECH SOFTWARE</h2>
-            <p>EMPLOYEE LEDGER & SALARY / ADVANCE STATEMENT</p>
+        <div class="header" style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #1f497d; padding-bottom: 10px; margin-bottom: 15px;">
+            <div style="flex: 0 0 130px; text-align: left;">
+                @php
+                    $logoUrl = \App\Models\Setting::getLogoUrl();
+                    if (!$logoUrl && file_exists(base_path('logo.png'))) {
+                        $type = pathinfo(base_path('logo.png'), PATHINFO_EXTENSION);
+                        $data = file_get_contents(base_path('logo.png'));
+                        $logoUrl = 'data:image/' . $type . ';base64,' . base64_encode($data);
+                    }
+                @endphp
+                @if($logoUrl)
+                    <img src="{{ $logoUrl }}" alt="Logo" style="max-height: 50px; max-width: 130px; object-fit: contain;">
+                @endif
+            </div>
+            <div style="flex: 1; text-align: center;">
+                <h2 style="margin: 0; color: #1f497d; font-size: 20px; font-weight: bold; text-transform: uppercase;">LOGIC TECH ENGINEERING</h2>
+                <p style="margin: 3px 0 0 0; color: #475569; font-weight: bold; font-size: 12px;">EMPLOYEE LEDGER & SALARY / ADVANCE STATEMENT</p>
+            </div>
+            <div style="flex: 0 0 130px;"></div>
         </div>
 
         <table class="emp-info">

@@ -36,6 +36,7 @@ class RepairOrder extends Model
         'due_amount',
         'status',
         'doc_type',
+        'subject',
         'priority',
         'received_date',
         'expected_delivery_date',

@@ -533,6 +533,7 @@ class RepairController extends Controller
         $validated = $request->validate([
             'doc_type' => 'required|in:quotation,invoice',
             'items' => 'nullable|array',
+            'subject' => 'nullable|string',
             'total_charges' => 'nullable|numeric|min:0',
             'advance_paid' => 'nullable|numeric|min:0',
             'due_amount' => 'nullable|numeric|min:0',
@@ -545,6 +546,10 @@ class RepairController extends Controller
 
             $docType = $validated['doc_type'];
             $repair->doc_type = $docType;
+
+            if (isset($validated['subject'])) {
+                $repair->subject = trim($validated['subject']);
+            }
 
             if (isset($validated['total_charges'])) {
                 $repair->total_charges = (float)$validated['total_charges'];

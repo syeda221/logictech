@@ -54,19 +54,170 @@ class ReportingController extends Controller
             $warehouses = collect();
         }
 
-        return view('admin_panel.reporting.item_stock_report', compact('categories', 'warehouses', 'units'));
+        $expenseCategories = DB::table('expense_categories')->orderBy('name')->get();
+
+        return view('admin_panel.reporting.item_stock_report', compact('categories', 'expenseCategories', 'warehouses', 'units'));
     }
 
     // AJAX endpoint to fetch report rows
     public function fetchItemStock(Request $request)
     {
-        $productId   = $request->product_id;
-        $categoryId  = $request->category_id;
-        $warehouseId = $request->warehouse_id;
-        $unitType    = $request->unit_type; // 'all', 'cartons_pcs', 'weight_kg', 'area_m2'
-        $reportMode  = $request->report_mode ?: 'summary'; // 'summary' vs 'ledger'
-        $dateFrom    = $request->date_from;
-        $dateTo      = $request->date_to;
+        $productId         = $request->product_id;
+        $categoryId        = $request->category_id;
+        $expenseCategoryId = $request->expense_category_id;
+        $warehouseId       = $request->warehouse_id;
+        $unitType          = $request->unit_type; // 'all', 'cartons_pcs', 'weight_kg', 'area_m2'
+        $reportMode        = $request->report_mode ?: 'summary'; // 'summary', 'ledger', 'expenses'
+        $dateFrom          = $request->date_from;
+        $dateTo            = $request->date_to;
+
+        // ── Expense Report Handling Mode ──
+        if ($reportMode === 'expenses') {
+            $categoriesMap   = DB::table('expense_categories')->pluck('name', 'id')->toArray();
+            $narrationsMap   = DB::table('narrations')->pluck('narration', 'id')->toArray();
+            $vendorsMap      = DB::table('vendors')->pluck('name', 'id')->toArray();
+            $customersMap    = DB::table('customers')->pluck('customer_name', 'id')->toArray();
+            $accountHeadsMap = DB::table('account_heads')->pluck('name', 'id')->toArray();
+            $accountsMap     = DB::table('accounts')->pluck('title', 'id')->toArray();
+
+            $expenseRows        = [];
+            $totalExpenseAmount = 0;
+            $categoryTotals     = [];
+
+            // 1. Fetch from expense_vouchers
+            $eVouchersQuery = DB::table('expense_vouchers');
+            if ($dateFrom) {
+                $eVouchersQuery->whereDate('entry_date', '>=', $dateFrom);
+            }
+            if ($dateTo) {
+                $eVouchersQuery->whereDate('entry_date', '<=', $dateTo);
+            }
+            $eVouchers = $eVouchersQuery->orderBy('entry_date', 'desc')->get();
+
+            foreach ($eVouchers as $v) {
+                $partyName = '-';
+                if ($v->type === 'vendor') {
+                    $partyName = $vendorsMap[$v->party_id] ?? ('Vendor #' . $v->party_id);
+                } elseif ($v->type === 'customer' || $v->type === 'walkin') {
+                    $partyName = $customersMap[$v->party_id] ?? ('Customer #' . $v->party_id);
+                } elseif (is_numeric($v->type)) {
+                    $headName  = $accountHeadsMap[$v->type] ?? 'Account';
+                    $accName   = $accountsMap[$v->party_id] ?? '';
+                    $partyName = $accName ? "{$headName} ({$accName})" : $headName;
+                }
+
+                $rowAccIds  = json_decode($v->row_account_id, true) ?? [];
+                $rowNarrIds = json_decode($v->narration_id, true) ?? [];
+                $rowAmounts = json_decode($v->amount, true) ?? [];
+
+                $categoryNames = [];
+                $narrationTexts = [];
+                $hasSelectedExpenseCategoryFilter = false;
+
+                foreach ($rowAccIds as $idx => $accId) {
+                    $catName = $categoriesMap[$accId] ?? ($accountsMap[$accId] ?? 'General Expense');
+                    $categoryNames[] = $catName;
+
+                    if ($expenseCategoryId && $expenseCategoryId !== 'all' && (string)$accId === (string)$expenseCategoryId) {
+                        $hasSelectedExpenseCategoryFilter = true;
+                    }
+
+                    $lineAmt = (float)($rowAmounts[$idx] ?? 0);
+                    if (!isset($categoryTotals[$catName])) {
+                        $categoryTotals[$catName] = 0;
+                    }
+                    $categoryTotals[$catName] += $lineAmt;
+                }
+
+                if ($expenseCategoryId && $expenseCategoryId !== 'all' && !$hasSelectedExpenseCategoryFilter) {
+                    continue;
+                }
+
+                foreach ($rowNarrIds as $narrId) {
+                    if (isset($narrationsMap[$narrId])) {
+                        $narrationTexts[] = $narrationsMap[$narrId];
+                    }
+                }
+
+                $catDisplay  = !empty($categoryNames) ? implode(', ', array_unique($categoryNames)) : 'General Expense';
+                $narrDisplay = !empty($narrationTexts) ? implode('; ', $narrationTexts) : ($v->remarks ?: '-');
+
+                $amt = (float)$v->total_amount;
+                $totalExpenseAmount += $amt;
+
+                $expenseRows[] = [
+                    'id'            => $v->id,
+                    'voucher_no'    => $v->evid ?: ('EVID-' . $v->id),
+                    'date'          => date('d M Y', strtotime($v->entry_date)),
+                    'raw_date'      => $v->entry_date,
+                    'category_name' => $catDisplay,
+                    'party_name'    => $partyName,
+                    'narration'     => $narrDisplay,
+                    'remarks'       => $v->remarks ?: '-',
+                    'amount'        => $amt,
+                    'source'        => 'Expense Voucher'
+                ];
+            }
+
+            // 2. Fetch from voucher_masters (v2 general expense vouchers)
+            if (!$expenseCategoryId || $expenseCategoryId === 'all') {
+                $v2Query = DB::table('voucher_masters')->where('voucher_type', 'expense');
+                if ($dateFrom) {
+                    $v2Query->whereDate('date', '>=', $dateFrom);
+                }
+                if ($dateTo) {
+                    $v2Query->whereDate('date', '<=', $dateTo);
+                }
+                $v2Vouchers = $v2Query->orderBy('date', 'desc')->get();
+
+                foreach ($v2Vouchers as $v2) {
+                    $amt = (float)$v2->total_amount;
+                    $totalExpenseAmount += $amt;
+                    $catName = 'General Expense';
+
+                    if (!isset($categoryTotals[$catName])) {
+                        $categoryTotals[$catName] = 0;
+                    }
+                    $categoryTotals[$catName] += $amt;
+
+                    $expenseRows[] = [
+                        'id'            => 'v2_' . $v2->id,
+                        'voucher_no'    => $v2->voucher_no ?: ('EXP-' . $v2->id),
+                        'date'          => date('d M Y', strtotime($v2->date)),
+                        'raw_date'      => $v2->date,
+                        'category_name' => $catName,
+                        'party_name'    => $v2->paid_to ?? 'General',
+                        'narration'     => $v2->remarks ?: 'Expense Payment',
+                        'remarks'       => $v2->remarks ?: '-',
+                        'amount'        => $amt,
+                        'source'        => 'General Voucher'
+                    ];
+                }
+            }
+
+            usort($expenseRows, function($a, $b) {
+                return strtotime($b['raw_date']) - strtotime($a['raw_date']);
+            });
+
+            $topCategoryName   = 'N/A';
+            $topCategoryAmount = 0;
+            foreach ($categoryTotals as $cName => $cSum) {
+                if ($cSum > $topCategoryAmount) {
+                    $topCategoryAmount = $cSum;
+                    $topCategoryName   = $cName;
+                }
+            }
+
+            return response()->json([
+                'data'                 => $expenseRows,
+                'total_expense_amount' => $totalExpenseAmount,
+                'total_vouchers_count' => count($expenseRows),
+                'top_category_name'    => $topCategoryName,
+                'top_category_amount'  => $topCategoryAmount,
+                'avg_expense_voucher'  => count($expenseRows) > 0 ? ($totalExpenseAmount / count($expenseRows)) : 0,
+                'category_breakdown'   => $categoryTotals
+            ]);
+        }
 
         $productsQuery = Product::with(['warehouseStocks', 'unit', 'category_relation'])
             ->whereIn('item_type', ['raw_material', 'both']);

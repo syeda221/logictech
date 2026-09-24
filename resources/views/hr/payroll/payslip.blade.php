@@ -120,9 +120,25 @@
     </div>
 
     <div class="payslip-box">
-        <div class="header">
-            <h2>LOGICTECH SOFTWARE</h2>
-            <p>SALARY PAYSLIP - {{ \Carbon\Carbon::parse($payroll->month.'-01')->format('F Y') }}</p>
+        <div class="header" style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #1f497d; padding-bottom: 15px; margin-bottom: 20px;">
+            <div style="flex: 0 0 140px; text-align: left;">
+                @php
+                    $logoUrl = \App\Models\Setting::getLogoUrl();
+                    if (!$logoUrl && file_exists(base_path('logo.png'))) {
+                        $type = pathinfo(base_path('logo.png'), PATHINFO_EXTENSION);
+                        $data = file_get_contents(base_path('logo.png'));
+                        $logoUrl = 'data:image/' . $type . ';base64,' . base64_encode($data);
+                    }
+                @endphp
+                @if($logoUrl)
+                    <img src="{{ $logoUrl }}" alt="Logo" style="max-height: 60px; max-width: 140px; object-fit: contain;">
+                @endif
+            </div>
+            <div style="flex: 1; text-align: center;">
+                <h2 style="margin: 0; color: #1f497d; font-size: 24px; font-weight: bold; text-transform: uppercase;">LOGIC TECH ENGINEERING</h2>
+                <p style="margin: 5px 0 0 0; color: #64748b; font-weight: bold;">SALARY PAYSLIP - {{ \Carbon\Carbon::parse($payroll->month.'-01')->format('F Y') }}</p>
+            </div>
+            <div style="flex: 0 0 140px;"></div>
         </div>
 
         <table class="info-table">
