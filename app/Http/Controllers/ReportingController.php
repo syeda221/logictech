@@ -27,7 +27,7 @@ class ReportingController extends Controller
             ->orderBy('products.item_name')
             ->get();
 
-        return view('admin_panel.Reporting.onhand', compact('rows'));
+        return view('admin_panel.reporting.onhand', compact('rows'));
     }
 
     public function item_stock_report()
@@ -1066,7 +1066,7 @@ class ReportingController extends Controller
 
     public function purchase_report()
     {
-        $products = \App\Models\product::orderBy('item_name')->get();
+        $products = Product::orderBy('item_name')->get();
         $vendors = \App\Models\Vendor::orderBy('name')->get();
         return view('admin_panel.reporting.purchase_report', compact('products', 'vendors'));
     }
