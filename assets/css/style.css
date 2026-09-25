@@ -1384,9 +1384,9 @@ blockquote span:before {
 }
 
 .rt_nav_header.horizontal-layout .top_nav {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%) !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+    background: #090d16 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4) !important;
     height: 70px;
 }
 
