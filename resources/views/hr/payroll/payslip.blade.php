@@ -22,6 +22,7 @@
             padding: 25px;
             max-width: 800px;
             margin: 0 auto;
+            background: #ffffff;
         }
         .header {
             text-align: center;
@@ -59,40 +60,52 @@
         .salary-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
         }
         .salary-table th {
             background-color: #1f497d;
             color: white;
             padding: 10px;
             text-align: left;
+            font-weight: bold;
         }
         .salary-table td {
             border: 1px solid #cbd5e1;
-            padding: 10px;
+            padding: 9px 10px;
         }
         .text-right { text-align: right; }
         .text-center { text-align: center; }
+        
         .total-row td {
             font-weight: bold;
-            background-color: #f1f5f9;
-            font-size: 14px;
+            background-color: #fde8e1;
+            color: #000;
+            font-size: 13px;
         }
+        
         .net-pay-box {
             background: #8db4e2;
             color: #000;
-            padding: 15px;
-            border-radius: 6px;
+            padding: 12px;
+            border-radius: 4px;
             text-align: center;
             font-size: 18px;
             font-weight: bold;
-            margin-bottom: 30px;
+            margin-bottom: 12px;
+            letter-spacing: 0.5px;
+        }
+        .balance-box {
+            text-align: center;
+            font-size: 15px;
+            font-weight: bold;
+            color: #000;
+            margin-bottom: 25px;
         }
         .signatures {
             display: flex;
             justify-content: space-between;
-            margin-top: 50px;
-            padding-top: 20px;
+            margin-top: 45px;
+            padding-top: 15px;
         }
         .sig-line {
             border-top: 1px solid #94a3b8;
@@ -162,51 +175,77 @@
             </tr>
         </table>
 
+        @php
+            $basicSalary    = (float) $payroll->basic_salary;
+            $pDays          = (float) $payroll->p_days;
+            $salaryCount    = (float) ($payroll->salary_count ?: (($basicSalary / 30) * $pDays));
+            $overtimePay    = (float) $payroll->overtime_pay;
+            $otherAllowance = (float) ($payroll->other_allowance ?: $payroll->manual_allowances ?: 0);
+            $totalPay       = (float) ($payroll->total_pay ?: ($salaryCount + $overtimePay + $otherAllowance));
+
+            $advances        = (float) ($payroll->advances ?: $payroll->deductions ?: 0);
+            $otherDeduction  = 0;
+            $totalDeductions = $advances + $otherDeduction;
+
+            $netPayable  = (float) ($payroll->net_salary ?: ($totalPay - $totalDeductions));
+            $paidAmount  = (float) ($payroll->payment_this_month ?: $netPayable);
+            $balanceAmt  = $payroll->closing_balance !== null ? (float)$payroll->closing_balance : ($netPayable - $paidAmount);
+        @endphp
+
         <table class="salary-table">
             <thead>
                 <tr>
-                    <th>Earnings & Pay Breakdown</th>
-                    <th class="text-right">Amount (PKR)</th>
-                    <th>Deductions & Adjustments</th>
-                    <th class="text-right">Amount (PKR)</th>
+                    <th style="width:35%;">Earnings & Pay Breakdown</th>
+                    <th class="text-right" style="width:15%;">Amount (PKR)</th>
+                    <th style="width:35%;">Deductions & Adjustments</th>
+                    <th class="text-right" style="width:15%;">Amount (PKR)</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
                     <td>Basic Salary</td>
-                    <td class="text-right">Rs. {{ number_format($payroll->basic_salary, 0) }}</td>
+                    <td class="text-right">Rs. {{ number_format($basicSalary, 0) }}</td>
                     <td>Advances / Loan Deductions</td>
-                    <td class="text-right text-danger">Rs. {{ number_format($payroll->advances ?: $payroll->deductions, 0) }}</td>
+                    <td class="text-right">Rs. {{ number_format($advances, 0) }}</td>
                 </tr>
                 <tr>
-                    <td>Salary Count (For {{ number_format($payroll->p_days, 0) }} Days)</td>
-                    <td class="text-right">Rs. {{ number_format($payroll->salary_count, 0) }}</td>
+                    <td>Salary Count (For {{ number_format($pDays, 0) }} Days)</td>
+                    <td class="text-right">Rs. {{ number_format($salaryCount, 0) }}</td>
                     <td>Other Deductions</td>
-                    <td class="text-right">Rs. 0</td>
+                    <td class="text-right">Rs. {{ number_format($otherDeduction, 0) }}</td>
                 </tr>
                 <tr>
                     <td>Overtime Pay</td>
-                    <td class="text-right">Rs. {{ number_format($payroll->overtime_pay, 0) }}</td>
-                    <td>Remaining Advance Balance</td>
-                    <td class="text-right">Rs. {{ number_format(abs($payroll->closing_balance), 0) }}</td>
+                    <td class="text-right">Rs. {{ number_format($overtimePay, 0) }}</td>
+                    <td><strong>Total Deductions</strong></td>
+                    <td class="text-right"><strong>Rs. {{ number_format($totalDeductions, 0) }}</strong></td>
                 </tr>
                 <tr>
-                    <td>Other Allowances / Eidi</td>
-                    <td class="text-right">Rs. {{ number_format($payroll->other_allowance ?: $payroll->manual_allowances, 0) }}</td>
+                    <td>Other Allowances (Eidi)</td>
+                    <td class="text-right">Rs. {{ number_format($otherAllowance, 0) }}</td>
                     <td></td>
                     <td></td>
                 </tr>
                 <tr class="total-row">
                     <td>TOTAL PAY</td>
-                    <td class="text-right">Rs. {{ number_format($payroll->total_pay ?: $payroll->gross_salary, 0) }}</td>
-                    <td>TOTAL DEDUCTIONS</td>
-                    <td class="text-right">Rs. {{ number_format($payroll->advances ?: $payroll->deductions, 0) }}</td>
+                    <td class="text-right">Rs. {{ number_format($totalPay, 0) }}</td>
+                    <td>NET PAYABLE</td>
+                    <td class="text-right">Rs. {{ number_format($netPayable, 0) }}</td>
                 </tr>
             </tbody>
         </table>
 
         <div class="net-pay-box">
-            NET AMOUNT PAID: Rs. {{ number_format($payroll->payment_this_month ?: $payroll->net_salary, 0) }}
+            NET PAID AMOUNT : Rs. {{ number_format($paidAmount, 0) }}
+        </div>
+
+        <div class="balance-box">
+            BALANCE AMOUNT : Rs. {{ number_format(abs($balanceAmt), 0) }}
+            @if($balanceAmt > 0)
+                <span style="color:#15803d;">(Payable)</span>
+            @elseif($balanceAmt < 0)
+                <span style="color:#b91c1c;">(Receivable)</span>
+            @endif
         </div>
 
         <div class="signatures">
