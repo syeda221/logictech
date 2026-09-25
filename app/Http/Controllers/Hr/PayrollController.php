@@ -689,6 +689,7 @@ class PayrollController extends Controller
             'total_advances_deducted' => 0,
             'total_salary_earned' => 0,
             'total_other_allowances' => 0,
+            'total_net_payable' => 0,
             'total_net_paid' => 0,
             'closing_balance' => 0,
         ];
@@ -702,6 +703,7 @@ class PayrollController extends Controller
                 $advDeducted = floatval($p->advances ?: $p->deductions ?: 0);
                 $otherAllowance = floatval($p->other_allowance ?: $p->manual_allowances ?: 0);
                 $salaryEarned = floatval($p->total_pay ?: $p->gross_salary ?: $p->basic_salary);
+                $netPayable = floatval($p->net_salary ?: (($salaryEarned + $otherAllowance) - $advDeducted));
                 $netPaid = floatval($p->payment_this_month ?: $p->net_salary);
 
                 $ledgerEntries->push([
@@ -713,6 +715,7 @@ class PayrollController extends Controller
                     'advance_deducted' => $advDeducted,
                     'other_allowance' => $otherAllowance,
                     'salary_earned' => $salaryEarned,
+                    'net_payable' => $netPayable,
                     'net_paid' => $netPaid,
                     'ref' => "PAY-#{$p->id}",
                 ]);
@@ -737,6 +740,7 @@ class PayrollController extends Controller
                     $summary['total_advances_deducted'] += $entry['advance_deducted'];
                     $summary['total_salary_earned'] += $entry['salary_earned'];
                     $summary['total_other_allowances'] += $entry['other_allowance'];
+                    $summary['total_net_payable'] += $entry['net_payable'];
                     $summary['total_net_paid'] += $entry['net_paid'];
                 }
             }
@@ -777,6 +781,7 @@ class PayrollController extends Controller
             'total_advances_deducted' => 0,
             'total_salary_earned' => 0,
             'total_other_allowances' => 0,
+            'total_net_payable' => 0,
             'total_net_paid' => 0,
             'closing_balance' => 0,
         ];
@@ -790,6 +795,7 @@ class PayrollController extends Controller
                 $advDeducted = floatval($p->advances ?: $p->deductions ?: 0);
                 $otherAllowance = floatval($p->other_allowance ?: $p->manual_allowances ?: 0);
                 $salaryEarned = floatval($p->total_pay ?: $p->gross_salary ?: $p->basic_salary);
+                $netPayable = floatval($p->net_salary ?: (($salaryEarned + $otherAllowance) - $advDeducted));
                 $netPaid = floatval($p->payment_this_month ?: $p->net_salary);
 
                 $ledgerEntries->push([
@@ -801,6 +807,7 @@ class PayrollController extends Controller
                     'advance_deducted' => $advDeducted,
                     'other_allowance' => $otherAllowance,
                     'salary_earned' => $salaryEarned,
+                    'net_payable' => $netPayable,
                     'net_paid' => $netPaid,
                     'ref' => "PAY-#{$p->id}",
                 ]);
@@ -825,6 +832,7 @@ class PayrollController extends Controller
                     $summary['total_advances_deducted'] += $entry['advance_deducted'];
                     $summary['total_salary_earned'] += $entry['salary_earned'];
                     $summary['total_other_allowances'] += $entry['other_allowance'];
+                    $summary['total_net_payable'] += $entry['net_payable'];
                     $summary['total_net_paid'] += $entry['net_paid'];
                 }
             }

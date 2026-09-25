@@ -177,6 +177,11 @@
                     <div class="stat-val" style="color: #6f42c1;">Rs. {{ number_format($summary['total_other_allowances'], 0) }}</div>
                 </div>
 
+                <div class="stat-pill border-warning">
+                    <div class="stat-label text-warning">Total Net Payable</div>
+                    <div class="stat-val text-warning">Rs. {{ number_format($summary['total_net_payable'], 0) }}</div>
+                </div>
+
                 <div class="stat-pill border-success">
                     <div class="stat-label text-success">Total Net Paid</div>
                     <div class="stat-val text-success">Rs. {{ number_format($summary['total_net_paid'], 0) }}</div>
@@ -195,11 +200,12 @@
                         <tr>
                             <th class="pl-3" style="width: 100px;">Date</th>
                             <th style="width: 100px;">Ref #</th>
-                            <th style="width: 180px;">Transaction Type</th>
+                            <th style="width: 150px;">Transaction Type</th>
                             <th>Description</th>
                             <th class="text-right text-primary">Salary Earned (+)</th>
                             <th class="text-right" style="color: #6f42c1 !important;">Allowances (+)</th>
                             <th class="text-right text-danger">Advances Deducted (-)</th>
+                            <th class="text-right text-warning">Net Payable</th>
                             <th class="text-right text-success">Net Amount Paid</th>
                             <th class="text-right pr-3" style="width: 150px;">Running Balance</th>
                         </tr>
@@ -211,6 +217,7 @@
                             <td class="text-muted">-</td>
                             <td><span class="badge badge-secondary px-2 py-1">Opening</span></td>
                             <td>Opening Advance Balance Owed</td>
+                            <td class="text-right">-</td>
                             <td class="text-right">-</td>
                             <td class="text-right">-</td>
                             <td class="text-right">-</td>
@@ -245,6 +252,11 @@
                                     {{ $entry['advance_deducted'] > 0 ? '- Rs. ' . number_format($entry['advance_deducted'], 0) : '-' }}
                                 </td>
 
+                                <!-- Net Payable -->
+                                <td class="text-right font-weight-bold {{ $entry['net_payable'] > 0 ? 'text-warning' : 'text-muted' }}">
+                                    {{ $entry['net_payable'] > 0 ? 'Rs. ' . number_format($entry['net_payable'], 0) : '-' }}
+                                </td>
+
                                 <!-- Net Paid -->
                                 <td class="text-right font-weight-bold {{ $entry['net_paid'] > 0 ? 'text-success' : 'text-muted' }}">
                                     {{ $entry['net_paid'] > 0 ? 'Rs. ' . number_format($entry['net_paid'], 0) : '-' }}
@@ -257,7 +269,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="text-center py-4 text-muted font-italic">
+                                <td colspan="10" class="text-center py-4 text-muted font-italic">
                                     No advance or salary transactions found for this period.
                                 </td>
                             </tr>
@@ -269,6 +281,7 @@
                             <td class="text-right text-primary">Rs. {{ number_format($summary['total_salary_earned'], 0) }}</td>
                             <td class="text-right" style="color: #6f42c1;">Rs. {{ number_format($summary['total_other_allowances'], 0) }}</td>
                             <td class="text-right text-danger">Rs. {{ number_format($summary['total_advances_deducted'], 0) }}</td>
+                            <td class="text-right text-warning">Rs. {{ number_format($summary['total_net_payable'], 0) }}</td>
                             <td class="text-right text-success">Rs. {{ number_format($summary['total_net_paid'], 0) }}</td>
                             <td class="text-right pr-3 font-weight-bold text-dark">Rs. {{ number_format($summary['closing_balance'], 0) }}</td>
                         </tr>

@@ -135,15 +135,16 @@
         <table class="ledger-table">
             <thead>
                 <tr>
-                    <th style="width: 70px;">Date</th>
-                    <th style="width: 70px;">Ref #</th>
-                    <th style="width: 130px;">Type</th>
+                    <th style="width: 65px;">Date</th>
+                    <th style="width: 60px;">Ref #</th>
+                    <th style="width: 110px;">Type</th>
                     <th>Description</th>
-                    <th style="width: 85px;">Salary Earned</th>
-                    <th style="width: 75px;">Allowances</th>
-                    <th style="width: 85px;">Advances Deducted</th>
-                    <th style="width: 85px;">Net Paid</th>
-                    <th style="width: 95px;">Running Balance</th>
+                    <th style="width: 75px;">Salary Earned</th>
+                    <th style="width: 65px;">Allowances</th>
+                    <th style="width: 75px;">Advances Deducted</th>
+                    <th style="width: 75px;">Net Payable</th>
+                    <th style="width: 75px;">Net Paid</th>
+                    <th style="width: 90px;">Running Balance</th>
                 </tr>
             </thead>
             <tbody>
@@ -152,6 +153,7 @@
                     <td>-</td>
                     <td>Opening</td>
                     <td>Opening Advance Balance</td>
+                    <td class="text-right">-</td>
                     <td class="text-right">-</td>
                     <td class="text-right">-</td>
                     <td class="text-right">-</td>
@@ -168,6 +170,7 @@
                         <td class="text-right">{{ $entry['salary_earned'] > 0 ? number_format($entry['salary_earned'], 0) : '-' }}</td>
                         <td class="text-right">{{ $entry['other_allowance'] > 0 ? number_format($entry['other_allowance'], 0) : '-' }}</td>
                         <td class="text-right">{{ $entry['advance_deducted'] > 0 ? number_format($entry['advance_deducted'], 0) : '-' }}</td>
+                        <td class="text-right fw-bold">{{ $entry['net_payable'] > 0 ? number_format($entry['net_payable'], 0) : '-' }}</td>
                         <td class="text-right fw-bold">{{ $entry['net_paid'] > 0 ? number_format($entry['net_paid'], 0) : '-' }}</td>
                         <td class="text-right fw-bold">Rs. {{ number_format($entry['running_balance'], 0) }}</td>
                     </tr>
@@ -178,6 +181,7 @@
                     <td class="text-right">{{ number_format($summary['total_salary_earned'], 0) }}</td>
                     <td class="text-right">{{ number_format($summary['total_other_allowances'], 0) }}</td>
                     <td class="text-right">{{ number_format($summary['total_advances_deducted'], 0) }}</td>
+                    <td class="text-right">{{ number_format($summary['total_net_payable'], 0) }}</td>
                     <td class="text-right">{{ number_format($summary['total_net_paid'], 0) }}</td>
                     <td class="text-right">Rs. {{ number_format($summary['closing_balance'], 0) }}</td>
                 </tr>
