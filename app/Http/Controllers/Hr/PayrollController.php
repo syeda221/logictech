@@ -688,6 +688,7 @@ class PayrollController extends Controller
             'opening_balance' => 0,
             'total_advances_deducted' => 0,
             'total_salary_earned' => 0,
+            'total_other_allowances' => 0,
             'total_net_paid' => 0,
             'closing_balance' => 0,
         ];
@@ -699,6 +700,7 @@ class PayrollController extends Controller
                 $dateStr = $p->payment_date ? $p->payment_date->format('Y-m-d') : ($p->updated_at ? $p->updated_at->format('Y-m-d') : date('Y-m-d'));
                 $monthName = \Carbon\Carbon::parse($p->month.'-01')->format('M Y');
                 $advDeducted = floatval($p->advances ?: $p->deductions ?: 0);
+                $otherAllowance = floatval($p->other_allowance ?: $p->manual_allowances ?: 0);
                 $salaryEarned = floatval($p->total_pay ?: $p->gross_salary ?: $p->basic_salary);
                 $netPaid = floatval($p->payment_this_month ?: $p->net_salary);
 
@@ -709,6 +711,7 @@ class PayrollController extends Controller
                     'description' => "Monthly Salary for {$monthName}",
                     'advance_given' => 0,
                     'advance_deducted' => $advDeducted,
+                    'other_allowance' => $otherAllowance,
                     'salary_earned' => $salaryEarned,
                     'net_paid' => $netPaid,
                     'ref' => "PAY-#{$p->id}",
@@ -721,7 +724,7 @@ class PayrollController extends Controller
 
             foreach ($ledgerEntries as $entry) {
                 $eDate = $entry['date'];
-                $balanceChange = ($entry['net_paid'] + $entry['advance_deducted']) - $entry['salary_earned'];
+                $balanceChange = ($entry['net_paid'] + $entry['advance_deducted']) - ($entry['salary_earned'] + $entry['other_allowance']);
 
                 if ($eDate < $startDate) {
                     $summary['opening_balance'] += $balanceChange;
@@ -733,6 +736,7 @@ class PayrollController extends Controller
 
                     $summary['total_advances_deducted'] += $entry['advance_deducted'];
                     $summary['total_salary_earned'] += $entry['salary_earned'];
+                    $summary['total_other_allowances'] += $entry['other_allowance'];
                     $summary['total_net_paid'] += $entry['net_paid'];
                 }
             }
@@ -772,6 +776,7 @@ class PayrollController extends Controller
             'opening_balance' => 0,
             'total_advances_deducted' => 0,
             'total_salary_earned' => 0,
+            'total_other_allowances' => 0,
             'total_net_paid' => 0,
             'closing_balance' => 0,
         ];
@@ -783,6 +788,7 @@ class PayrollController extends Controller
                 $dateStr = $p->payment_date ? $p->payment_date->format('Y-m-d') : ($p->updated_at ? $p->updated_at->format('Y-m-d') : date('Y-m-d'));
                 $monthName = \Carbon\Carbon::parse($p->month.'-01')->format('M Y');
                 $advDeducted = floatval($p->advances ?: $p->deductions ?: 0);
+                $otherAllowance = floatval($p->other_allowance ?: $p->manual_allowances ?: 0);
                 $salaryEarned = floatval($p->total_pay ?: $p->gross_salary ?: $p->basic_salary);
                 $netPaid = floatval($p->payment_this_month ?: $p->net_salary);
 
@@ -793,6 +799,7 @@ class PayrollController extends Controller
                     'description' => "Monthly Salary for {$monthName}",
                     'advance_given' => 0,
                     'advance_deducted' => $advDeducted,
+                    'other_allowance' => $otherAllowance,
                     'salary_earned' => $salaryEarned,
                     'net_paid' => $netPaid,
                     'ref' => "PAY-#{$p->id}",
@@ -805,7 +812,7 @@ class PayrollController extends Controller
 
             foreach ($ledgerEntries as $entry) {
                 $eDate = $entry['date'];
-                $balanceChange = ($entry['net_paid'] + $entry['advance_deducted']) - $entry['salary_earned'];
+                $balanceChange = ($entry['net_paid'] + $entry['advance_deducted']) - ($entry['salary_earned'] + $entry['other_allowance']);
 
                 if ($eDate < $startDate) {
                     $summary['opening_balance'] += $balanceChange;
@@ -817,6 +824,7 @@ class PayrollController extends Controller
 
                     $summary['total_advances_deducted'] += $entry['advance_deducted'];
                     $summary['total_salary_earned'] += $entry['salary_earned'];
+                    $summary['total_other_allowances'] += $entry['other_allowance'];
                     $summary['total_net_paid'] += $entry['net_paid'];
                 }
             }

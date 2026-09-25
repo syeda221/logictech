@@ -139,10 +139,11 @@
                     <th style="width: 70px;">Ref #</th>
                     <th style="width: 130px;">Type</th>
                     <th>Description</th>
-                    <th style="width: 90px;">Salary Earned</th>
-                    <th style="width: 90px;">Advances Deducted</th>
-                    <th style="width: 90px;">Net Paid</th>
-                    <th style="width: 100px;">Running Balance</th>
+                    <th style="width: 85px;">Salary Earned</th>
+                    <th style="width: 75px;">Allowances</th>
+                    <th style="width: 85px;">Advances Deducted</th>
+                    <th style="width: 85px;">Net Paid</th>
+                    <th style="width: 95px;">Running Balance</th>
                 </tr>
             </thead>
             <tbody>
@@ -151,6 +152,7 @@
                     <td>-</td>
                     <td>Opening</td>
                     <td>Opening Advance Balance</td>
+                    <td class="text-right">-</td>
                     <td class="text-right">-</td>
                     <td class="text-right">-</td>
                     <td class="text-right">-</td>
@@ -164,6 +166,7 @@
                         <td class="fw-bold">{{ $entry['type'] }}</td>
                         <td>{{ $entry['description'] }}</td>
                         <td class="text-right">{{ $entry['salary_earned'] > 0 ? number_format($entry['salary_earned'], 0) : '-' }}</td>
+                        <td class="text-right">{{ $entry['other_allowance'] > 0 ? number_format($entry['other_allowance'], 0) : '-' }}</td>
                         <td class="text-right">{{ $entry['advance_deducted'] > 0 ? number_format($entry['advance_deducted'], 0) : '-' }}</td>
                         <td class="text-right fw-bold">{{ $entry['net_paid'] > 0 ? number_format($entry['net_paid'], 0) : '-' }}</td>
                         <td class="text-right fw-bold">Rs. {{ number_format($entry['running_balance'], 0) }}</td>
@@ -173,6 +176,7 @@
                 <tr class="total-row">
                     <td colspan="4" class="text-left">TOTALS</td>
                     <td class="text-right">{{ number_format($summary['total_salary_earned'], 0) }}</td>
+                    <td class="text-right">{{ number_format($summary['total_other_allowances'], 0) }}</td>
                     <td class="text-right">{{ number_format($summary['total_advances_deducted'], 0) }}</td>
                     <td class="text-right">{{ number_format($summary['total_net_paid'], 0) }}</td>
                     <td class="text-right">Rs. {{ number_format($summary['closing_balance'], 0) }}</td>

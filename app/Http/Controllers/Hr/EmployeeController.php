@@ -47,7 +47,10 @@ class EmployeeController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['errors' => $validator->errors()], 422);
+            }
+            return redirect()->back()->withErrors($validator)->withInput();
         }
 
         $data = $request->except(['document_degree', 'document_certificate', 'document_hsc_marksheet', 'document_ssc_marksheet', 'document_cv', 'password', 'casual_leave_days']);
@@ -221,7 +224,11 @@ class EmployeeController extends Controller
         }
         */
 
-        return response()->json(['success' => 'Employee saved successfully']);
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => 'Employee saved successfully']);
+        }
+
+        return redirect()->route('hr.employees.index')->with('success', 'Employee saved successfully');
     }
 
     public function destroy(Employee $employee)

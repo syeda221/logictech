@@ -181,11 +181,20 @@
             $salaryCount    = (float) ($payroll->salary_count ?: (($basicSalary / 30) * $pDays));
             $overtimePay    = (float) $payroll->overtime_pay;
             $otherAllowance = (float) ($payroll->other_allowance ?: $payroll->manual_allowances ?: 0);
-            $totalPay       = (float) ($payroll->total_pay ?: ($salaryCount + $overtimePay + $otherAllowance));
+            
+            // Previous Balance from previous month
+            $prevBalance = (float) ($payroll->previous_advance_balance ?: 0);
+            
+            // If previous balance is positive (+), company underpaid last month -> Arrears added to Earnings
+            $earningsPrevBal = $prevBalance > 0 ? $prevBalance : 0;
+            $totalPay        = $salaryCount + $overtimePay + $otherAllowance + $earningsPrevBal;
 
+            // Deductions
             $advances        = (float) ($payroll->advances ?: $payroll->deductions ?: 0);
             $otherDeduction  = 0;
-            $totalDeductions = $advances + $otherDeduction;
+            // If previous balance is negative (-), employee owes advance -> Added to Deductions
+            $deductionsPrevBal = $prevBalance < 0 ? abs($prevBalance) : 0;
+            $totalDeductions   = $advances + $otherDeduction + $deductionsPrevBal;
 
             $netPayable  = (float) ($payroll->net_salary ?: ($totalPay - $totalDeductions));
             $paidAmount  = (float) ($payroll->payment_this_month ?: $netPayable);
@@ -217,15 +226,33 @@
                 <tr>
                     <td>Overtime Pay</td>
                     <td class="text-right">Rs. {{ number_format($overtimePay, 0) }}</td>
-                    <td><strong>Total Deductions</strong></td>
-                    <td class="text-right"><strong>Rs. {{ number_format($totalDeductions, 0) }}</strong></td>
+                    @if($prevBalance < 0)
+                        <td>Prev. Month Advance (Owed Deduction)</td>
+                        <td class="text-right" style="color: #dc2626; font-weight: bold;">-Rs. {{ number_format(abs($prevBalance), 0) }}</td>
+                    @else
+                        <td><strong>Total Deductions</strong></td>
+                        <td class="text-right"><strong>Rs. {{ number_format($totalDeductions, 0) }}</strong></td>
+                    @endif
                 </tr>
                 <tr>
                     <td>Other Allowances (Eidi)</td>
                     <td class="text-right">Rs. {{ number_format($otherAllowance, 0) }}</td>
-                    <td></td>
-                    <td></td>
+                    @if($prevBalance < 0)
+                        <td><strong>Total Deductions</strong></td>
+                        <td class="text-right"><strong>Rs. {{ number_format($totalDeductions, 0) }}</strong></td>
+                    @else
+                        <td></td>
+                        <td></td>
+                    @endif
                 </tr>
+                @if($prevBalance > 0)
+                    <tr>
+                        <td style="color: #16a34a; font-weight: bold;">Prev. Month Arrears (Company Underpaid)</td>
+                        <td class="text-right" style="color: #16a34a; font-weight: bold;">+Rs. {{ number_format($prevBalance, 0) }}</td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                @endif
                 <tr class="total-row">
                     <td>TOTAL PAY</td>
                     <td class="text-right">Rs. {{ number_format($totalPay, 0) }}</td>

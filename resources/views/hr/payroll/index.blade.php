@@ -254,11 +254,13 @@
                                         </td>
                                         <td>
                                             <input type="number" step="1" class="form-control-sheet inp-payment-month fw-bold"
-                                                value="{{ $item['payment_this_month'] }}">
+                                                value="{{ $item['payment_this_month'] }}"
+                                                @if(!empty($item['payroll_id']) || (isset($item['payment_this_month']) && $item['payment_this_month'] != $item['net_payable']))) data-user-edited="true" @endif>
                                         </td>
                                         <td>
                                             <input type="number" step="1" class="form-control-sheet inp-closing-balance fw-bold"
-                                                value="{{ $item['closing_balance'] != 0 ? $item['closing_balance'] : '' }}" placeholder="-">
+                                                value="{{ $item['closing_balance'] != 0 ? $item['closing_balance'] : '' }}" placeholder="-"
+                                                @if(!empty($item['payroll_id']) || (isset($item['closing_balance']) && $item['closing_balance'] != 0)) data-user-edited="true" @endif>
                                         </td>
                                         <td>
                                             <input type="date" class="form-control-sheet inp-payment-date"

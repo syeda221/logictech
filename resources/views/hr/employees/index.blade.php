@@ -256,6 +256,60 @@
     <!-- Scripts -->
     <script>
         $(document).ready(function() {
+            // Submit Employee Form via AJAX
+            $('#employeeForm').on('submit', function(e) {
+                e.preventDefault();
+                var form = $(this);
+                var actionUrl = form.attr('action');
+                var formData = new FormData(this);
+                var submitBtn = form.find('button[type="submit"]');
+
+                submitBtn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-1"></i> Saving...');
+
+                $.ajax({
+                    url: actionUrl,
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success: function(response) {
+                        submitBtn.prop('disabled', false).html('<i class="fa fa-check"></i> <span>Save Employee</span>');
+                        if (response.success) {
+                            $('.modal').modal('hide');
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Saved!',
+                                text: response.success,
+                                timer: 1500,
+                                showConfirmButton: false
+                            }).then(function() {
+                                location.reload();
+                            });
+                        } else if (response.error) {
+                            Swal.fire('Error', response.error, 'error');
+                        }
+                    },
+                    error: function(err) {
+                        submitBtn.prop('disabled', false).html('<i class="fa fa-check"></i> <span>Save Employee</span>');
+                        var msg = 'Failed to save employee';
+                        if (err.responseJSON) {
+                            if (err.responseJSON.errors) {
+                                var errList = [];
+                                $.each(err.responseJSON.errors, function(key, val) {
+                                    errList.push(val.join(' '));
+                                });
+                                msg = errList.join('<br>');
+                            } else if (err.responseJSON.error) {
+                                msg = err.responseJSON.error;
+                            }
+                        }
+                        Swal.fire('Validation Error', msg, 'error');
+                    }
+                });
+            });
             // Fill Edit Form
             function fillEditModal(btn) {
                 if (!btn || !btn.length) return;

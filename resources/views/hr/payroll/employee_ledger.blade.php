@@ -172,6 +172,11 @@
                     <div class="stat-val text-primary">Rs. {{ number_format($summary['total_salary_earned'], 0) }}</div>
                 </div>
 
+                <div class="stat-pill" style="border-color: #6f42c1;">
+                    <div class="stat-label" style="color: #6f42c1;">Allowances (+)</div>
+                    <div class="stat-val" style="color: #6f42c1;">Rs. {{ number_format($summary['total_other_allowances'], 0) }}</div>
+                </div>
+
                 <div class="stat-pill border-success">
                     <div class="stat-label text-success">Total Net Paid</div>
                     <div class="stat-val text-success">Rs. {{ number_format($summary['total_net_paid'], 0) }}</div>
@@ -193,6 +198,7 @@
                             <th style="width: 180px;">Transaction Type</th>
                             <th>Description</th>
                             <th class="text-right text-primary">Salary Earned (+)</th>
+                            <th class="text-right" style="color: #6f42c1 !important;">Allowances (+)</th>
                             <th class="text-right text-danger">Advances Deducted (-)</th>
                             <th class="text-right text-success">Net Amount Paid</th>
                             <th class="text-right pr-3" style="width: 150px;">Running Balance</th>
@@ -205,6 +211,7 @@
                             <td class="text-muted">-</td>
                             <td><span class="badge badge-secondary px-2 py-1">Opening</span></td>
                             <td>Opening Advance Balance Owed</td>
+                            <td class="text-right">-</td>
                             <td class="text-right">-</td>
                             <td class="text-right">-</td>
                             <td class="text-right">-</td>
@@ -228,6 +235,11 @@
                                     {{ $entry['salary_earned'] > 0 ? 'Rs. ' . number_format($entry['salary_earned'], 0) : '-' }}
                                 </td>
 
+                                <!-- Allowances (+) -->
+                                <td class="text-right font-weight-semibold {{ $entry['other_allowance'] > 0 ? '' : 'text-muted' }}" style="{{ $entry['other_allowance'] > 0 ? 'color: #6f42c1;' : '' }}">
+                                    {{ $entry['other_allowance'] > 0 ? 'Rs. ' . number_format($entry['other_allowance'], 0) : '-' }}
+                                </td>
+
                                 <!-- Advances Deducted (-) -->
                                 <td class="text-right font-weight-semibold {{ $entry['advance_deducted'] > 0 ? 'text-danger' : 'text-muted' }}">
                                     {{ $entry['advance_deducted'] > 0 ? '- Rs. ' . number_format($entry['advance_deducted'], 0) : '-' }}
@@ -245,7 +257,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="text-center py-4 text-muted font-italic">
+                                <td colspan="9" class="text-center py-4 text-muted font-italic">
                                     No advance or salary transactions found for this period.
                                 </td>
                             </tr>
@@ -255,6 +267,7 @@
                         <tr class="bg-light font-weight-bold" style="border-top: 2px solid #1e40af;">
                             <td colspan="4" class="pl-3 font-weight-bold">STATEMENT TOTALS</td>
                             <td class="text-right text-primary">Rs. {{ number_format($summary['total_salary_earned'], 0) }}</td>
+                            <td class="text-right" style="color: #6f42c1;">Rs. {{ number_format($summary['total_other_allowances'], 0) }}</td>
                             <td class="text-right text-danger">Rs. {{ number_format($summary['total_advances_deducted'], 0) }}</td>
                             <td class="text-right text-success">Rs. {{ number_format($summary['total_net_paid'], 0) }}</td>
                             <td class="text-right pr-3 font-weight-bold text-dark">Rs. {{ number_format($summary['closing_balance'], 0) }}</td>
