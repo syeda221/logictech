@@ -35,7 +35,6 @@
     <link rel="stylesheet" href="{{ asset('assets/vendors/font-awesome/css/brands.min.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/vendors/font-awesome/css/all.min.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/vendors/font-awesome/css/brands.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets/css/dark-theme.css') }}">
 </head>
 
 <body>
