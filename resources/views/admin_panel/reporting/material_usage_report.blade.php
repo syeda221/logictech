@@ -249,6 +249,15 @@
         </div>
         <div class="kpi-card">
             <div>
+                <div class="kpi-label">Current Stock Balance</div>
+                <div class="kpi-val text-success">{{ number_format($totalAvailableStock, 2) }}</div>
+            </div>
+            <div class="kpi-icon" style="background-color: #d1fae5; color: #059669;">
+                <i class="fas fa-boxes-stacked"></i>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div>
                 <div class="kpi-label">Total Cost Value</div>
                 <div class="kpi-val text-dark">Rs. {{ number_format($totalCostUsed, 2) }}</div>
             </div>
@@ -297,9 +306,10 @@
                                 <th>Raw Material Name</th>
                                 <th>Item Code</th>
                                 <th>Unit</th>
-                                <th class="text-right" style="width: 130px;">Issue Count</th>
-                                <th class="text-right" style="width: 170px;">Total Qty Consumed</th>
-                                <th class="text-right" style="width: 170px;">Total Cost Value</th>
+                                <th class="text-right" style="width: 120px;">Issue Count</th>
+                                <th class="text-right" style="width: 160px;">Total Qty Consumed</th>
+                                <th class="text-right" style="width: 160px;">Current Stock</th>
+                                <th class="text-right" style="width: 160px;">Total Cost Value</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -319,13 +329,16 @@
                                     <td class="text-right font-weight-bold text-danger" style="font-size: 0.9rem;">
                                         {{ number_format($row->sum_qty, 2) }} {{ $row->unit_name ?: 'Pcs' }}
                                     </td>
+                                    <td class="text-right font-weight-bold text-success" style="font-size: 0.9rem;">
+                                        {{ number_format($row->current_stock, 2) }} {{ $row->unit_name ?: 'Pcs' }}
+                                    </td>
                                     <td class="text-right font-weight-bold text-dark" style="font-size: 0.9rem;">
                                         Rs. {{ number_format($row->sum_cost, 2) }}
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="text-center py-5 text-muted">
+                                    <td colspan="8" class="text-center py-5 text-muted">
                                         <i class="fas fa-chart-pie fa-3x mb-3 text-light"></i>
                                         <p class="mb-0">No raw material consumption data recorded for the selected criteria.</p>
                                     </td>
@@ -335,9 +348,12 @@
                         @if($itemSummary->count() > 0)
                             <tfoot class="bg-light font-weight-bold">
                                 <tr>
-                                    <td colspan="5" class="text-right py-2">Total Consumed:</td>
+                                    <td colspan="5" class="text-right py-2">Total Consumed / Stock:</td>
                                     <td class="text-right py-2 text-danger font-weight-bold" style="font-size: 1rem;">
                                         {{ number_format($totalQtyUsed, 2) }}
+                                    </td>
+                                    <td class="text-right py-2 text-success font-weight-bold" style="font-size: 1rem;">
+                                        {{ number_format($totalAvailableStock, 2) }}
                                     </td>
                                     <td class="text-right py-2 text-dark font-weight-bold" style="font-size: 1rem;">
                                         Rs. {{ number_format($totalCostUsed, 2) }}
@@ -364,6 +380,7 @@
                                 <th style="width: 120px;">Voucher #</th>
                                 <th>Raw Material</th>
                                 <th class="text-right" style="width: 120px;">Qty Consumed</th>
+                                <th class="text-right" style="width: 120px;">Current Stock</th>
                                 <th class="text-right" style="width: 110px;">Unit Cost</th>
                                 <th class="text-right" style="width: 130px;">Total Cost</th>
                                 <th>Purpose / Notes</th>
@@ -390,6 +407,9 @@
                                     <td class="text-right font-weight-bold text-danger">
                                         {{ number_format($item->qty_used, 2) }} {{ $item->unit_name }}
                                     </td>
+                                    <td class="text-right font-weight-bold text-success">
+                                        {{ number_format($item->current_stock, 2) }} {{ $item->unit_name }}
+                                    </td>
                                     <td class="text-right text-muted">
                                         Rs. {{ number_format($item->unit_cost, 2) }}
                                     </td>
@@ -405,7 +425,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="text-center py-5 text-muted">
+                                    <td colspan="9" class="text-center py-5 text-muted">
                                         <p class="mb-0">No detailed consumption logs found.</p>
                                     </td>
                                 </tr>

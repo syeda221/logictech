@@ -15,11 +15,7 @@
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
-        <style>
-            body {
-  background-color: pink;
-}
-        </style>
+        <link rel="stylesheet" href="{{ asset('assets/css/dark-theme.css') }}">
     </head>
     <body class="font-sans antialiased">
         <div class="min-h-screen bg-gray-100">

@@ -663,7 +663,7 @@ $(document).ready(function() {
                             <td class="ps-4 text-muted" style="font-size:.78rem;">${m.date}</td>
                             <td><span class="badge bg-${m.type_badge} px-2 py-1">${m.type}</span></td>
                             <td><code class="text-dark">${m.ref_type}</code></td>
-                            <td class="text-center fw-bold fs-6">${m.qty > 0 ? '+' : ''}${m.qty}</td>
+                            <td class="text-center fw-bold fs-6">${m.formatted_qty || ((m.qty > 0 ? '+' : '') + m.qty)}</td>
                             <td style="font-size:.78rem; color:#475569;">${m.note}</td>
                         </tr>`;
                         tbody.append(row);

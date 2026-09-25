@@ -145,8 +145,8 @@ class MaterialUsageController extends Controller
         $this->checkPermission();
         $defaultWarehouse = $this->getDefaultWarehouse();
 
-        // ONLY RAW MATERIALS - Finished goods strictly excluded!
-        $rawMaterials = Product::where('item_type', 'raw_material')
+        // RAW MATERIALS & BOTH - Finished goods strictly excluded!
+        $rawMaterials = Product::whereIn('item_type', ['raw_material', 'both'])
             ->with(['unit', 'category_relation', 'warehouseStocks'])
             ->withSum('warehouseStocks', 'total_pieces')
             ->orderBy('item_name')
@@ -187,7 +187,7 @@ class MaterialUsageController extends Controller
 
         $product = Product::with('unit')->findOrFail($request->product_id);
 
-        if ($product->item_type !== 'raw_material') {
+        if ($product->item_type !== 'raw_material' && $product->item_type !== 'both') {
             return response()->json([
                 'success' => false,
                 'message' => 'Selected item is not a raw material.',
@@ -518,9 +518,35 @@ class MaterialUsageController extends Controller
             ->orderByDesc('sum_qty')
             ->get();
 
+        $allProductIds = $itemSummary->pluck('product_id')->toArray();
+        $stocksMap = DB::table('warehouse_stocks')
+            ->whereIn('product_id', $allProductIds)
+            ->groupBy('product_id')
+            ->select('product_id', DB::raw('COALESCE(SUM(total_pieces), 0) as total_stock'))
+            ->pluck('total_stock', 'product_id')
+            ->toArray();
+
+        foreach ($itemSummary as $row) {
+            $row->current_stock = (float) ($stocksMap[$row->product_id] ?? 0);
+        }
+
         $items = $query->orderByDesc('id')->paginate(50)->withQueryString();
 
-        $rawMaterials = Product::where('item_type', 'raw_material')->orderBy('item_name')->get();
+        $detailProductIds = $items->pluck('product_id')->unique()->toArray();
+        $detailStocksMap = DB::table('warehouse_stocks')
+            ->whereIn('product_id', $detailProductIds)
+            ->groupBy('product_id')
+            ->select('product_id', DB::raw('COALESCE(SUM(total_pieces), 0) as total_stock'))
+            ->pluck('total_stock', 'product_id')
+            ->toArray();
+
+        foreach ($items as $item) {
+            $item->current_stock = (float) ($detailStocksMap[$item->product_id] ?? 0);
+        }
+
+        $totalAvailableStock = array_sum($stocksMap);
+
+        $rawMaterials = Product::whereIn('item_type', ['raw_material', 'both'])->orderBy('item_name')->get();
 
         return view('admin_panel.reporting.material_usage_report', compact(
             'items',
@@ -528,7 +554,8 @@ class MaterialUsageController extends Controller
             'rawMaterials',
             'totalQtyUsed',
             'totalCostUsed',
-            'totalTransactions'
+            'totalTransactions',
+            'totalAvailableStock'
         ));
     }
 }

@@ -344,13 +344,25 @@ class ReportingController extends Controller
                 // Fetch Stock Adjustments
                 $adjQuery = DB::table('stock_movements')
                     ->where('product_id', $product->id)
-                    ->where('type', 'adjustment');
+                    ->where('type', 'adjustment')
+                    ->whereNotIn('ref_type', ['INIT', 'INITIAL_STOCK', 'init']);
                 if ($warehouseId && $warehouseId !== 'all') {
                     $adjQuery->where('note', 'like', "%Warehouse #{$warehouseId}%");
                 }
                 if ($dateFrom) $adjQuery->whereDate('created_at', '>=', $dateFrom);
                 if ($dateTo)   $adjQuery->whereDate('created_at', '<=', $dateTo);
                 $adjList = $adjQuery->select('qty', 'note')->get();
+
+                // Fetch Material Usage for variant
+                $usageQuery = DB::table('material_usage_items as mui')
+                    ->join('material_usages as mu', 'mu.id', '=', 'mui.material_usage_id')
+                    ->where('mui.product_id', $product->id);
+                if ($warehouseId && $warehouseId !== 'all') {
+                    $usageQuery->where('mu.warehouse_id', $warehouseId);
+                }
+                if ($dateFrom) $usageQuery->whereDate('mu.date', '>=', $dateFrom);
+                if ($dateTo)   $usageQuery->whereDate('mu.date', '<=', $dateTo);
+                $usageList = $usageQuery->select('mui.qty_used', 'mui.total_cost', 'mui.notes')->get();
 
                 $saleIds = $returnsList->pluck('sale_id')->unique()->toArray();
                 $saleItemsMap = [];
@@ -396,10 +408,12 @@ class ReportingController extends Controller
                         $initial = (float) $vRawStock;
                     }
 
+                    $variantCount = count($parsedVariants);
+
                     // Purchased for variant
                     $purchased = 0; $purchaseAmount = 0;
                     foreach ($purchasesList as $pItem) {
-                        if ($this->matchSaleItemToVariant($pItem, $v)) {
+                        if ($this->matchSaleItemToVariant($pItem, $v, $variantCount)) {
                             $purchased += (float) $pItem->total_pieces;
                             $purchaseAmount += (float) $pItem->line_total;
                         }
@@ -408,7 +422,7 @@ class ReportingController extends Controller
                     // Purchase Returned for variant
                     $pReturned = 0; $pReturnAmount = 0;
                     foreach ($purchaseReturnsList as $prItem) {
-                        if ($this->matchSaleItemToVariant($prItem, $v)) {
+                        if ($this->matchSaleItemToVariant($prItem, $v, $variantCount)) {
                             $pReturned += (float) $prItem->qty;
                             $pReturnAmount += (float) $prItem->line_total;
                         }
@@ -417,7 +431,7 @@ class ReportingController extends Controller
                     // Sold for variant
                     $sold = 0; $saleAmount = 0;
                     foreach ($salesList as $sItem) {
-                        if ($this->matchSaleItemToVariant($sItem, $v)) {
+                        if ($this->matchSaleItemToVariant($sItem, $v, $variantCount)) {
                             $sold += (float) $sItem->total_pieces;
                             $saleAmount += (float) $sItem->total;
                         }
@@ -432,7 +446,7 @@ class ReportingController extends Controller
                             $rColor = !empty($saleColors) ? $saleColors[0] : '';
                         }
                         $rItemCopy = (object)['qty' => $rItem->qty, 'color' => $rColor];
-                        if ($this->matchSaleItemToVariant($rItemCopy, $v)) {
+                        if ($this->matchSaleItemToVariant($rItemCopy, $v, $variantCount)) {
                             $returnedQty += (float) $rItem->qty;
                         }
                     }
@@ -440,13 +454,22 @@ class ReportingController extends Controller
                     // Adjustments for variant
                     $adjustments = 0;
                     foreach ($adjList as $adjItem) {
-                        if ($this->matchAdjustmentToVariant($adjItem, $v)) {
+                        if ($this->matchAdjustmentToVariant($adjItem, $v, $variantCount)) {
                             $adjustments += (float) $adjItem->qty;
                         }
                     }
 
-                    // Balance in Total Pieces = Initial + Purchased - Sold + Returned - Purchased Returned + Adjustments
-                    $balance = max(0, $initial + $purchased - $sold + $returnedQty - $pReturned + $adjustments);
+                    // Material Used for variant
+                    $materialUsedQty = 0; $materialUsedCost = 0;
+                    foreach ($usageList as $uItem) {
+                        if ($this->matchSaleItemToVariant($uItem, $v, $variantCount)) {
+                            $materialUsedQty  += (float) $uItem->qty_used;
+                            $materialUsedCost += (float) $uItem->total_cost;
+                        }
+                    }
+
+                    // Balance in Total Pieces = Initial + Purchased - Material Used - Sold + Returned - Purchased Returned + Adjustments
+                    $balance = max(0, $initial + $purchased - $materialUsedQty - $sold + $returnedQty - $pReturned + $adjustments);
 
                     // Weighted Average Purchase Price
                     $vPurchPrice = (float) ($v['purch_price'] ?? $productPurchPrice);
@@ -456,8 +479,10 @@ class ReportingController extends Controller
                     $averagePrice = $totalQtyIn > 0 ? ($totalAmountIn / $totalQtyIn) : $vPurchPrice;
 
                     $stockValue = $balance * $averagePrice;
-                    $grandTotalValue += $stockValue;
+                    $grandTotalValue   += $stockValue;
                     $totalCurrentStock += $balance;
+                    $totalMaterialUsed += $materialUsedQty;
+                    $totalPurchasedQty += $purchased;
                     $totalAdjustments  += $adjustments;
                     $totalSoldAmount   += $saleAmount;
 
@@ -484,28 +509,30 @@ class ReportingController extends Controller
                     elseif ($product->alert_quantity && $balance < $product->alert_quantity) $status = 'low_stock';
 
                     $rows[] = [
-                        'id'              => $product->id,
-                        'item_code'       => $product->item_code,
-                        'item_name'       => $vName . ' (' . $vSize . ' | ' . $vColor . ')',
-                        'category_name'   => $product->category_relation->name ?? 'Standard',
-                        'unit_name'       => $vUnitName,
-                        'size_mode'       => $sizeMode,
-                        'initial_stock'   => $initial,
-                        'purchased'       => $purchased,
-                        'purchase_amount' => $purchaseAmount,
-                        'sold'            => $sold,
-                        'sale_amount'     => $saleAmount,
-                        'returned_qty'    => $returnedQty,
+                        'id'                 => $product->id,
+                        'item_code'          => $product->item_code,
+                        'item_name'          => $vName . ' (' . $vSize . ' | ' . $vColor . ')',
+                        'category_name'      => $product->category_relation->name ?? 'Standard',
+                        'unit_name'          => $vUnitName,
+                        'size_mode'          => $sizeMode,
+                        'initial_stock'      => $initial,
+                        'purchased'          => $purchased,
+                        'purchase_amount'    => $purchaseAmount,
+                        'material_used'      => $materialUsedQty,
+                        'material_used_cost' => $materialUsedCost,
+                        'sold'               => $sold,
+                        'sale_amount'        => $saleAmount,
+                        'returned_qty'       => $returnedQty,
                         'purch_returned_qty' => $pReturned,
-                        'adjustments'     => $adjustments,
-                        'balance'         => $balance,
-                        'formatted_stock' => $formattedStock,
-                        'carton_display'  => $cartonDisplay,
-                        'cartons'         => $cartons,
-                        'loose'           => $loose,
-                        'average_price'   => $averagePrice,
-                        'stock_value'     => $stockValue,
-                        'status'          => $status,
+                        'adjustments'        => $adjustments,
+                        'balance'            => $balance,
+                        'formatted_stock'    => $formattedStock,
+                        'carton_display'     => $cartonDisplay,
+                        'cartons'            => $cartons,
+                        'loose'              => $loose,
+                        'average_price'      => $averagePrice,
+                        'stock_value'        => $stockValue,
+                        'status'             => $status,
                     ];
                 }
             } else {
@@ -553,7 +580,8 @@ class ReportingController extends Controller
                 // Stock Adjustments
                 $adjQuery = DB::table('stock_movements')
                     ->where('product_id', $product->id)
-                    ->where('type', 'adjustment');
+                    ->where('type', 'adjustment')
+                    ->whereNotIn('ref_type', ['INIT', 'INITIAL_STOCK', 'init']);
                 if ($warehouseId && $warehouseId !== 'all') {
                     $adjQuery->where('note', 'like', "%Warehouse #{$warehouseId}%");
                 }
@@ -671,7 +699,13 @@ class ReportingController extends Controller
             ->map(function ($m) {
                 $typeBadge = 'info';
                 $typeLabel = strtoupper($m->type);
-                if ($m->ref_type === 'MATERIAL_USAGE') {
+                $isDeduction = false;
+
+                if ($m->ref_type === 'MATERIAL_USAGE' || str_contains(strtoupper($m->type), 'USAGE') || $m->type === 'out' || $m->type === 'assembly_out') {
+                    $isDeduction = true;
+                }
+
+                if ($m->ref_type === 'MATERIAL_USAGE' || str_contains(strtoupper($m->type), 'USAGE')) {
                     $typeBadge = 'primary';
                     $typeLabel = 'MATERIAL USAGE (-)';
                 } elseif ($m->type === 'in' || $m->type === 'assembly_in') {
@@ -685,14 +719,18 @@ class ReportingController extends Controller
                     $typeLabel = 'ADJUSTMENT (' . ($m->qty >= 0 ? '+' : '') . ')';
                 }
 
+                $rawQty = (float) $m->qty;
+                $formattedQty = $isDeduction ? ('-' . abs($rawQty)) : (($rawQty > 0 ? '+' : '') . $rawQty);
+
                 return [
-                    'id'          => $m->id,
-                    'date'        => date('d M Y h:i A', strtotime($m->created_at)),
-                    'type'        => $typeLabel,
-                    'type_badge'  => $typeBadge,
-                    'qty'         => (float) $m->qty,
-                    'ref_type'    => $m->ref_type ?: 'GENERAL',
-                    'note'        => $m->note ?: 'N/A',
+                    'id'            => $m->id,
+                    'date'          => date('d M Y h:i A', strtotime($m->created_at)),
+                    'type'          => $typeLabel,
+                    'type_badge'    => $typeBadge,
+                    'qty'           => $rawQty,
+                    'formatted_qty' => $formattedQty,
+                    'ref_type'      => $m->ref_type ?: 'GENERAL',
+                    'note'          => $m->note ?: 'N/A',
                 ];
             });
 
@@ -2719,11 +2757,25 @@ class ReportingController extends Controller
     /**
      * Match a sale item to a specific variant based on size and color stored in color field.
      */
-    private function matchSaleItemToVariant($saleItem, $variant)
+    private function matchSaleItemToVariant($saleItem, $variant, $totalVariantsCount = 0)
     {
-        $itemColor = $saleItem->color;
+        if ($totalVariantsCount === 1) {
+            return true;
+        }
+
+        $vColor = strtolower(trim($variant['color'] ?? '-'));
+        $vSize  = strtolower(trim($variant['size'] ?? '-'));
+        if ($vColor === '' || $vColor === 'none' || $vColor === 'null') $vColor = '-';
+        if ($vSize === '' || $vSize === 'none' || $vSize === 'null') $vSize = '-';
+
+        // If variant is a default single variant (color is '-' or empty, size is '-' or empty)
+        if (($vColor === '-' || $vColor === '') && ($vSize === '-' || $vSize === '')) {
+            return true;
+        }
+
+        $itemColor = $saleItem->color ?? ($saleItem->notes ?? ($saleItem->note ?? ''));
         if (empty($itemColor)) {
-            return false;
+            return $totalVariantsCount <= 1;
         }
 
         $itemVariant = [];
@@ -2742,33 +2794,36 @@ class ReportingController extends Controller
         }
 
         if (empty($itemVariant)) {
-            // Simple string comparison
-            return strtolower(trim($itemColor)) === strtolower(trim($variant['color'] ?? ''));
+            // Simple string comparison or contains check
+            $str = strtolower(trim($itemColor));
+            if ($str === $vColor || ($vColor !== '-' && str_contains($str, $vColor))) {
+                return true;
+            }
+            return $totalVariantsCount <= 1;
         }
 
         // Compare color and size
-        $vColor = strtolower(trim($variant['color'] ?? '-'));
-        $vSize = strtolower(trim($variant['size'] ?? '-'));
-
         $itemVColor = strtolower(trim($itemVariant['color'] ?? ($itemVariant['color_val'] ?? '-')));
-        $itemVSize = strtolower(trim($itemVariant['size'] ?? ($itemVariant['size_val'] ?? '-')));
+        $itemVSize  = strtolower(trim($itemVariant['size'] ?? ($itemVariant['size_val'] ?? '-')));
 
-        if ($vColor === '') $vColor = '-';
-        if ($vSize === '') $vSize = '-';
         if ($itemVColor === '') $itemVColor = '-';
-        if ($itemVSize === '') $itemVSize = '-';
+        if ($itemVSize === '')  $itemVSize  = '-';
 
-        return $vColor === $itemVColor && $vSize === $itemVSize;
+        return ($vColor === '-' || $vColor === $itemVColor) && ($vSize === '-' || $vSize === $itemVSize);
     }
 
     /**
      * Match a stock adjustment note to a specific variant based on size and color.
      */
-    private function matchAdjustmentToVariant($adjItem, $variant)
+    private function matchAdjustmentToVariant($adjItem, $variant, $totalVariantsCount = 0)
     {
+        if ($totalVariantsCount === 1) {
+            return true;
+        }
+
         $note = strtolower($adjItem->note ?? '');
         if (empty($note)) {
-            return false;
+            return $totalVariantsCount <= 1;
         }
 
         $vSize  = strtolower(trim($variant['size'] ?? '-'));

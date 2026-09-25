@@ -1,0 +1,741 @@
+/* ==========================================================================
+   LogicTech ERP - Dark Theme with Contrast Light Header Design System
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. GLOBAL BODY & ROOT VARIABLES
+   -------------------------------------------------------------------------- */
+:root {
+    --bg-dark-body: #0b0f19;
+    --bg-dark-surface: #151c2c;
+    --bg-dark-card: #1e293b;
+    --bg-dark-header-card: #162032;
+    --border-dark: rgba(255, 255, 255, 0.08);
+    --border-dark-strong: #334155;
+    
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-muted: #94a3b8;
+    
+    --accent-blue: #3b82f6;
+    --accent-blue-hover: #2563eb;
+    --accent-glow: rgba(59, 130, 246, 0.25);
+    
+    --light-header-bg: #ffffff;
+    --light-header-subnav: #f8fafc;
+    --light-header-border: #e2e8f0;
+    --light-header-text: #1e293b;
+}
+
+html, body {
+    background-color: var(--bg-dark-body) !important;
+    color: var(--text-primary) !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+}
+
+.container-scroller,
+.app-page-body,
+.main-content,
+.main-content-inner {
+    background-color: var(--bg-dark-body) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Headings & Text Color */
+h1, h2, h3, h4, h5, h6,
+.h1, .h2, .h3, .h4, .h5, .h6,
+.page-title, .card-title, .heading-title {
+    color: #ffffff !important;
+}
+
+p, span, label, td, th, li {
+    color: var(--text-secondary);
+}
+
+.text-muted, small, .small, .small-text {
+    color: var(--text-muted) !important;
+}
+
+.text-dark {
+    color: #f8fafc !important;
+}
+
+/* --------------------------------------------------------------------------
+   2. LIGHT HEADER & NAVIGATION (HIGH CONTRAST & ELEGANT)
+   -------------------------------------------------------------------------- */
+
+/* Main Header Container */
+.rt_nav_header.horizontal-layout {
+    background: var(--light-header-bg) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Top Header Bar */
+.rt_nav_header.horizontal-layout .top_nav {
+    background: #ffffff !important;
+    border-bottom: 1px solid var(--light-header-border) !important;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05) !important;
+}
+
+/* Top Nav Elements Styling */
+.top_nav a, 
+.top_nav span,
+.top_nav .nav-link {
+    color: var(--light-header-text) !important;
+}
+
+/* Brand Initials / Logo Badge */
+.header-pw-badge {
+    background: linear-gradient(135deg, #1e40af, #2563eb) !important;
+    border: 1.5px solid rgba(255, 255, 255, 0.3) !important;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3) !important;
+}
+
+/* Support Button in Light Header */
+.header-support-btn {
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #0f172a !important;
+    font-weight: 600 !important;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.04) !important;
+}
+
+.header-support-btn:hover {
+    background: #e2e8f0 !important;
+    border-color: #94a3b8 !important;
+    transform: translateY(-1px);
+}
+
+.header-support-btn i {
+    color: #2563eb !important;
+}
+
+.header-support-btn span {
+    color: #0f172a !important;
+}
+
+/* Online Status Pill */
+.header-online-pill {
+    background: #ecfdf5 !important;
+    border: 1px solid #a7f3d0 !important;
+    color: #059669 !important;
+}
+
+.online-dot {
+    background: #10b981 !important;
+    box-shadow: 0 0 8px #10b981 !important;
+}
+
+/* Bottom Header Navigation Bar */
+.rt_nav_header.horizontal-layout .nav-bottom {
+    background: #f8fafc !important;
+    border-top: 1px solid #e2e8f0 !important;
+    border-bottom: 1px solid #cbd5e1 !important;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06) !important;
+}
+
+/* Main Navigation Items (Light Bar) */
+.rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item > .nav-link {
+    color: #1e293b !important;
+    font-weight: 600 !important;
+    font-size: 13.5px !important;
+    border-radius: 6px !important;
+    margin: 4px 2px !important;
+    padding: 10px 14px !important;
+    transition: all 0.2s ease-in-out !important;
+}
+
+.rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item > .nav-link .menu_icon {
+    color: #2563eb !important;
+    margin-right: 6px !important;
+}
+
+.rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item > .nav-link:hover,
+.rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item.active > .nav-link,
+.rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item.hover-active > .nav-link {
+    color: #2563eb !important;
+    background: #eff6ff !important;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.1) !important;
+}
+
+.rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item > .nav-link:hover .menu_icon,
+.rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item.active > .nav-link .menu_icon {
+    color: #1d4ed8 !important;
+}
+
+/* Submenu & Mega Menu Dropdowns (Clean Light Card Design) */
+.nav-item .submenu,
+.mega-menu .submenu {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 15px 35px rgba(15, 23, 42, 0.18), 0 5px 15px rgba(0, 0, 0, 0.08) !important;
+    border-radius: 10px !important;
+}
+
+.mega-menu .category-heading {
+    color: #2563eb !important;
+    font-weight: 700 !important;
+    border-bottom: 2px solid #eff6ff !important;
+}
+
+.mega-menu .col-group {
+    border-right: 1px solid #f1f5f9 !important;
+}
+
+.nav-item .submenu-item li a,
+.mega-menu .submenu-item li a {
+    color: #334155 !important;
+    font-weight: 500 !important;
+    padding: 6px 10px !important;
+    border-radius: 6px !important;
+}
+
+.nav-item .submenu-item li a i,
+.mega-menu .submenu-item li a i {
+    color: #3b82f6 !important;
+}
+
+.nav-item .submenu-item li a:hover,
+.mega-menu .submenu-item li a:hover {
+    background: #eff6ff !important;
+    color: #1d4ed8 !important;
+    font-weight: 600 !important;
+    padding-left: 14px !important;
+}
+
+.nav-item .submenu-item li a:hover i,
+.mega-menu .submenu-item li a:hover i {
+    color: #1d4ed8 !important;
+}
+
+/* Notification & Profile Dropdowns in Light Header */
+.top_nav .dropdown-menu {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15) !important;
+    color: #1e293b !important;
+}
+
+.top_nav .dropdown-menu .dropdown-header {
+    background: #ffffff !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+}
+
+.top_nav .dropdown-menu .dropdown-header p {
+    color: #0f172a !important;
+}
+
+.top_nav .dropdown-item {
+    color: #334155 !important;
+}
+
+.top_nav .dropdown-item:hover {
+    background: #f8fafc !important;
+    color: #2563eb !important;
+}
+
+/* --------------------------------------------------------------------------
+   3. CARDS, PANELS & CONTAINER CARDS (DARK SYSTEM)
+   -------------------------------------------------------------------------- */
+.card, 
+.tile, 
+.box, 
+.panel, 
+.widget,
+.cat-page,
+.brand-page,
+.erp-page,
+.report-page-container {
+    background-color: var(--bg-dark-card) !important;
+    border: 1px solid var(--border-dark) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2) !important;
+    color: var(--text-primary) !important;
+}
+
+.card-header,
+.panel-heading,
+.box-header {
+    background-color: var(--bg-dark-header-card) !important;
+    border-bottom: 1px solid var(--border-dark) !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    border-top-left-radius: 12px !important;
+    border-top-right-radius: 12px !important;
+    padding: 14px 20px !important;
+}
+
+.card-body,
+.panel-body,
+.box-body {
+    background-color: transparent !important;
+    color: var(--text-primary) !important;
+}
+
+.card-footer,
+.panel-footer {
+    background-color: var(--bg-dark-header-card) !important;
+    border-top: 1px solid var(--border-dark) !important;
+    border-bottom-left-radius: 12px !important;
+    border-bottom-right-radius: 12px !important;
+}
+
+/* Background Light Utilities Overrides */
+.bg-white, 
+.bg-light, 
+.bg-gray-100 {
+    background-color: var(--bg-dark-card) !important;
+    color: var(--text-primary) !important;
+}
+
+.bg-white *, 
+.bg-light * {
+    color: var(--text-primary);
+}
+
+/* Specific Card Stats / Widgets Highlights */
+.card-counter,
+.dashboard-stat-card {
+    background: var(--bg-dark-card) !important;
+    border: 1px solid var(--border-dark) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-counter:hover,
+.dashboard-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 30px rgba(0,0,0,0.4) !important;
+    border-color: var(--accent-blue) !important;
+}
+
+/* --------------------------------------------------------------------------
+   4. FORM INPUTS, CONTROLS & SELECT2 (DARK CONTROL SYSTEM)
+   -------------------------------------------------------------------------- */
+.form-control, 
+.form-select, 
+.custom-select,
+input[type="text"], 
+input[type="number"], 
+input[type="email"], 
+input[type="password"], 
+input[type="date"], 
+input[type="datetime-local"], 
+input[type="search"],
+textarea, 
+select {
+    background-color: var(--bg-dark-body) !important;
+    border: 1px solid var(--border-dark-strong) !important;
+    color: #ffffff !important;
+    border-radius: 8px !important;
+    padding: 8px 12px !important;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out !important;
+}
+
+.form-control:focus, 
+.form-select:focus,
+.custom-select:focus,
+input:focus, 
+textarea:focus, 
+select:focus {
+    background-color: var(--bg-dark-body) !important;
+    border-color: var(--accent-blue) !important;
+    box-shadow: 0 0 0 3px var(--accent-glow) !important;
+    color: #ffffff !important;
+    outline: none !important;
+}
+
+.form-control::placeholder,
+input::placeholder,
+textarea::placeholder {
+    color: var(--text-muted) !important;
+    opacity: 0.8;
+}
+
+.form-control[readonly],
+.form-control:disabled,
+input:disabled,
+select:disabled {
+    background-color: #162032 !important;
+    border-color: #273549 !important;
+    color: var(--text-muted) !important;
+    cursor: not-allowed;
+}
+
+/* Input Group Append / Prepend */
+.input-group-text {
+    background-color: #162032 !important;
+    border: 1px solid var(--border-dark-strong) !important;
+    color: var(--text-secondary) !important;
+}
+
+/* Select2 Plugin Custom Styling */
+.select2-container--default .select2-selection--single,
+.select2-container--default .select2-selection--multiple {
+    background-color: var(--bg-dark-body) !important;
+    border: 1px solid var(--border-dark-strong) !important;
+    border-radius: 8px !important;
+    min-height: 38px !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    color: #ffffff !important;
+    line-height: 36px !important;
+    padding-left: 12px !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 36px !important;
+}
+
+.select2-dropdown {
+    background-color: var(--bg-dark-card) !important;
+    border: 1px solid var(--border-dark-strong) !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4) !important;
+    border-radius: 8px !important;
+    z-index: 9999 !important;
+}
+
+.select2-search__field {
+    background-color: var(--bg-dark-body) !important;
+    border: 1px solid var(--border-dark-strong) !important;
+    color: #ffffff !important;
+    border-radius: 6px !important;
+}
+
+.select2-container--default .select2-results__option {
+    color: var(--text-secondary) !important;
+    padding: 8px 12px !important;
+}
+
+.select2-container--default .select2-results__option--highlighted[aria-selected],
+.select2-container--default .select2-results__option[aria-selected="true"] {
+    background-color: var(--accent-blue) !important;
+    color: #ffffff !important;
+}
+
+/* --------------------------------------------------------------------------
+   5. TABLES & DATATABLES (HIGH CONTRAST DARK STYLING)
+   -------------------------------------------------------------------------- */
+.table,
+table {
+    color: var(--text-primary) !important;
+    background-color: transparent !important;
+    border-color: var(--border-dark) !important;
+    width: 100% !important;
+}
+
+.table th,
+.table td,
+table th,
+table td {
+    border-top: 1px solid var(--border-dark) !important;
+    border-bottom: 1px solid var(--border-dark) !important;
+    padding: 12px 14px !important;
+    vertical-align: middle !important;
+}
+
+.table thead th,
+table thead th {
+    background-color: var(--bg-dark-body) !important;
+    color: #94a3b8 !important;
+    font-size: 11.5px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.6px !important;
+    border-bottom: 2px solid var(--border-dark-strong) !important;
+    border-top: none !important;
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(255, 255, 255, 0.02) !important;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(59, 130, 246, 0.08) !important;
+}
+
+.table-bordered {
+    border: 1px solid var(--border-dark) !important;
+}
+
+.table-bordered th, 
+.table-bordered td {
+    border: 1px solid var(--border-dark) !important;
+}
+
+/* DataTables Specific Controls */
+.dataTables_wrapper {
+    color: var(--text-secondary) !important;
+    padding: 10px 0 !important;
+}
+
+.dataTables_length label,
+.dataTables_filter label,
+.dataTables_info {
+    color: var(--text-muted) !important;
+    font-size: 13px !important;
+}
+
+.dataTables_filter input {
+    background-color: var(--bg-dark-body) !important;
+    border: 1px solid var(--border-dark-strong) !important;
+    color: #ffffff !important;
+    border-radius: 6px !important;
+    padding: 5px 10px !important;
+    margin-left: 8px !important;
+}
+
+.dataTables_paginate .paginate_button {
+    background-color: var(--bg-dark-card) !important;
+    border: 1px solid var(--border-dark-strong) !important;
+    color: var(--text-secondary) !important;
+    border-radius: 6px !important;
+    margin: 0 2px !important;
+}
+
+.dataTables_paginate .paginate_button.current,
+.dataTables_paginate .paginate_button.current:hover {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+    border-color: #2563eb !important;
+    color: #ffffff !important;
+}
+
+.dataTables_paginate .paginate_button:hover {
+    background-color: #334155 !important;
+    color: #ffffff !important;
+    border-color: #475569 !important;
+}
+
+/* --------------------------------------------------------------------------
+   6. MODALS, POPUPS & ALERTS (ELEGANT DARK OVERLAYS)
+   -------------------------------------------------------------------------- */
+.modal-content {
+    background-color: var(--bg-dark-card) !important;
+    border: 1px solid var(--border-dark-strong) !important;
+    border-radius: 14px !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6) !important;
+    color: var(--text-primary) !important;
+}
+
+.modal-header {
+    background-color: var(--bg-dark-body) !important;
+    border-bottom: 1px solid var(--border-dark-strong) !important;
+    border-top-left-radius: 14px !important;
+    border-top-right-radius: 14px !important;
+    padding: 16px 20px !important;
+}
+
+.modal-header .modal-title {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+}
+
+.modal-header .close {
+    color: var(--text-muted) !important;
+    opacity: 0.8;
+    text-shadow: none !important;
+}
+
+.modal-header .close:hover {
+    color: #ffffff !important;
+    opacity: 1;
+}
+
+.modal-body {
+    background-color: var(--bg-dark-card) !important;
+    color: var(--text-primary) !important;
+    padding: 20px !important;
+}
+
+.modal-footer {
+    background-color: var(--bg-dark-body) !important;
+    border-top: 1px solid var(--border-dark-strong) !important;
+    border-bottom-left-radius: 14px !important;
+    border-bottom-right-radius: 14px !important;
+    padding: 14px 20px !important;
+}
+
+/* SweetAlert2 Dark Styling */
+.swal2-popup {
+    background-color: var(--bg-dark-card) !important;
+    border: 1px solid var(--border-dark-strong) !important;
+    border-radius: 16px !important;
+    color: var(--text-primary) !important;
+}
+
+.swal2-title {
+    color: #ffffff !important;
+}
+
+.swal2-content, .swal2-html-container {
+    color: var(--text-secondary) !important;
+}
+
+/* --------------------------------------------------------------------------
+   7. BUTTONS, BADGES, BREADCRUMBS & TABS
+   -------------------------------------------------------------------------- */
+.btn {
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    transition: all 0.2s ease !important;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+    border: none !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35) !important;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.45) !important;
+}
+
+.btn-secondary, 
+.btn-light {
+    background-color: #334155 !important;
+    border: 1px solid #475569 !important;
+    color: #ffffff !important;
+}
+
+.btn-secondary:hover, 
+.btn-light:hover {
+    background-color: #475569 !important;
+    color: #ffffff !important;
+}
+
+.btn-outline-primary {
+    border-color: #3b82f6 !important;
+    color: #60a5fa !important;
+}
+
+.btn-outline-primary:hover {
+    background-color: #2563eb !important;
+    color: #ffffff !important;
+}
+
+.btn-outline-secondary {
+    border-color: #475569 !important;
+    color: #cbd5e1 !important;
+}
+
+/* Badges */
+.badge {
+    padding: 5px 10px !important;
+    border-radius: 6px !important;
+    font-weight: 600 !important;
+}
+
+.badge-primary, .bg-primary {
+    background-color: #2563eb !important;
+    color: #ffffff !important;
+}
+
+.badge-success, .bg-success {
+    background-color: #059669 !important;
+    color: #ffffff !important;
+}
+
+.badge-warning, .bg-warning {
+    background-color: #d97706 !important;
+    color: #ffffff !important;
+}
+
+.badge-danger, .bg-danger {
+    background-color: #dc2626 !important;
+    color: #ffffff !important;
+}
+
+.badge-info, .bg-info {
+    background-color: #0284c7 !important;
+    color: #ffffff !important;
+}
+
+.badge-secondary, .bg-secondary {
+    background-color: #475569 !important;
+    color: #ffffff !important;
+}
+
+/* Breadcrumbs */
+.breadcrumb {
+    background-color: transparent !important;
+    padding: 0 !important;
+    margin-bottom: 15px !important;
+}
+
+.breadcrumb-item, 
+.breadcrumb-item a {
+    color: var(--text-muted) !important;
+    font-size: 13px !important;
+}
+
+.breadcrumb-item.active {
+    color: var(--accent-blue) !important;
+    font-weight: 600 !important;
+}
+
+/* Nav Tabs */
+.nav-tabs {
+    border-bottom: 1px solid var(--border-dark-strong) !important;
+}
+
+.nav-tabs .nav-link {
+    color: var(--text-muted) !important;
+    border: none !important;
+    border-bottom: 2px solid transparent !important;
+    padding: 10px 16px !important;
+    font-weight: 600 !important;
+}
+
+.nav-tabs .nav-link:hover {
+    color: #ffffff !important;
+    border-bottom-color: #475569 !important;
+}
+
+.nav-tabs .nav-link.active {
+    background-color: transparent !important;
+    color: var(--accent-blue) !important;
+    border-bottom: 2px solid var(--accent-blue) !important;
+}
+
+/* --------------------------------------------------------------------------
+   8. FOOTER & CUSTOM SCROLLBAR
+   -------------------------------------------------------------------------- */
+footer,
+.footer-area {
+    background-color: var(--bg-dark-body) !important;
+    border-top: 1px solid var(--border-dark) !important;
+    color: var(--text-muted) !important;
+    padding: 20px 0 !important;
+    text-align: center !important;
+}
+
+footer p, 
+.footer-area p {
+    color: var(--text-muted) !important;
+    margin-bottom: 0 !important;
+    font-size: 13px !important;
+}
+
+/* Sleek Dark Scrollbars */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-dark-body);
+}
+
+::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+}

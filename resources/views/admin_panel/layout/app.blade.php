@@ -261,6 +261,7 @@
     {{-- Flatpickr CSS for custom date formats --}}
     <!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"> -->
     <link rel="stylesheet" href="{{ asset('assets/css/flatpickr.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/dark-theme.css') }}">
 
     <style>
         .dropdown-toggle::after,
@@ -556,7 +557,7 @@
                                     <span style="color: #ffffff;">{{ $init1 }}</span><span style="color: #60a5fa;">{{ $init2 }}</span>
                                 </div>
                                 <div class="d-flex flex-column text-start justify-content-center">
-                                    <span style="font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 800; color: #ffffff; line-height: 1.15; letter-spacing: -0.2px;">{{ $dynCompName }}</span>
+                                    <span style="font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 800; color: #0f172a; line-height: 1.15; letter-spacing: -0.2px;">{{ $dynCompName }}</span>
                                     <span style="font-size: 10px; font-weight: 700; color: #38bdf8; letter-spacing: 0.8px; line-height: 1; text-transform: uppercase;">Heating & Cooling ERP</span>
                                 </div>
                             @endif
