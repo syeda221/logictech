@@ -65,8 +65,13 @@ class RoleController extends Controller
             $roles = Role::orderBy('name', "ASC")->get();
             $allPermissions = Permission::orderBy('name')->get();
         } else {
-            // Non-Super Admin: Only show roles other than Super Admin
-            $roles = Role::where('name', '!=', 'Super Admin')->orderBy('name', "ASC")->get();
+            $myPermissions = $authUser ? $authUser->getAllPermissions()->pluck('name')->toArray() : [];
+            // Non-Super Admin: Only show roles whose permissions are a subset of $authUser's permissions
+            $roles = Role::with('permissions')->where('name', '!=', 'Super Admin')->get()->filter(function ($role) use ($myPermissions) {
+                $rolePerms = $role->permissions->pluck('name')->toArray();
+                return empty(array_diff($rolePerms, $myPermissions));
+            })->values();
+
             // Hierarchical: Only show permissions that the logged-in user possesses
             $allPermissions = $authUser ? $authUser->getAllPermissions() : collect([]);
         }
@@ -88,15 +93,22 @@ class RoleController extends Controller
             return response()->json(['errors' => $validator->errors()]);
         }
 
-        // Prevent non-super-admin from creating or renaming to 'Super Admin'
+        // Prevent non-super-admin from creating or renaming to 'Super Admin' or modifying out-of-scope roles
         if (!$isSuperAdmin) {
             if (strtolower(trim($request->name)) === 'super admin') {
                 return response()->json(['errors' => ['name' => ['You are not authorized to create or rename to Super Admin.']]]);
             }
             if (!empty($editId)) {
                 $checkRole = Role::find($editId);
-                if ($checkRole && $checkRole->name === 'Super Admin') {
-                    return response()->json(['errors' => ['name' => ['You are not authorized to modify the Super Admin role.']]]);
+                if ($checkRole) {
+                    if ($checkRole->name === 'Super Admin') {
+                        return response()->json(['errors' => ['name' => ['You are not authorized to modify the Super Admin role.']]]);
+                    }
+                    $myPermissions = $authUser ? $authUser->getAllPermissions()->pluck('name')->toArray() : [];
+                    $checkRolePerms = $checkRole->permissions->pluck('name')->toArray();
+                    if (!empty(array_diff($checkRolePerms, $myPermissions))) {
+                        return response()->json(['errors' => ['name' => ['You are not authorized to modify a role containing permissions outside your scope.']]]);
+                    }
                 }
             }
         }
@@ -131,8 +143,15 @@ class RoleController extends Controller
         $authUser = auth()->user();
         $isSuperAdmin = $authUser && ($authUser->hasRole('Super Admin') || $authUser->email === 'admin@admin.com');
 
-        if (!$isSuperAdmin && $role->name === 'Super Admin') {
-            abort(403, 'Unauthorized to delete Super Admin role.');
+        if (!$isSuperAdmin) {
+            if ($role->name === 'Super Admin') {
+                abort(403, 'Unauthorized to delete Super Admin role.');
+            }
+            $myPermissions = $authUser ? $authUser->getAllPermissions()->pluck('name')->toArray() : [];
+            $rolePerms = $role->permissions->pluck('name')->toArray();
+            if (!empty(array_diff($rolePerms, $myPermissions))) {
+                abort(403, 'Unauthorized to delete a role containing permissions outside your scope.');
+            }
         }
 
         $role->delete();

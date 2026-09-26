@@ -764,6 +764,11 @@
             var $container = $(container);
             $container.empty();
 
+            if (!allRoles || allRoles.length === 0) {
+                $container.append('<div class="text-muted small p-2"><i class="fa fa-info-circle me-1"></i>No assignable roles available within your permission scope.</div>');
+                return;
+            }
+
             (allRoles || []).forEach(function(r) {
                 var checked = (assignedRoles || []).includes(r.name);
                 var id = 'role_' + r.name.replace(/[^a-z0-9]/gi, '_');

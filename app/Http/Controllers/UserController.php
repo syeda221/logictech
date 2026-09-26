@@ -24,7 +24,14 @@ class UserController extends Controller
             $usersQuery->whereDoesntHave('roles', function ($q) {
                 $q->where('name', 'Super Admin');
             });
-            $allRoles = Role::where('name', '!=', 'Super Admin')->get();
+
+            // Hierarchical role filtering: Non-Super Admin can ONLY see/assign roles
+            // whose permissions are a subset of $authUser's own granted permissions.
+            $myPermissions = $authUser ? $authUser->getAllPermissions()->pluck('name')->toArray() : [];
+            $allRoles = Role::with('permissions')->where('name', '!=', 'Super Admin')->get()->filter(function ($role) use ($myPermissions) {
+                $rolePerms = $role->permissions->pluck('name')->toArray();
+                return empty(array_diff($rolePerms, $myPermissions));
+            })->values();
         } else {
             $allRoles = Role::all();
         }
@@ -76,12 +83,25 @@ class UserController extends Controller
         }
         $user->save();
 
-        // If not super admin, filter out 'Super Admin' role from assignment
+        // Hierarchical role filtering for non-super-admins
         $assignedRoles = $request->roles ?? [];
         if (!$isSuperAdmin) {
-            $assignedRoles = array_values(array_filter($assignedRoles, function ($roleName) {
-                return strtolower(trim($roleName)) !== 'super admin';
-            }));
+            $myPermissions = $authUser ? $authUser->getAllPermissions()->pluck('name')->toArray() : [];
+
+            $allowedRoleNames = Role::with('permissions')->where('name', '!=', 'Super Admin')->get()->filter(function ($role) use ($myPermissions) {
+                $rolePerms = $role->permissions->pluck('name')->toArray();
+                return empty(array_diff($rolePerms, $myPermissions));
+            })->pluck('name')->toArray();
+
+            $sanitizedRequestedRoles = array_values(array_intersect($assignedRoles, $allowedRoleNames));
+
+            if (!empty($editId)) {
+                $existingRoles = $user->getRoleNames()->toArray();
+                $preservedRoles = array_values(array_diff($existingRoles, $allowedRoleNames));
+                $assignedRoles = array_unique(array_merge($preservedRoles, $sanitizedRequestedRoles));
+            } else {
+                $assignedRoles = $sanitizedRequestedRoles;
+            }
         }
 
         // Always sync roles (empty array will remove all roles)
@@ -120,9 +140,18 @@ class UserController extends Controller
 
         $assignedRoles = $request->roles ?? [];
         if (!$isSuperAdmin) {
-            $assignedRoles = array_values(array_filter($assignedRoles, function ($roleName) {
-                return strtolower(trim($roleName)) !== 'super admin';
-            }));
+            $myPermissions = $authUser ? $authUser->getAllPermissions()->pluck('name')->toArray() : [];
+
+            $allowedRoleNames = Role::with('permissions')->where('name', '!=', 'Super Admin')->get()->filter(function ($role) use ($myPermissions) {
+                $rolePerms = $role->permissions->pluck('name')->toArray();
+                return empty(array_diff($rolePerms, $myPermissions));
+            })->pluck('name')->toArray();
+
+            $sanitizedRequestedRoles = array_values(array_intersect($assignedRoles, $allowedRoleNames));
+
+            $existingRoles = $user->getRoleNames()->toArray();
+            $preservedRoles = array_values(array_diff($existingRoles, $allowedRoleNames));
+            $assignedRoles = array_unique(array_merge($preservedRoles, $sanitizedRequestedRoles));
         }
 
         // Assign new roles (by name)
