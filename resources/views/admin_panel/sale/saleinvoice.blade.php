@@ -25,7 +25,7 @@
     $coName    = 'LOGIC TECH ENGINEERING';
     $coAddr    = \App\Models\Setting::get('company_address', 'Hno 2/11B near bight future high school husri distric hyderabad');
     $coEmail   = 'info@logictech.com.pk';
-    $coPhone   = '92 300 5308035, 92 336 1500082';
+    $coPhone   = trim(str_replace(['92 300 5308035,', '92 300 5308035', '0300-5308035'], '', \App\Models\Setting::get('company_phone', '92 336 1500082')), " \t\n\r\0\x0B,") ?: '92 336 1500082';
     $coLogo    = \App\Models\Setting::getLogoUrl();
     $coNtn     = \App\Models\Setting::get('company_ntn',  '5561761-4');
     $coStrn    = \App\Models\Setting::get('company_strn',  '');

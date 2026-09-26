@@ -141,7 +141,7 @@
             <div class="company-title">{{ \App\Models\Setting::get('company_name', 'LOGIC TECH ENGINEERING') }}</div>
             <div style="font-size: 9px;">Heating &amp; Cooling Solutions, Power Electronics</div>
             <div style="font-size: 9px;">{{ \App\Models\Setting::get('company_address', 'Hyderabad, Pakistan') }}</div>
-            <div style="font-size: 9px;">Phone: {{ \App\Models\Setting::get('company_phone', '0300-5308035') }}</div>
+            <div style="font-size: 9px;">Phone: {{ trim(str_replace(['92 300 5308035,', '92 300 5308035', '0300-5308035'], '', \App\Models\Setting::get('company_phone', '0336-1500082')), " \t\n\r\0\x0B,") ?: '0336-1500082' }}</div>
 
             <div class="py-1">
                 <span class="ticket-badge">{{ $repair->repair_no }}</span>

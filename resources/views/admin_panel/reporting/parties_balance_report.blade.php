@@ -336,6 +336,8 @@
             return 'Rs ' + val.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
         }
 
+        let currentReportData = null;
+
         function loadReport() {
             let reportType = $(".reportTypeInput").val() || 'BOTH';
             let showZero = $(".showZeroInput").is(":checked");
@@ -351,6 +353,7 @@
                 party_name: partyName,
                 mobile: mobile
             }, function(res) {
+                currentReportData = res;
                 $("#loader").hide();
                 $("#reportBox").show();
 
@@ -459,26 +462,71 @@
 
         // Export to Excel function
         function exportToExcel() {
-            let table = document.getElementById("partiesTable");
-            let rows = Array.from(table.rows);
-            let csvContent = "data:text/csv;charset=utf-8,";
+            if (!currentReportData || !currentReportData.rows || currentReportData.rows.length === 0) {
+                alert("No data available to export.");
+                return;
+            }
 
-            rows.forEach(function(row) {
-                let rowData = [];
-                Array.from(row.cells).forEach(function(cell) {
-                    if (window.getComputedStyle(cell).display !== 'none') {
-                        let text = cell.innerText.replace(/,/g, '').replace(/\n/g, ' ');
-                        rowData.push('"' + text + '"');
-                    }
-                });
-                csvContent += rowData.join(",") + "\r\n";
+            let reportType = $(".reportTypeInput").val() || 'BOTH';
+            let csv = [];
+
+            // Header row
+            let headers = ['#', 'Code', 'Party / Title', 'Type', 'Mobile'];
+            if (reportType !== 'PAYABLE') {
+                headers.push('Receivable');
+            }
+            if (reportType !== 'RECEIVABLE') {
+                headers.push('Payable');
+            }
+            headers.push('Notes');
+            csv.push(headers.map(h => '"' + h + '"').join(','));
+
+            // Data rows
+            currentReportData.rows.forEach(function(row) {
+                let isVendor = row.code && row.code.startsWith('V');
+                let typeStr = isVendor ? 'Vendor' : 'Customer';
+                
+                let rowData = [
+                    '"' + (row.sr || '') + '"',
+                    '"' + (row.code || '').replace(/"/g, '""') + '"',
+                    '"' + (row.title || '').replace(/"/g, '""') + '"',
+                    '"' + typeStr + '"',
+                    '"' + (row.mobile || '').replace(/"/g, '""') + '"'
+                ];
+
+                if (reportType !== 'PAYABLE') {
+                    let recVal = parseFloat(row.receivable || 0);
+                    rowData.push('"' + recVal.toFixed(2) + '"');
+                }
+                if (reportType !== 'RECEIVABLE') {
+                    let payVal = parseFloat(row.payable || 0);
+                    rowData.push('"' + payVal.toFixed(2) + '"');
+                }
+
+                rowData.push('"' + (row.notes || '').replace(/"/g, '""') + '"');
+                csv.push(rowData.join(','));
             });
 
-            let encodedUri = encodeURI(csvContent);
-            let link = document.createElement("a");
-            let filename = "parties_balance_report_" + new Date().toISOString().slice(0,10) + ".csv";
+            // Totals row
+            if (currentReportData.totals) {
+                let t = currentReportData.totals;
+                let totalsRow = ['"TOTAL"', '""', '""', '""', '""'];
+                if (reportType !== 'PAYABLE') {
+                    totalsRow.push('"' + parseFloat(t.receivable || 0).toFixed(2) + '"');
+                }
+                if (reportType !== 'RECEIVABLE') {
+                    totalsRow.push('"' + parseFloat(t.payable || 0).toFixed(2) + '"');
+                }
+                totalsRow.push('""');
+                csv.push(totalsRow.join(','));
+            }
+
+            let csvString = csv.join('\r\n');
+            let blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' });
+            let link = document.createElement('a');
+            let filename = "parties_balance_report_" + new Date().toISOString().slice(0, 10) + ".csv";
             
-            link.setAttribute("href", encodedUri);
+            link.href = URL.createObjectURL(blob);
             link.setAttribute("download", filename);
             document.body.appendChild(link);
             link.click();
@@ -501,7 +549,7 @@
             window.print();
         });
 
-        $(".btnExcelTrigger").click(function() {
+        $(document).on('click', '.btnExcelTrigger', function() {
             exportToExcel();
         });
 

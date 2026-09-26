@@ -276,7 +276,7 @@
                             @endif
                             <div class="company-meta">
                                 <div><i class="fas fa-map-marker-alt me-1 text-primary"></i> {{ \App\Models\Setting::get('company_address', '01-KM Sharaqpur Road') }}</div>
-                                <div><i class="fas fa-envelope me-1 text-primary"></i> {{ \App\Models\Setting::get('company_email', 'info@logictech.com.pk') }} &nbsp;|&nbsp; <i class="fas fa-phone me-1 text-primary"></i> {{ \App\Models\Setting::get('company_phone', '+92 300 5308035') }}</div>
+                                <div><i class="fas fa-envelope me-1 text-primary"></i> {{ \App\Models\Setting::get('company_email', 'info@logictech.com.pk') }} &nbsp;|&nbsp; <i class="fas fa-phone me-1 text-primary"></i> {{ trim(str_replace(['92 300 5308035,', '92 300 5308035', '0300-5308035', '+92 300 5308035'], '', \App\Models\Setting::get('company_phone', '+92 336 1500082')), " \t\n\r\0\x0B,") ?: '+92 336 1500082' }}</div>
                             </div>
                         </div>
                     </div>
