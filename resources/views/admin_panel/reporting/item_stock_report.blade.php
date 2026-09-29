@@ -80,9 +80,9 @@
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
         <div>
             <h4 class="fw-bold text-dark mb-0" id="reportHeaderTitle">
-                <i class="fas fa-industry text-primary me-2" id="reportHeaderIcon"></i>Raw Material Stock &amp; Ledger Report
+                <i class="fas fa-boxes-stacked text-primary me-2" id="reportHeaderIcon"></i>Item Stock &amp; Inventory Report
             </h4>
-            <small class="text-muted" id="reportHeaderSub">Raw material inventory — purchases, material usage consumption, and stock valuation summary</small>
+            <small class="text-muted" id="reportHeaderSub">Finished goods &amp; raw material inventory — stock balances, movement ledger, and valuation summary</small>
         </div>
 
         {{-- Mode Pills --}}
@@ -150,6 +150,16 @@
             <div class="col-md-2">
                 <label class="rpt-flabel">Date To</label>
                 <input type="date" name="date_to" id="date_to" class="rpt-finput">
+            </div>
+
+            {{-- Item Type Filter (Finished Goods / Raw Material / All) --}}
+            <div class="col-md-2" id="item_type_wrapper">
+                <label class="rpt-flabel">Item Type / Nature</label>
+                <select name="item_type" id="item_type" class="rpt-finput">
+                    <option value="all" selected>All Items (FG &amp; Raw Material)</option>
+                    <option value="finish_goods">Finished Goods</option>
+                    <option value="raw_material">Raw Material</option>
+                </select>
             </div>
 
             {{-- Stock Product Category (Single) --}}
@@ -299,7 +309,7 @@ $(document).ready(function() {
             dataType: 'json',
             delay: 250,
             data: function (params) {
-                return { q: params.term, item_type: 'raw_material' };
+                return { q: params.term, item_type: $('#item_type').val() };
             },
             processResults: function (data) {
                 return {
@@ -337,6 +347,7 @@ $(document).ready(function() {
             $('#reportHeaderSub').text('Comprehensive audit breakdown of all operational expenses, category wise vouchers, and total spending');
             
             // Toggle Filter Inputs
+            $('#item_type_wrapper').hide();
             $('#category_id_wrapper').hide();
             $('#expense_category_id_wrapper').show();
             $('#unit_type_wrapper').hide();
@@ -360,10 +371,11 @@ $(document).ready(function() {
             $('#kpiIcon4').html('<i class="fas fa-calculator"></i>');
         } else {
             // Stock Modes UI
-            $('#reportHeaderTitle').html('<i class="fas fa-industry text-primary me-2"></i>Raw Material Stock &amp; Ledger Report');
-            $('#reportHeaderSub').text('Raw material inventory — purchases, material usage consumption, and stock valuation summary');
+            $('#reportHeaderTitle').html('<i class="fas fa-boxes-stacked text-primary me-2"></i>Item Stock &amp; Inventory Report');
+            $('#reportHeaderSub').text('Finished goods & raw material inventory — stock balances, movement ledger, and valuation summary');
 
             // Toggle Filter Inputs
+            $('#item_type_wrapper').show();
             $('#category_id_wrapper').show();
             $('#expense_category_id_wrapper').hide();
             $('#unit_type_wrapper').show();
@@ -416,6 +428,7 @@ $(document).ready(function() {
             type: "POST",
             data: {
                 _token: "{{ csrf_token() }}",
+                item_type:   $('#item_type').val(),
                 category_id: $('#category_id').val(),
                 expense_category_id: $('#expense_category_id').val(),
                 product_id:  $('#product_id').val(),
@@ -477,16 +490,17 @@ $(document).ready(function() {
             thead.append(`
                 <tr>
                     <th style="width:40px;">#</th>
-                    <th style="width:100px;">Item Code</th>
+                    <th style="width:90px;">Item Code</th>
                     <th>Item / Variant Name</th>
                     <th>Category</th>
-                    <th style="width:100px;">Unit Type</th>
+                    <th style="width:120px;">Item Nature</th>
+                    <th style="width:90px;">Unit</th>
                     <th class="text-center" style="width:120px;">Stock Balance</th>
                     <th class="text-center" style="width:110px;">Cartons / Loose</th>
                     <th class="text-end" style="width:110px;">Avg Cost (Rs)</th>
                     <th class="text-end" style="width:130px;">Stock Value (Rs)</th>
                     <th class="text-center" style="width:100px;">Status</th>
-                    <th class="text-center" style="width:80px;">History</th>
+                    <th class="text-center" style="width:70px;">History</th>
                 </tr>
             `);
         } else if (mode === 'ledger') {
@@ -494,8 +508,9 @@ $(document).ready(function() {
             thead.append(`
                 <tr>
                     <th style="width:30px;">#</th>
-                    <th style="width:90px;">Item Code</th>
+                    <th style="width:80px;">Item Code</th>
                     <th>Item / Variant Name</th>
+                    <th style="width:110px;">Item Nature</th>
                     <th class="text-end">Opening</th>
                     <th class="text-end" style="background:#ecfdf5 !important; color:#065f46 !important;">Purchased (+)</th>
                     <th class="text-end" style="background:#fef2f2 !important; color:#991b1b !important;">Material Used (-)</th>
@@ -505,6 +520,7 @@ $(document).ready(function() {
                     <th class="text-center" style="width:70px;">History</th>
                 </tr>
             `);
+        }
         } else if (mode === 'expenses') {
             // Operational Expense Report Columns
             thead.append(`
@@ -570,6 +586,13 @@ $(document).ready(function() {
                 </button>
             `;
 
+            let typeBadge = '<span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1" style="font-size:0.75rem;"><i class="fas fa-box me-1"></i> Finished Good</span>';
+            if (row.item_type === 'raw_material') {
+                typeBadge = '<span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1" style="font-size:0.75rem;"><i class="fas fa-cubes me-1"></i> Raw Material</span>';
+            } else if (row.item_type === 'both') {
+                typeBadge = '<span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1" style="font-size:0.75rem;"><i class="fas fa-layer-group me-1"></i> Both (FG/RM)</span>';
+            }
+
             if (mode === 'summary') {
                 let statusBadge = '<span class="status-healthy"><i class="fas fa-check-circle me-1"></i> Healthy</span>';
                 if (row.status === 'out_of_stock') {
@@ -584,6 +607,7 @@ $(document).ready(function() {
                     <td><span class="item-code-badge">${row.item_code || ''}</span></td>
                     <td class="fw-bold text-dark" style="font-size:.90rem;">${row.item_name}</td>
                     <td class="text-secondary fw-semibold">${row.category_name}</td>
+                    <td>${typeBadge}</td>
                     <td><span class="item-unit-badge">${row.unit_name}</span></td>
                     <td class="text-center fw-bold text-primary" style="font-size:.92rem;">${row.formatted_stock}</td>
                     <td class="text-center fw-semibold text-secondary">${row.carton_display || '—'}</td>
@@ -609,6 +633,7 @@ $(document).ready(function() {
                     <td class="text-muted fw-bold" style="font-size:.80rem;">${i + 1}</td>
                     <td><span class="item-code-badge">${row.item_code || ''}</span></td>
                     <td class="fw-bold text-dark" style="font-size:.90rem;">${row.item_name}</td>
+                    <td>${typeBadge}</td>
                     <td class="text-end text-muted fw-semibold">${parseFloat(row.initial_stock).toLocaleString()}</td>
                     <td class="text-end text-success fw-bold" style="background:#ecfdf5; font-size:.90rem;">+${parseFloat(row.purchased).toLocaleString()}</td>
                     <td class="text-end text-danger fw-bold" style="background:#fef2f2; font-size:.90rem;">-${parseFloat(row.material_used || 0).toLocaleString()}</td>
@@ -625,7 +650,7 @@ $(document).ready(function() {
         if (mode === 'summary') {
             tfooter.append(`
                 <tr class="bg-light fw-bold" style="border-top: 2px solid #cbd5e1;">
-                    <td colspan="8" class="text-end text-dark fs-6">Grand Stock Valuation Total:</td>
+                    <td colspan="9" class="text-end text-dark fs-6">Grand Stock Valuation Total:</td>
                     <td class="text-end text-primary fs-6 fw-bolder">Rs ${totalValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                     <td colspan="2"></td>
                 </tr>
@@ -633,7 +658,7 @@ $(document).ready(function() {
         } else {
             tfooter.append(`
                 <tr class="bg-light fw-bold" style="border-top: 2px solid #cbd5e1;">
-                    <td colspan="8" class="text-end text-dark fs-6">Grand Stock Valuation Total:</td>
+                    <td colspan="9" class="text-end text-dark fs-6">Grand Stock Valuation Total:</td>
                     <td class="text-end text-primary fs-6 fw-bolder">Rs ${totalValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                     <td></td>
                 </tr>

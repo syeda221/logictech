@@ -547,7 +547,7 @@ class HomeController extends Controller
             $query->orderByDesc('sales.created_at');
         }
 
-        $items = $query->limit(6)->get();
+        $items = $query->limit(15)->get();
 
         return $items->map(function ($s, $idx) {
             $statusStr = strtolower($s->sale_status ?? '');
@@ -604,7 +604,7 @@ class HomeController extends Controller
             $query->orderByDesc('repair_orders.created_at');
         }
 
-        $items = $query->limit(6)->get();
+        $items = $query->limit(15)->get();
 
         return $items->map(function ($r, $idx) {
             $statusLabel = match($r->status ?? '') {
@@ -664,7 +664,7 @@ class HomeController extends Controller
             $filtered = $mapped->sortBy('current_cartons');
         }
 
-        return $filtered->take(6)->values()->map(function ($p, $idx) {
+        return $filtered->take(15)->values()->map(function ($p, $idx) {
             return [
                 'sr' => $idx + 1,
                 'product' => $p->item_name ?: ($p->product_name ?: 'Product Item'),
@@ -710,7 +710,7 @@ class HomeController extends Controller
             $collection = $collection->sortByDesc('balance');
         }
 
-        return $collection->take(6)->values()->map(function ($p, $idx) {
+        return $collection->take(15)->values()->map(function ($p, $idx) {
             return [
                 'sr' => $idx + 1,
                 'code' => $p['code'],
@@ -756,7 +756,7 @@ class HomeController extends Controller
             $collection = $collection->sortByDesc('balance');
         }
 
-        return $collection->take(6)->values()->map(function ($p, $idx) {
+        return $collection->take(15)->values()->map(function ($p, $idx) {
             return [
                 'sr' => $idx + 1,
                 'code' => $p['code'],
@@ -773,7 +773,7 @@ class HomeController extends Controller
         $vouchers = collect();
 
         if ($filter == 'recent' || $filter == 'sales') {
-            $sales = DB::table('sales')->latest()->limit(5)->get()->map(function($s) {
+            $sales = DB::table('sales')->latest()->limit(10)->get()->map(function($s) {
                 return [
                     'icon' => 'fa-receipt text-success',
                     'bg' => '#ecfdf5',
@@ -787,7 +787,7 @@ class HomeController extends Controller
         }
 
         if ($filter == 'recent' || $filter == 'purchases') {
-            $purchases = DB::table('purchases')->latest()->limit(5)->get()->map(function($p) {
+            $purchases = DB::table('purchases')->latest()->limit(10)->get()->map(function($p) {
                 return [
                     'icon' => 'fa-cart-shopping text-primary',
                     'bg' => '#eef2ff',
@@ -801,7 +801,7 @@ class HomeController extends Controller
         }
 
         if ($filter == 'recent' || $filter == 'vouchers') {
-            $vouchers = DB::table('voucher_masters')->latest()->limit(5)->get()->map(function($v) {
+            $vouchers = DB::table('voucher_masters')->latest()->limit(10)->get()->map(function($v) {
                 return [
                     'icon' => 'fa-file-invoice-dollar text-warning',
                     'bg' => '#fffbeb',
@@ -814,7 +814,7 @@ class HomeController extends Controller
             });
         }
 
-        $all = $sales->concat($purchases)->concat($vouchers)->sortByDesc('created_at')->take(6)->values();
+        $all = $sales->concat($purchases)->concat($vouchers)->sortByDesc('created_at')->take(15)->values();
 
         return $all->map(function ($act, $idx) {
             return [

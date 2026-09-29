@@ -558,14 +558,45 @@
     </div>
 
     {{-- =============================================
-         3.5. DASHBOARD ITEMS (6 CARDS WITH FILTERS)
+         3.5. DASHBOARD ITEMS (6 CARDS WITH FILTERS & EXPANDED HEIGHT)
     ============================================= --}}
+    <style>
+        .db-grid-table {
+            border: 1px solid #cbd5e1 !important;
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+            width: 100% !important;
+        }
+        .db-grid-table th {
+            background-color: #f1f5f9 !important;
+            color: #0f172a !important;
+            font-weight: 800 !important;
+            font-size: 0.72rem !important;
+            text-transform: uppercase !important;
+            border: 1px solid #cbd5e1 !important;
+            padding: 8px 10px !important;
+        }
+        .db-grid-table td {
+            border: 1px solid #e2e8f0 !important;
+            padding: 7px 10px !important;
+            vertical-align: middle !important;
+        }
+        .db-grid-table tbody tr:hover {
+            background-color: #f8fafc !important;
+        }
+        .db-grid-scroll-wrap {
+            max-height: 520px;
+            min-height: 420px;
+            overflow-y: auto;
+        }
+    </style>
+
     <div class="db-section-label" style="margin-top: 1rem;"><i class="fas fa-layer-group text-primary"></i> Dashboard Items</div>
     <div class="grid-3col" style="grid-template-columns: repeat(3, 1fr); gap: 1.25rem; margin-bottom: 2rem;">
 
         {{-- 1. Pending Sales Orders --}}
         <div class="panel" style="padding: 1.1rem 1.15rem;">
-            <div class="panel-hd mb-2 pb-2" style="border-bottom: 1px solid #f1f5f9;">
+            <div class="panel-hd mb-2 pb-2" style="border-bottom: 1px solid #cbd5e1;">
                 <span class="panel-title" style="font-size: 0.88rem; font-weight: 800;">
                     <i class="fa-solid fa-clock-rotate-left text-primary me-1"></i> Pending Sales Orders
                 </span>
@@ -577,9 +608,9 @@
                 </select>
             </div>
             <div class="panel-body-flex position-relative">
-                <div class="table-responsive" style="max-height: 230px; overflow-y: auto;">
+                <div class="table-responsive db-grid-scroll-wrap">
                     <table class="table table-sm table-hover align-middle mb-0 db-grid-table" id="tbl-pending_sales" style="font-size: 0.76rem;">
-                        <thead class="bg-light sticky-top" style="font-size: 0.7rem; text-transform: uppercase; color: var(--muted);">
+                        <thead class="bg-light sticky-top">
                             <tr>
                                 <th style="width: 25px;">#</th>
                                 <th>Client Name</th>
@@ -598,7 +629,7 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="4" class="text-center text-muted py-3" style="font-size:0.75rem;">No pending sales orders.</td></tr>
+                                <tr><td colspan="4" class="text-center text-muted py-4" style="font-size:0.75rem;">No pending sales orders.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -608,7 +639,7 @@
 
         {{-- 2. Pending Repairing Orders --}}
         <div class="panel" style="padding: 1.1rem 1.15rem;">
-            <div class="panel-hd mb-2 pb-2" style="border-bottom: 1px solid #f1f5f9;">
+            <div class="panel-hd mb-2 pb-2" style="border-bottom: 1px solid #cbd5e1;">
                 <span class="panel-title" style="font-size: 0.88rem; font-weight: 800;">
                     <i class="fa-solid fa-wrench text-warning me-1"></i> Pending Repairing Orders
                 </span>
@@ -620,9 +651,9 @@
                 </select>
             </div>
             <div class="panel-body-flex position-relative">
-                <div class="table-responsive" style="max-height: 230px; overflow-y: auto;">
+                <div class="table-responsive db-grid-scroll-wrap">
                     <table class="table table-sm table-hover align-middle mb-0 db-grid-table" id="tbl-pending_repairs" style="font-size: 0.76rem;">
-                        <thead class="bg-light sticky-top" style="font-size: 0.7rem; text-transform: uppercase; color: var(--muted);">
+                        <thead class="bg-light sticky-top">
                             <tr>
                                 <th style="width: 25px;">#</th>
                                 <th>Client Name</th>
@@ -641,7 +672,7 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="4" class="text-center text-muted py-3" style="font-size:0.75rem;">No pending repair orders.</td></tr>
+                                <tr><td colspan="4" class="text-center text-muted py-4" style="font-size:0.75rem;">No pending repair orders.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -651,7 +682,7 @@
 
         {{-- 3. Raw Material Low Stock Products --}}
         <div class="panel" style="padding: 1.1rem 1.15rem;">
-            <div class="panel-hd mb-2 pb-2" style="border-bottom: 1px solid #f1f5f9;">
+            <div class="panel-hd mb-2 pb-2" style="border-bottom: 1px solid #cbd5e1;">
                 <span class="panel-title" style="font-size: 0.88rem; font-weight: 800;">
                     <i class="fa-solid fa-boxes-packing text-danger me-1"></i> Raw material low stock products
                 </span>
@@ -663,9 +694,9 @@
                 </select>
             </div>
             <div class="panel-body-flex position-relative">
-                <div class="table-responsive" style="max-height: 230px; overflow-y: auto;">
+                <div class="table-responsive db-grid-scroll-wrap">
                     <table class="table table-sm table-hover align-middle mb-0 db-grid-table" id="tbl-low_stock" style="font-size: 0.76rem;">
-                        <thead class="bg-light sticky-top" style="font-size: 0.7rem; text-transform: uppercase; color: var(--muted);">
+                        <thead class="bg-light sticky-top">
                             <tr>
                                 <th style="width: 25px;">#</th>
                                 <th>Product Name</th>
@@ -682,7 +713,7 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="3" class="text-center text-muted py-3" style="font-size:0.75rem;">No low stock raw items.</td></tr>
+                                <tr><td colspan="3" class="text-center text-muted py-4" style="font-size:0.75rem;">No low stock raw items.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -692,7 +723,7 @@
 
         {{-- 4. Receivables --}}
         <div class="panel" style="padding: 1.1rem 1.15rem;">
-            <div class="panel-hd mb-2 pb-2" style="border-bottom: 1px solid #f1f5f9;">
+            <div class="panel-hd mb-2 pb-2" style="border-bottom: 1px solid #cbd5e1;">
                 <span class="panel-title" style="font-size: 0.88rem; font-weight: 800;">
                     <i class="fa-solid fa-hand-holding-dollar text-success me-1"></i> Receivables
                 </span>
@@ -703,9 +734,9 @@
                 </select>
             </div>
             <div class="panel-body-flex position-relative">
-                <div class="table-responsive" style="max-height: 230px; overflow-y: auto;">
+                <div class="table-responsive db-grid-scroll-wrap">
                     <table class="table table-sm table-hover align-middle mb-0 db-grid-table" id="tbl-receivables" style="font-size: 0.76rem;">
-                        <thead class="bg-light sticky-top" style="font-size: 0.7rem; text-transform: uppercase; color: var(--muted);">
+                        <thead class="bg-light sticky-top">
                             <tr>
                                 <th style="width: 25px;">#</th>
                                 <th>Party Name</th>
@@ -720,7 +751,7 @@
                                     <td class="text-end fw-bold text-primary">{{ $row['amount'] }}</td>
                                 </tr>
                             @empty
-                                <tr><td colspan="3" class="text-center text-muted py-3" style="font-size:0.75rem;">No receivable balances.</td></tr>
+                                <tr><td colspan="3" class="text-center text-muted py-4" style="font-size:0.75rem;">No receivable balances.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -730,7 +761,7 @@
 
         {{-- 5. Payables --}}
         <div class="panel" style="padding: 1.1rem 1.15rem;">
-            <div class="panel-hd mb-2 pb-2" style="border-bottom: 1px solid #f1f5f9;">
+            <div class="panel-hd mb-2 pb-2" style="border-bottom: 1px solid #cbd5e1;">
                 <span class="panel-title" style="font-size: 0.88rem; font-weight: 800;">
                     <i class="fa-solid fa-file-invoice-dollar text-danger me-1"></i> Payables
                 </span>
@@ -741,9 +772,9 @@
                 </select>
             </div>
             <div class="panel-body-flex position-relative">
-                <div class="table-responsive" style="max-height: 230px; overflow-y: auto;">
+                <div class="table-responsive db-grid-scroll-wrap">
                     <table class="table table-sm table-hover align-middle mb-0 db-grid-table" id="tbl-payables" style="font-size: 0.76rem;">
-                        <thead class="bg-light sticky-top" style="font-size: 0.7rem; text-transform: uppercase; color: var(--muted);">
+                        <thead class="bg-light sticky-top">
                             <tr>
                                 <th style="width: 25px;">#</th>
                                 <th>Party Name</th>
@@ -758,7 +789,7 @@
                                     <td class="text-end fw-bold text-danger">{{ $row['amount'] }}</td>
                                 </tr>
                             @empty
-                                <tr><td colspan="3" class="text-center text-muted py-3" style="font-size:0.75rem;">No payable balances.</td></tr>
+                                <tr><td colspan="3" class="text-center text-muted py-4" style="font-size:0.75rem;">No payable balances.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -768,7 +799,7 @@
 
         {{-- 6. Recent Activities --}}
         <div class="panel" style="padding: 1.1rem 1.15rem;">
-            <div class="panel-hd mb-2 pb-2" style="border-bottom: 1px solid #f1f5f9;">
+            <div class="panel-hd mb-2 pb-2" style="border-bottom: 1px solid #cbd5e1;">
                 <span class="panel-title" style="font-size: 0.88rem; font-weight: 800;">
                     <i class="fa-solid fa-bolt text-indigo me-1"></i> Recent Activities
                 </span>
@@ -780,9 +811,9 @@
                 </select>
             </div>
             <div class="panel-body-flex position-relative">
-                <div class="table-responsive" style="max-height: 230px; overflow-y: auto;">
+                <div class="table-responsive db-grid-scroll-wrap">
                     <table class="table table-sm table-hover align-middle mb-0 db-grid-table" id="tbl-activities" style="font-size: 0.76rem;">
-                        <thead class="bg-light sticky-top" style="font-size: 0.7rem; text-transform: uppercase; color: var(--muted);">
+                        <thead class="bg-light sticky-top">
                             <tr>
                                 <th style="width: 25px;">#</th>
                                 <th>Party Name</th>
@@ -803,7 +834,7 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="3" class="text-center text-muted py-3" style="font-size:0.75rem;">No recent activities.</td></tr>
+                                <tr><td colspan="3" class="text-center text-muted py-4" style="font-size:0.75rem;">No recent activities.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -813,72 +844,7 @@
 
     </div>
 
-    {{-- =============================================
-         4. SALES OVERVIEW + CATEGORY + TOP PRODUCTS
-    ============================================= --}}
-    <div class="db-section-label"><i class="fas fa-chart-area text-success"></i> Sales Analytics</div>
-    <div class="grid-3col">
 
-        {{-- Sales Overview Line Chart --}}
-        <div class="panel">
-            <div class="panel-hd">
-                <span class="panel-title"><i class="fas fa-chart-area" style="color:var(--indigo);"></i> Sales Overview</span>
-                <span class="panel-badge">Last 7 Days</span>
-            </div>
-            <div class="panel-body-flex">
-                <div style="height: 250px; position: relative;">
-                    <canvas id="chartSalesOverview"></canvas>
-                </div>
-            </div>
-        </div>
-
-        {{-- Sales by Category Doughnut --}}
-        <div class="panel">
-            <div class="panel-hd">
-                <span class="panel-title"><i class="fas fa-pie-chart" style="color:var(--blue);"></i> By Category</span>
-            </div>
-            <div class="panel-body-flex d-flex flex-column align-items-center">
-                <div style="position: relative; width: 160px; height: 160px; margin-bottom: 1rem;">
-                    <canvas id="chartSalesCat"></canvas>
-                    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;">
-                        <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;">Total</div>
-                        <div style="font-size:12px;font-weight:800;color:var(--text);">Rs {{ number_format($salesThisMonth, 0) }}</div>
-                    </div>
-                </div>
-                <div class="legend-list w-100" id="catLegend"></div>
-            </div>
-        </div>
-
-        {{-- Top Selling Products --}}
-        <div class="panel">
-            <div class="panel-hd">
-                <span class="panel-title"><i class="fas fa-fire" style="color:var(--red);"></i> Top Products</span>
-                <span class="panel-badge">By Qty</span>
-            </div>
-            <div class="panel-body-flex">
-                <div class="rank-list">
-                    @if(isset($topProducts) && count($topProducts) > 0)
-                        @php $r = 1; @endphp
-                        @foreach($topProducts->take(6) as $tp)
-                            <div class="rank-item">
-                                <div class="d-flex align-items-center gap-2">
-                                    <div class="rank-num">{{ $r++ }}</div>
-                                    <div>
-                                        <div class="rank-name">{{ Str::limit($tp->product_name ?: 'Standard Item', 20) }}</div>
-                                        <div class="rank-sub">{{ number_format($tp->total_qty) }} units sold</div>
-                                    </div>
-                                </div>
-                                <div class="rank-val">Rs {{ number_format($tp->total_revenue ?? 0) }}</div>
-                            </div>
-                        @endforeach
-                    @else
-                        <div class="text-center text-muted py-4" style="font-size:0.82rem;">No sales data available.</div>
-                    @endif
-                </div>
-            </div>
-        </div>
-
-    </div>
 
     {{-- =============================================
          5. BUSINESS SUMMARY + CASH FLOW + EXPENSE + ACTIVITY
@@ -1087,28 +1053,7 @@
 
     </div>
 
-    {{-- Low Stock Alert --}}
-    @can('products.view')
-        @if(isset($lowStockProducts) && $lowStockProducts->count() > 0)
-            <div class="db-section-label" style="margin-top: 0.5rem;">
-                <i class="fas fa-triangle-exclamation text-danger"></i> Low Stock Alarm
-            </div>
-            <div class="panel" style="margin-bottom: 2rem;">
-                <div class="panel-hd">
-                    <span class="panel-title" style="color: var(--red);">
-                        <i class="fas fa-triangle-exclamation"></i> Low Stock Alert Products
-                        <span style="background:#fff1f2; color:var(--red); font-size:0.7rem; font-weight:800; padding:3px 10px; border-radius:99px; border:1px solid #fecdd3;">
-                            {{ $lowStockProducts->count() }} Items
-                        </span>
-                    </span>
-                    <a href="{{ route('product') }}?status=active" style="font-size:0.78rem; color:var(--red); font-weight:700; text-decoration:none;">Manage Inventory →</a>
-                </div>
-                <div style="height: 280px; position: relative;">
-                    <canvas id="chartLowStock"></canvas>
-                </div>
-            </div>
-        @endif
-    @endcan
+
 
 </div>
 
@@ -1153,82 +1098,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     };
 
-    // ── 1. SALES OVERVIEW LINE CHART ──────────────────────
-    const soCtx = document.getElementById('chartSalesOverview');
-    if (soCtx) {
-        const ctx = soCtx.getContext('2d');
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: salesStats.daily.categories,
-                datasets: [
-                    {
-                        label: 'Sales',
-                        data: salesStats.daily.series[0]?.data || [],
-                        borderColor: '#6366f1', borderWidth: 2.5,
-                        backgroundColor: grad(ctx, 'rgba(99,102,241,0.18)', 'rgba(99,102,241,0.0)'),
-                        fill: true, tension: 0.42,
-                        pointBackgroundColor: '#6366f1', pointBorderColor: '#fff',
-                        pointBorderWidth: 2, pointRadius: 4, pointHoverRadius: 6
-                    },
-                    {
-                        label: 'Target',
-                        data: (salesStats.daily.series[0]?.data || []).map(v => v * 1.12 + 3000),
-                        borderColor: '#cbd5e1', borderWidth: 1.5,
-                        borderDash: [5, 4], fill: false, tension: 0.42, pointRadius: 0
-                    }
-                ]
-            },
-            options: { ...baseOpts,
-                legend: { display: true, position: 'top', align: 'end',
-                    labels: { font: { family: 'Inter', size: 11, weight: '600' }, usePointStyle: true, boxWidth: 6, padding: 14 } },
-                plugins: { ...baseOpts.plugins,
-                    legend: { display: true, position: 'top', align: 'end',
-                        labels: { font: { family: 'Inter', size: 11, weight: '600' }, usePointStyle: true, boxWidth: 6, padding: 14 } },
-                    tooltip: { ...baseOpts.plugins.tooltip,
-                        callbacks: { label: c => ` ${c.dataset.label}: Rs ${parseFloat(c.raw || c.value || 0).toLocaleString()}` } }
-                }
-            }
-        });
-    }
 
-    // ── 2. SALES BY CATEGORY DOUGHNUT ─────────────────────
-    const catCtx = document.getElementById('chartSalesCat');
-    if (catCtx) {
-        let labels = catData.length ? catData.map(c => c.category_name) : ['General', 'Others'];
-        let values = catData.length ? catData.map(c => parseFloat(c.total_amount) || 0) : [1, 1];
-        const total = values.reduce((a,b) => a+b, 0);
-
-        new Chart(catCtx.getContext('2d'), {
-            type: 'doughnut',
-            data: { labels, datasets: [{ data: values, backgroundColor: COLORS, borderWidth: 3, borderColor: '#fff', hoverOffset: 6 }] },
-            options: { responsive: true, maintainAspectRatio: false, cutoutPercentage: 74, cutout: '74%',
-                legend: { display: false },
-                plugins: { legend: { display: false },
-                    tooltip: { backgroundColor: '#0f172a', padding: 10, bodyFont: { family: 'Inter', size: 11 },
-                        callbacks: { label: c => ` ${c.label}: Rs ${parseFloat(c.raw || c.value || 0).toLocaleString()}` } }
-                }
-            }
-        });
-
-        // Legend
-        const el = document.getElementById('catLegend');
-        if (el) {
-            el.innerHTML = labels.map((l,i) => {
-                const pct = total > 0 ? Math.round((values[i]/total)*100) : 0;
-                return `<div class="legend-row">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="legend-dot" style="background:${COLORS[i]};"></span>
-                        <span class="legend-name">${l}</span>
-                    </div>
-                    <div class="legend-right">
-                        <span class="legend-pct">${pct}%</span>
-                        <span class="legend-amt">Rs ${values[i].toLocaleString()}</span>
-                    </div>
-                </div>`;
-            }).join('');
-        }
-    }
 
     // ── 3. CASH FLOW GROUPED BAR ────────────────────────
     const cfCtx = document.getElementById('chartCashFlow');
@@ -1323,38 +1193,7 @@ document.addEventListener("DOMContentLoaded", function () {
     sparkline('spkGross',     '#10b981', [20,35,30,45,42,55,62]);
     sparkline('spkNet',       '#059669', [15,28,24,38,35,48,55]);
 
-    // ── 6. LOW STOCK BAR CHART ─────────────────────────────
-    const lsCtx = document.getElementById('chartLowStock');
-    if (lsCtx) {
-        const lsData = @json($lowStockProducts ?? collect());
-        if (lsData.length > 0) {
-            const lsNames  = lsData.map(p => p.item_name ? p.item_name.substring(0,22) : 'Unknown');
-            const lsStock  = lsData.map(p => parseFloat(p.current_cartons) || 0);
-            const lsAlert  = lsData.map(p => parseFloat(p.alert_carton_quantity) || 0);
-            new Chart(lsCtx.getContext('2d'), {
-                type: 'bar',
-                data: {
-                    labels: lsNames,
-                    datasets: [
-                        { label: 'Alert Level', data: lsAlert, backgroundColor: 'rgba(244,63,94,0.85)', borderRadius: 5, barPercentage: 0.55 },
-                        { label: 'Current Stock', data: lsStock, backgroundColor: 'rgba(99,102,241,0.85)', borderRadius: 5, barPercentage: 0.55 }
-                    ]
-                },
-                options: { ...baseOpts,
-                    plugins: { ...baseOpts.plugins,
-                        legend: { display: true, position: 'top', align: 'end',
-                            labels: { font: { family:'Inter', size:11, weight:'600' }, usePointStyle:true, boxWidth:6 } },
-                        tooltip: { ...baseOpts.plugins.tooltip,
-                            callbacks: { label: c => ` ${c.dataset.label}: ${c.raw} cartons` } }
-                    },
-                    scales: { ...baseOpts.scales,
-                        y: { ...baseOpts.scales.y,
-                            ticks: { ...baseOpts.scales.y.ticks, callback: v => v + ' ctns' } }
-                    }
-                }
-            });
-        }
-    }
+
 
     // ── 7. SYNC BUTTON ─────────────────────────────────────
     const syncBtn = document.getElementById('btnSyncCloud');

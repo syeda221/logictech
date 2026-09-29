@@ -130,12 +130,17 @@
             border: 1.5px solid #dbeafe;
             border-radius: 12px;
             box-shadow: 0 1px 4px rgba(37, 99, 235, 0.04);
-            overflow: hidden;
+            overflow: visible !important;
         }
         .erp-table-responsive {
             border-radius: 8px;
             width: 100%;
             overflow-x: auto;
+            min-height: 380px;
+            padding-bottom: 120px;
+        }
+        .erp-table-responsive .dropdown-menu {
+            z-index: 1060 !important;
         }
         .erp-table {
             width: 100% !important;
@@ -266,7 +271,9 @@
             white-space: nowrap;
             text-decoration: none;
         }
-        .btn-erp-table-action:hover {
+        .btn-erp-table-action:hover,
+        .btn-erp-table-action:focus,
+        .btn-erp-table-action[aria-expanded="true"] {
             background-color: #eff6ff;
             border-color: #3b82f6;
             color: #1e40af;
@@ -643,40 +650,51 @@
                                                 </span>
                                             </td>
 
-                                                     {{-- Actions --}}
-                                                     <td class="text-center">
-                                                         <div class="d-flex align-items-center justify-content-center gap-1">
-                                                             {{-- View Details & Audit --}}
-                                                             <a href="{{ route('repair.show', $repair->id) }}" class="btn-erp-table-action" title="View Job Card & Audit Trail">
-                                                                 <i class="fas fa-eye"></i>
-                                                             </a>
-                                                             {{-- Print A4 Technical Job Sheet --}}
-                                                             <a href="{{ route('repair.print.jobsheet', $repair->id) }}" target="_blank" class="btn-erp-table-action text-info fw-bold bg-light" title="Print A4 Technical Job Sheet">
-                                                                 <i class="fas fa-clipboard-list me-1"></i> Job Sheet
-                                                             </a>
-                                                             {{-- Print A4 Invoice --}}
-                                                             <a href="{{ route('repair.print.a4', $repair->id) }}" target="_blank" class="btn-erp-table-action text-danger fw-bold bg-light" title="Print LOGICTECH Invoice">
-                                                                 <i class="fas fa-file-invoice-dollar me-1"></i> Invoice
-                                                             </a>
-                                                             {{-- Print 80mm Thermal Slip --}}
-                                                             <a href="{{ route('repair.print.thermal', $repair->id) }}" target="_blank" class="btn-erp-table-action text-dark" title="Print 80mm Thermal Slip">
-                                                                 <i class="fas fa-receipt"></i>
-                                                             </a>
-
-                                                             {{-- Status Modal Trigger --}}
-                                                             @if($repair->status !== 'delivered' && $repair->status !== 'cancelled')
-                                                                 <button type="button" class="btn-erp-table-action text-warning border-warning-subtle" 
-                                                                         data-bs-toggle="modal" data-bs-target="#statusModal{{ $repair->id }}"
-                                                                         data-toggle="modal" data-target="#statusModal{{ $repair->id }}" title="Update Status">
-                                                                     <i class="fas fa-tasks"></i> Status
-                                                                 </button>
-
-                                                                 <button type="button" class="btn-erp-table-action text-success border-success-subtle" 
-                                                                         data-bs-toggle="modal" data-bs-target="#deliverModal{{ $repair->id }}"
-                                                                         data-toggle="modal" data-target="#deliverModal{{ $repair->id }}" title="Deliver to Customer & Final Payment">
-                                                                     <i class="fas fa-truck-loading"></i> Deliver
-                                                                 </button>
-                                                             @endif
+                                                     {{-- Action Dropdown --}}
+                                                     <td class="pe-2 text-center text-nowrap">
+                                                         <div class="dropdown d-inline-block">
+                                                             <button class="btn btn-erp-table-action dropdown-toggle shadow-none" type="button" data-toggle="dropdown" data-bs-toggle="dropdown" data-display="static" data-bs-display="static" aria-expanded="false">
+                                                                 <i class="fas fa-ellipsis-v small me-1"></i> Actions
+                                                             </button>
+                                                             <ul class="dropdown-menu dropdown-menu-right dropdown-menu-end border-0 shadow-lg rounded-3 py-2" style="min-width: 175px;">
+                                                                 <li>
+                                                                     <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('repair.show', $repair->id) }}">
+                                                                         <i class="fas fa-eye text-primary fa-fw"></i> View Details
+                                                                     </a>
+                                                                 </li>
+                                                                 <li>
+                                                                     <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('repair.print.jobsheet', $repair->id) }}" target="_blank">
+                                                                         <i class="fas fa-clipboard-list text-info fa-fw"></i> Job Sheet
+                                                                     </a>
+                                                                 </li>
+                                                                 <li>
+                                                                     <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('repair.print.a4', $repair->id) }}" target="_blank">
+                                                                         <i class="fas fa-file-invoice-dollar text-danger fa-fw"></i> Invoice
+                                                                     </a>
+                                                                 </li>
+                                                                 <li>
+                                                                     <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('repair.print.thermal', $repair->id) }}" target="_blank">
+                                                                         <i class="fas fa-receipt text-secondary fa-fw"></i> Thermal Slip
+                                                                     </a>
+                                                                 </li>
+                                                                 @if($repair->status !== 'delivered' && $repair->status !== 'cancelled')
+                                                                     <li><hr class="dropdown-divider my-1"></li>
+                                                                     <li>
+                                                                         <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-warning fw-semibold" href="javascript:void(0);"
+                                                                            data-bs-toggle="modal" data-bs-target="#statusModal{{ $repair->id }}"
+                                                                            data-toggle="modal" data-target="#statusModal{{ $repair->id }}">
+                                                                             <i class="fas fa-tasks text-warning fa-fw"></i> Update Status
+                                                                         </a>
+                                                                     </li>
+                                                                     <li>
+                                                                         <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-success fw-semibold" href="javascript:void(0);"
+                                                                            data-bs-toggle="modal" data-bs-target="#deliverModal{{ $repair->id }}"
+                                                                            data-toggle="modal" data-target="#deliverModal{{ $repair->id }}">
+                                                                             <i class="fas fa-truck-loading text-success fa-fw"></i> Deliver &amp; Payment
+                                                                         </a>
+                                                                     </li>
+                                                                 @endif
+                                                             </ul>
                                                          </div>
                                                      </td>
                                          </tr>
@@ -837,6 +855,20 @@
                                 paginate: {
                                     previous: '<i class="fas fa-chevron-left"></i>',
                                     next: '<i class="fas fa-chevron-right"></i>'
+                                }
+                            }
+                        });
+
+                        // Auto-detect viewport space: open dropdown upward (dropup) if near bottom
+                        $(document).on('show.bs.dropdown', '.dropdown', function () {
+                            let $btn = $(this).find('[data-toggle="dropdown"], [data-bs-toggle="dropdown"]');
+                            if ($btn.length) {
+                                let offset = $btn.offset();
+                                let spaceBelow = $(window).height() - (offset.top - $(window).scrollTop()) - $btn.outerHeight();
+                                if (spaceBelow < 280) {
+                                    $(this).addClass('dropup');
+                                } else {
+                                    $(this).removeClass('dropup');
                                 }
                             }
                         });

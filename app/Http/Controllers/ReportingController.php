@@ -34,16 +34,8 @@ class ReportingController extends Controller
     {
         $user = auth()->user();
         
-        // Fetch only categories that have raw materials
-        $rawCategoryIds = Product::whereIn('item_type', ['raw_material', 'both'])
-            ->pluck('category_id')
-            ->filter()
-            ->unique();
-
-        $categories = Category::whereIn('id', $rawCategoryIds)->orderBy('name')->get();
-        if ($categories->isEmpty()) {
-            $categories = Category::orderBy('name')->get();
-        }
+        // Fetch all categories for stock report
+        $categories = Category::orderBy('name')->get();
 
         $units = Unit::orderBy('name')->get();
 
@@ -219,8 +211,19 @@ class ReportingController extends Controller
             ]);
         }
 
-        $productsQuery = Product::with(['warehouseStocks', 'unit', 'category_relation'])
-            ->whereIn('item_type', ['raw_material', 'both']);
+        $itemType          = $request->item_type; // 'all', 'finish_goods', 'raw_material', 'both'
+
+        $productsQuery = Product::with(['warehouseStocks', 'unit', 'category_relation']);
+
+        if ($itemType && $itemType !== 'all') {
+            if ($itemType === 'finish_goods') {
+                $productsQuery->whereIn('item_type', ['finish_goods', 'both']);
+            } elseif ($itemType === 'raw_material') {
+                $productsQuery->whereIn('item_type', ['raw_material', 'both']);
+            } else {
+                $productsQuery->where('item_type', $itemType);
+            }
+        }
 
         if ($productId && $productId !== 'all') {
             $productsQuery->where('id', $productId);
@@ -513,6 +516,13 @@ class ReportingController extends Controller
                         'item_code'          => $product->item_code,
                         'item_name'          => $vName . ' (' . $vSize . ' | ' . $vColor . ')',
                         'category_name'      => $product->category_relation->name ?? 'Standard',
+                        'item_type'          => $product->item_type ?? 'raw_material',
+                        'item_type_label'    => match($product->item_type ?? 'raw_material') {
+                            'finish_goods' => 'Finished Good',
+                            'raw_material' => 'Raw Material',
+                            'both' => 'Both (FG/RM)',
+                            default => 'Finished Good'
+                        },
                         'unit_name'          => $vUnitName,
                         'size_mode'          => $sizeMode,
                         'initial_stock'      => $initial,
@@ -650,6 +660,13 @@ class ReportingController extends Controller
                     'item_code'          => $product->item_code,
                     'item_name'          => $product->item_name,
                     'category_name'      => $product->category_relation->name ?? 'Standard',
+                    'item_type'          => $product->item_type ?? 'raw_material',
+                    'item_type_label'    => match($product->item_type ?? 'raw_material') {
+                        'finish_goods' => 'Finished Good',
+                        'raw_material' => 'Raw Material',
+                        'both' => 'Both (FG/RM)',
+                        default => 'Finished Good'
+                    },
                     'unit_name'          => $unitName,
                     'size_mode'          => $sizeMode,
                     'initial_stock'      => $initial,
