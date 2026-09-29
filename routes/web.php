@@ -83,6 +83,7 @@ Route::get('/software', function () {
 Route::post('/software', [\App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'store'])->name('software.login');
 
 Route::get('/home', [HomeController::class, 'index'])->middleware('auth')->name('home');
+Route::get('/dashboard/grid-data', [HomeController::class, 'fetchDashboardGrid'])->middleware('auth')->name('dashboard.grid_data');
 Route::post('/admin/sync-to-cloud', [SyncController::class, 'syncToCloud'])->middleware('auth')->name('admin.sync_to_cloud');
 
 // Route::get('/adminpage', [HomeController::class, 'adminpage'])->middleware(['auth','admin'])->name('adminpage');

@@ -558,6 +558,262 @@
     </div>
 
     {{-- =============================================
+         3.5. DASHBOARD ITEMS (6 CARDS WITH FILTERS)
+    ============================================= --}}
+    <div class="db-section-label" style="margin-top: 1rem;"><i class="fas fa-layer-group text-primary"></i> Dashboard Items</div>
+    <div class="grid-3col" style="grid-template-columns: repeat(3, 1fr); gap: 1.25rem; margin-bottom: 2rem;">
+
+        {{-- 1. Pending Sales Orders --}}
+        <div class="panel" style="padding: 1.1rem 1.15rem;">
+            <div class="panel-hd mb-2 pb-2" style="border-bottom: 1px solid #f1f5f9;">
+                <span class="panel-title" style="font-size: 0.88rem; font-weight: 800;">
+                    <i class="fa-solid fa-clock-rotate-left text-primary me-1"></i> Pending Sales Orders
+                </span>
+                <select class="form-select form-select-sm db-grid-filter" data-card="pending_sales" style="font-size:0.72rem; font-weight:700; border-radius:6px; border:1px solid #cbd5e1; width:auto; padding:2px 22px 2px 8px; cursor:pointer;">
+                    <option value="recent">🕒 Recent</option>
+                    <option value="top">💰 Top Amount</option>
+                    <option value="delay">⚠️ Delayed</option>
+                    <option value="nearest">⏳ Nearest</option>
+                </select>
+            </div>
+            <div class="panel-body-flex position-relative">
+                <div class="table-responsive" style="max-height: 230px; overflow-y: auto;">
+                    <table class="table table-sm table-hover align-middle mb-0 db-grid-table" id="tbl-pending_sales" style="font-size: 0.76rem;">
+                        <thead class="bg-light sticky-top" style="font-size: 0.7rem; text-transform: uppercase; color: var(--muted);">
+                            <tr>
+                                <th style="width: 25px;">#</th>
+                                <th>Client Name</th>
+                                <th>Product/Order Details</th>
+                                <th class="text-end">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($pendingSalesData as $row)
+                                <tr>
+                                    <td class="text-muted fw-bold">{{ $row['sr'] }}</td>
+                                    <td class="fw-semibold text-dark">{{ $row['client'] }}</td>
+                                    <td class="text-secondary small">{{ $row['details'] }}</td>
+                                    <td class="text-end">
+                                        <span class="badge {{ $row['badge'] }}" style="font-size:0.65rem;">{{ $row['status'] }}</span>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="4" class="text-center text-muted py-3" style="font-size:0.75rem;">No pending sales orders.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {{-- 2. Pending Repairing Orders --}}
+        <div class="panel" style="padding: 1.1rem 1.15rem;">
+            <div class="panel-hd mb-2 pb-2" style="border-bottom: 1px solid #f1f5f9;">
+                <span class="panel-title" style="font-size: 0.88rem; font-weight: 800;">
+                    <i class="fa-solid fa-wrench text-warning me-1"></i> Pending Repairing Orders
+                </span>
+                <select class="form-select form-select-sm db-grid-filter" data-card="pending_repairs" style="font-size:0.72rem; font-weight:700; border-radius:6px; border:1px solid #cbd5e1; width:auto; padding:2px 22px 2px 8px; cursor:pointer;">
+                    <option value="recent">🕒 Recent</option>
+                    <option value="top">💰 Top Amount</option>
+                    <option value="delay">⚠️ Delayed</option>
+                    <option value="nearest">⏳ Nearest</option>
+                </select>
+            </div>
+            <div class="panel-body-flex position-relative">
+                <div class="table-responsive" style="max-height: 230px; overflow-y: auto;">
+                    <table class="table table-sm table-hover align-middle mb-0 db-grid-table" id="tbl-pending_repairs" style="font-size: 0.76rem;">
+                        <thead class="bg-light sticky-top" style="font-size: 0.7rem; text-transform: uppercase; color: var(--muted);">
+                            <tr>
+                                <th style="width: 25px;">#</th>
+                                <th>Client Name</th>
+                                <th>Product/Order Details</th>
+                                <th class="text-end">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($pendingRepairsData as $row)
+                                <tr>
+                                    <td class="text-muted fw-bold">{{ $row['sr'] }}</td>
+                                    <td class="fw-semibold text-dark">{{ $row['client'] }}</td>
+                                    <td class="text-secondary small">{{ $row['details'] }}</td>
+                                    <td class="text-end">
+                                        <span class="badge {{ $row['badge'] }}" style="font-size:0.65rem;">{{ $row['status'] }}</span>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="4" class="text-center text-muted py-3" style="font-size:0.75rem;">No pending repair orders.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {{-- 3. Raw Material Low Stock Products --}}
+        <div class="panel" style="padding: 1.1rem 1.15rem;">
+            <div class="panel-hd mb-2 pb-2" style="border-bottom: 1px solid #f1f5f9;">
+                <span class="panel-title" style="font-size: 0.88rem; font-weight: 800;">
+                    <i class="fa-solid fa-boxes-packing text-danger me-1"></i> Raw material low stock products
+                </span>
+                <select class="form-select form-select-sm db-grid-filter" data-card="low_stock" style="font-size:0.72rem; font-weight:700; border-radius:6px; border:1px solid #cbd5e1; width:auto; padding:2px 22px 2px 8px; cursor:pointer;">
+                    <option value="critical">🚨 Critical</option>
+                    <option value="low">📉 Low Stock</option>
+                    <option value="out_of_stock">❌ Out of Stock</option>
+                    <option value="all">📦 All Items</option>
+                </select>
+            </div>
+            <div class="panel-body-flex position-relative">
+                <div class="table-responsive" style="max-height: 230px; overflow-y: auto;">
+                    <table class="table table-sm table-hover align-middle mb-0 db-grid-table" id="tbl-low_stock" style="font-size: 0.76rem;">
+                        <thead class="bg-light sticky-top" style="font-size: 0.7rem; text-transform: uppercase; color: var(--muted);">
+                            <tr>
+                                <th style="width: 25px;">#</th>
+                                <th>Product Name</th>
+                                <th class="text-end">Stock Available</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($rawLowStockData as $row)
+                                <tr>
+                                    <td class="text-muted fw-bold">{{ $row['sr'] }}</td>
+                                    <td class="fw-semibold text-dark">{{ $row['product'] }}</td>
+                                    <td class="text-end fw-bold {{ $row['is_low'] ? 'text-danger' : 'text-success' }}">
+                                        {{ $row['stock'] }}
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="3" class="text-center text-muted py-3" style="font-size:0.75rem;">No low stock raw items.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {{-- 4. Receivables --}}
+        <div class="panel" style="padding: 1.1rem 1.15rem;">
+            <div class="panel-hd mb-2 pb-2" style="border-bottom: 1px solid #f1f5f9;">
+                <span class="panel-title" style="font-size: 0.88rem; font-weight: 800;">
+                    <i class="fa-solid fa-hand-holding-dollar text-success me-1"></i> Receivables
+                </span>
+                <select class="form-select form-select-sm db-grid-filter" data-card="receivables" style="font-size:0.72rem; font-weight:700; border-radius:6px; border:1px solid #cbd5e1; width:auto; padding:2px 22px 2px 8px; cursor:pointer;">
+                    <option value="top">💰 Top Balances</option>
+                    <option value="recent">🕒 Recent</option>
+                    <option value="delay">⚠️ Overdue</option>
+                </select>
+            </div>
+            <div class="panel-body-flex position-relative">
+                <div class="table-responsive" style="max-height: 230px; overflow-y: auto;">
+                    <table class="table table-sm table-hover align-middle mb-0 db-grid-table" id="tbl-receivables" style="font-size: 0.76rem;">
+                        <thead class="bg-light sticky-top" style="font-size: 0.7rem; text-transform: uppercase; color: var(--muted);">
+                            <tr>
+                                <th style="width: 25px;">#</th>
+                                <th>Party Name</th>
+                                <th class="text-end">Balance Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($receivablesGridData as $row)
+                                <tr>
+                                    <td class="text-muted fw-bold">{{ $row['sr'] }}</td>
+                                    <td class="fw-semibold text-dark">{{ $row['party'] }} <span class="text-muted small">({{ $row['code'] }})</span></td>
+                                    <td class="text-end fw-bold text-primary">{{ $row['amount'] }}</td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="3" class="text-center text-muted py-3" style="font-size:0.75rem;">No receivable balances.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {{-- 5. Payables --}}
+        <div class="panel" style="padding: 1.1rem 1.15rem;">
+            <div class="panel-hd mb-2 pb-2" style="border-bottom: 1px solid #f1f5f9;">
+                <span class="panel-title" style="font-size: 0.88rem; font-weight: 800;">
+                    <i class="fa-solid fa-file-invoice-dollar text-danger me-1"></i> Payables
+                </span>
+                <select class="form-select form-select-sm db-grid-filter" data-card="payables" style="font-size:0.72rem; font-weight:700; border-radius:6px; border:1px solid #cbd5e1; width:auto; padding:2px 22px 2px 8px; cursor:pointer;">
+                    <option value="top">💰 Top Payables</option>
+                    <option value="recent">🕒 Recent</option>
+                    <option value="delay">⚠️ Overdue</option>
+                </select>
+            </div>
+            <div class="panel-body-flex position-relative">
+                <div class="table-responsive" style="max-height: 230px; overflow-y: auto;">
+                    <table class="table table-sm table-hover align-middle mb-0 db-grid-table" id="tbl-payables" style="font-size: 0.76rem;">
+                        <thead class="bg-light sticky-top" style="font-size: 0.7rem; text-transform: uppercase; color: var(--muted);">
+                            <tr>
+                                <th style="width: 25px;">#</th>
+                                <th>Party Name</th>
+                                <th class="text-end">Balance Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($payablesGridData as $row)
+                                <tr>
+                                    <td class="text-muted fw-bold">{{ $row['sr'] }}</td>
+                                    <td class="fw-semibold text-dark">{{ $row['party'] }} <span class="text-muted small">({{ $row['code'] }})</span></td>
+                                    <td class="text-end fw-bold text-danger">{{ $row['amount'] }}</td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="3" class="text-center text-muted py-3" style="font-size:0.75rem;">No payable balances.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {{-- 6. Recent Activities --}}
+        <div class="panel" style="padding: 1.1rem 1.15rem;">
+            <div class="panel-hd mb-2 pb-2" style="border-bottom: 1px solid #f1f5f9;">
+                <span class="panel-title" style="font-size: 0.88rem; font-weight: 800;">
+                    <i class="fa-solid fa-bolt text-indigo me-1"></i> Recent Activities
+                </span>
+                <select class="form-select form-select-sm db-grid-filter" data-card="activities" style="font-size:0.72rem; font-weight:700; border-radius:6px; border:1px solid #cbd5e1; width:auto; padding:2px 22px 2px 8px; cursor:pointer;">
+                    <option value="recent">⚡ All Activities</option>
+                    <option value="sales">🛒 Sales</option>
+                    <option value="purchases">🛍️ Purchases</option>
+                    <option value="vouchers">📄 Vouchers</option>
+                </select>
+            </div>
+            <div class="panel-body-flex position-relative">
+                <div class="table-responsive" style="max-height: 230px; overflow-y: auto;">
+                    <table class="table table-sm table-hover align-middle mb-0 db-grid-table" id="tbl-activities" style="font-size: 0.76rem;">
+                        <thead class="bg-light sticky-top" style="font-size: 0.7rem; text-transform: uppercase; color: var(--muted);">
+                            <tr>
+                                <th style="width: 25px;">#</th>
+                                <th>Party Name</th>
+                                <th class="text-end">Balance Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($recentActivitiesGridData as $row)
+                                <tr>
+                                    <td class="text-muted fw-bold">{{ $row['sr'] }}</td>
+                                    <td class="fw-semibold text-dark">
+                                        <div class="text-truncate" style="max-width: 140px;">{{ $row['party'] }}</div>
+                                        <div class="text-muted" style="font-size: 0.68rem;">{{ $row['subtitle'] }}</div>
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="fw-bold text-dark">{{ $row['amount'] }}</div>
+                                        <div class="text-muted" style="font-size: 0.65rem;">{{ $row['time'] }}</div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="3" class="text-center text-muted py-3" style="font-size:0.75rem;">No recent activities.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    {{-- =============================================
          4. SALES OVERVIEW + CATEGORY + TOP PRODUCTS
     ============================================= --}}
     <div class="db-section-label"><i class="fas fa-chart-area text-success"></i> Sales Analytics</div>
@@ -1127,6 +1383,80 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         });
     }
+
+    // ── 8. DASHBOARD ITEMS GRID DROPDOWN FILTERS ────────────
+    const gridFilters = document.querySelectorAll('.db-grid-filter');
+    gridFilters.forEach(function(select) {
+        select.addEventListener('change', function() {
+            const card = this.getAttribute('data-card');
+            const filter = this.value;
+            const tableBody = document.querySelector('#tbl-' + card + ' tbody');
+            
+            if (tableBody) {
+                tableBody.style.opacity = '0.4';
+                tableBody.style.transition = 'opacity 0.2s';
+            }
+
+            fetch(`{{ route('dashboard.grid_data') }}?card=${card}&filter=${filter}`)
+                .then(response => response.json())
+                .then(res => {
+                    if (tableBody) tableBody.style.opacity = '1';
+                    if (res.status === 'success' && res.data && tableBody) {
+                        let html = '';
+                        if (res.data.length === 0) {
+                            let cols = (card === 'pending_sales' || card === 'pending_repairs') ? 4 : 3;
+                            html = `<tr><td colspan="${cols}" class="text-center text-muted py-3" style="font-size:0.75rem;">No data matching filter.</td></tr>`;
+                        } else {
+                            res.data.forEach(function(r) {
+                                if (card === 'pending_sales' || card === 'pending_repairs') {
+                                    html += `<tr>
+                                        <td class="text-muted fw-bold">${r.sr}</td>
+                                        <td class="fw-semibold text-dark">${r.client}</td>
+                                        <td class="text-secondary small">${r.details}</td>
+                                        <td class="text-end"><span class="badge ${r.badge}" style="font-size:0.65rem;">${r.status}</span></td>
+                                    </tr>`;
+                                } else if (card === 'low_stock') {
+                                    let stockClass = r.is_low ? 'text-danger' : 'text-success';
+                                    html += `<tr>
+                                        <td class="text-muted fw-bold">${r.sr}</td>
+                                        <td class="fw-semibold text-dark">${r.product}</td>
+                                        <td class="text-end fw-bold ${stockClass}">${r.stock}</td>
+                                    </tr>`;
+                                } else if (card === 'receivables') {
+                                    html += `<tr>
+                                        <td class="text-muted fw-bold">${r.sr}</td>
+                                        <td class="fw-semibold text-dark">${r.party} <span class="text-muted small">(${r.code})</span></td>
+                                        <td class="text-end fw-bold text-primary">${r.amount}</td>
+                                    </tr>`;
+                                } else if (card === 'payables') {
+                                    html += `<tr>
+                                        <td class="text-muted fw-bold">${r.sr}</td>
+                                        <td class="fw-semibold text-dark">${r.party} <span class="text-muted small">(${r.code})</span></td>
+                                        <td class="text-end fw-bold text-danger">${r.amount}</td>
+                                    </tr>`;
+                                } else if (card === 'activities') {
+                                    html += `<tr>
+                                        <td class="text-muted fw-bold">${r.sr}</td>
+                                        <td class="fw-semibold text-dark">
+                                            <div class="text-truncate" style="max-width:140px;">${r.party}</div>
+                                            <div class="text-muted" style="font-size:0.68rem;">${r.subtitle}</div>
+                                        </td>
+                                        <td class="text-end">
+                                            <div class="fw-bold text-dark">${r.amount}</div>
+                                            <div class="text-muted" style="font-size:0.65rem;">${r.time}</div>
+                                        </td>
+                                    </tr>`;
+                                }
+                            });
+                        }
+                        tableBody.innerHTML = html;
+                    }
+                })
+                .catch(() => {
+                    if (tableBody) tableBody.style.opacity = '1';
+                });
+        });
+    });
 
 });
 </script>

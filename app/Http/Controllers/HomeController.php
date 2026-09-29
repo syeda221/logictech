@@ -437,6 +437,14 @@ class HomeController extends Controller
 
             $recentActivities = $recentSales->concat($recentPurchases)->values();
 
+            // ===== 6 DASHBOARD ITEMS GRID INITIAL DATA =====
+            $pendingSalesData = $this->getPendingSalesData('recent');
+            $pendingRepairsData = $this->getPendingRepairsData('recent');
+            $rawLowStockData = $this->getRawLowStockData('critical');
+            $receivablesGridData = $this->getReceivablesGridData('top');
+            $payablesGridData = $this->getPayablesGridData('top');
+            $recentActivitiesGridData = $this->getRecentActivitiesGridData('recent');
+
             return view('admin_panel.dashboard', compact(
                 'categoryCount',
                 'subcategoryCount',
@@ -474,10 +482,350 @@ class HomeController extends Controller
                 'totalStockValue',
                 'salesByCategory',
                 'expenseBreakdown',
-                'recentActivities'
+                'recentActivities',
+                'pendingSalesData',
+                'pendingRepairsData',
+                'rawLowStockData',
+                'receivablesGridData',
+                'payablesGridData',
+                'recentActivitiesGridData'
             ));
         } else {
             return redirect()->back()->with('error', 'Unauthorized access');
         }
+    }
+
+    /**
+     * AJAX endpoint to fetch dashboard grid card data based on selected filter
+     */
+    public function fetchDashboardGrid(Request $request)
+    {
+        $card = $request->card;
+        $filter = $request->filter ?? 'recent';
+
+        $data = match ($card) {
+            'pending_sales' => $this->getPendingSalesData($filter),
+            'pending_repairs' => $this->getPendingRepairsData($filter),
+            'low_stock' => $this->getRawLowStockData($filter),
+            'receivables' => $this->getReceivablesGridData($filter),
+            'payables' => $this->getPayablesGridData($filter),
+            'activities' => $this->getRecentActivitiesGridData($filter),
+            default => collect(),
+        };
+
+        return response()->json([
+            'status' => 'success',
+            'card' => $card,
+            'filter' => $filter,
+            'data' => $data
+        ]);
+    }
+
+    public function getPendingSalesData($filter = 'recent')
+    {
+        $query = DB::table('sales')
+            ->leftJoin('customers', 'customers.id', '=', 'sales.customer_id')
+            ->select(
+                'sales.id',
+                'sales.invoice_no',
+                'sales.reference',
+                'sales.sale_status',
+                'sales.total_net',
+                'sales.created_at',
+                'customers.customer_name'
+            );
+
+        if ($filter == 'top') {
+            $query->orderByDesc('sales.total_net');
+        } elseif ($filter == 'delay') {
+            $query->where('sales.created_at', '<=', Carbon::now()->subDays(3))
+                  ->orderBy('sales.created_at', 'asc');
+        } elseif ($filter == 'nearest') {
+            $query->where('sales.created_at', '>=', Carbon::now()->subDays(7))
+                  ->orderByDesc('sales.created_at');
+        } else {
+            $query->orderByDesc('sales.created_at');
+        }
+
+        $items = $query->limit(6)->get();
+
+        return $items->map(function ($s, $idx) {
+            $statusStr = strtolower($s->sale_status ?? '');
+            $statusLabel = match ($statusStr) {
+                'posted' => 'Posted',
+                'completed' => 'Completed',
+                'booked' => 'Booked',
+                'draft' => 'Draft',
+                'cancelled' => 'Cancelled',
+                default => 'Pending'
+            };
+
+            $badgeClass = match ($statusStr) {
+                'posted', 'completed' => 'bg-success-subtle text-success border border-success-subtle',
+                'booked', 'draft', 'pending' => 'bg-warning-subtle text-warning border border-warning-subtle',
+                'cancelled' => 'bg-danger-subtle text-danger border border-danger-subtle',
+                default => 'bg-primary-subtle text-primary border border-primary-subtle',
+            };
+
+            return [
+                'sr' => $idx + 1,
+                'client' => $s->customer_name ?: 'Walk-in Customer',
+                'details' => 'Invoice #' . ($s->invoice_no ?: $s->id) . ($s->reference ? ' (' . $s->reference . ')' : ''),
+                'status' => $statusLabel,
+                'badge' => $badgeClass,
+                'amount' => 'Rs ' . number_format($s->total_net ?? 0, 0),
+                'date' => Carbon::parse($s->created_at)->diffForHumans()
+            ];
+        });
+    }
+
+    public function getPendingRepairsData($filter = 'recent')
+    {
+        if (!\Illuminate\Support\Facades\Schema::hasTable('repair_orders')) {
+            return collect();
+        }
+
+        $query = DB::table('repair_orders')
+            ->leftJoin('customers', 'customers.id', '=', 'repair_orders.customer_id')
+            ->select(
+                'repair_orders.*',
+                'customers.customer_name as cust_rel_name'
+            )
+            ->whereNotIn('repair_orders.status', ['delivered', 'cancelled']);
+
+        if ($filter == 'top') {
+            $query->orderByDesc('repair_orders.total_charges');
+        } elseif ($filter == 'delay') {
+            $query->orderBy('repair_orders.received_date', 'asc');
+        } elseif ($filter == 'nearest') {
+            $query->whereNotNull('repair_orders.expected_delivery_date')
+                  ->orderBy('repair_orders.expected_delivery_date', 'asc');
+        } else {
+            $query->orderByDesc('repair_orders.created_at');
+        }
+
+        $items = $query->limit(6)->get();
+
+        return $items->map(function ($r, $idx) {
+            $statusLabel = match($r->status ?? '') {
+                'received' => 'Received',
+                'diagnosing' => 'Diagnosing',
+                'in_progress' => 'In Progress',
+                'waiting_parts' => 'Waiting Parts',
+                'completed' => 'Ready',
+                default => ucfirst(str_replace('_', ' ', $r->status ?? 'pending')),
+            };
+
+            $badgeClass = match($r->status ?? '') {
+                'completed' => 'bg-success-subtle text-success border border-success-subtle',
+                'in_progress', 'diagnosing' => 'bg-info-subtle text-info border border-info-subtle',
+                'waiting_parts' => 'bg-warning-subtle text-warning border border-warning-subtle',
+                default => 'bg-secondary-subtle text-secondary border border-secondary-subtle',
+            };
+
+            return [
+                'sr' => $idx + 1,
+                'client' => $r->customer_name ?: ($r->cust_rel_name ?: 'Walk-in Client'),
+                'details' => ($r->repair_no ?: ('#' . $r->id)) . ' - ' . ($r->item_name ?: 'Repair Item'),
+                'status' => $statusLabel,
+                'badge' => $badgeClass,
+                'amount' => 'Rs ' . number_format($r->total_charges ?: $r->estimated_cost ?: 0, 0),
+                'date' => $r->expected_delivery_date ? Carbon::parse($r->expected_delivery_date)->format('d M Y') : 'Pending'
+            ];
+        });
+    }
+
+    public function getRawLowStockData($filter = 'critical')
+    {
+        $products = \App\Models\Product::withSum('warehouseStocks', 'total_pieces')
+            ->where('is_active', 1)
+            ->get();
+
+        $mapped = $products->map(function ($p) {
+            $stock = (float) ($p->warehouse_stocks_sum_total_pieces ?? 0);
+            $ppb = $p->pieces_per_box > 0 ? $p->pieces_per_box : 1;
+            $cartons = floor($stock / $ppb);
+            $p->current_cartons = $cartons;
+            $p->alert_qty = (float) ($p->alert_carton_quantity ?? 0);
+            $p->deficit = $cartons - $p->alert_qty;
+            return $p;
+        });
+
+        if ($filter == 'critical') {
+            $filtered = $mapped->filter(fn($p) => $p->alert_qty > 0 && $p->current_cartons < $p->alert_qty)
+                               ->sortBy('deficit');
+        } elseif ($filter == 'low') {
+            $filtered = $mapped->filter(fn($p) => $p->alert_qty > 0 && $p->current_cartons < $p->alert_qty)
+                               ->sortBy('current_cartons');
+        } elseif ($filter == 'out_of_stock') {
+            $filtered = $mapped->filter(fn($p) => $p->current_cartons <= 0)
+                               ->sortBy('current_cartons');
+        } else {
+            $filtered = $mapped->sortBy('current_cartons');
+        }
+
+        return $filtered->take(6)->values()->map(function ($p, $idx) {
+            return [
+                'sr' => $idx + 1,
+                'product' => $p->item_name ?: ($p->product_name ?: 'Product Item'),
+                'stock' => $p->current_cartons . ' ctns',
+                'alert' => $p->alert_qty . ' ctns',
+                'pieces' => number_format($p->warehouse_stocks_sum_total_pieces ?? 0) . ' pcs',
+                'is_low' => $p->current_cartons < $p->alert_qty
+            ];
+        });
+    }
+
+    public function getReceivablesGridData($filter = 'top')
+    {
+        $custBalances = DB::table('journal_entries')
+            ->where('party_type', \App\Models\Customer::class)
+            ->selectRaw('party_id, COALESCE(SUM(debit) - SUM(credit), 0) as balance')
+            ->groupBy('party_id')
+            ->pluck('balance', 'party_id');
+
+        $customers = DB::table('customers')->get();
+        $parties = [];
+
+        foreach ($customers as $c) {
+            $balance = (float) ($custBalances[$c->id] ?? 0);
+            if ($balance > 0) {
+                $parties[] = [
+                    'id' => $c->id,
+                    'code' => sprintf("C%04d", $c->id),
+                    'party' => $c->customer_name,
+                    'balance' => $balance,
+                    'mobile' => $c->mobile ?? '-'
+                ];
+            }
+        }
+
+        $collection = collect($parties);
+
+        if ($filter == 'top') {
+            $collection = $collection->sortByDesc('balance');
+        } elseif ($filter == 'recent') {
+            $collection = $collection->sortByDesc('id');
+        } elseif ($filter == 'delay') {
+            $collection = $collection->sortByDesc('balance');
+        }
+
+        return $collection->take(6)->values()->map(function ($p, $idx) {
+            return [
+                'sr' => $idx + 1,
+                'code' => $p['code'],
+                'party' => $p['party'],
+                'amount' => 'Rs ' . number_format($p['balance'], 2)
+            ];
+        });
+    }
+
+    public function getPayablesGridData($filter = 'top')
+    {
+        $apId = app(\App\Services\BalanceService::class)->getAccountsPayableId();
+        $vendorBalances = DB::table('journal_entries')
+            ->where('party_type', \App\Models\Vendor::class)
+            ->where('account_id', $apId)
+            ->selectRaw('party_id, COALESCE(SUM(credit) - SUM(debit), 0) as balance')
+            ->groupBy('party_id')
+            ->pluck('balance', 'party_id');
+
+        $vendors = DB::table('vendors')->get();
+        $parties = [];
+
+        foreach ($vendors as $v) {
+            $balance = (float) ($vendorBalances[$v->id] ?? 0);
+            if ($balance > 0) {
+                $parties[] = [
+                    'id' => $v->id,
+                    'code' => sprintf("V%04d", $v->id),
+                    'party' => $v->name,
+                    'balance' => $balance,
+                    'mobile' => $v->phone ?? '-'
+                ];
+            }
+        }
+
+        $collection = collect($parties);
+
+        if ($filter == 'top') {
+            $collection = $collection->sortByDesc('balance');
+        } elseif ($filter == 'recent') {
+            $collection = $collection->sortByDesc('id');
+        } elseif ($filter == 'delay') {
+            $collection = $collection->sortByDesc('balance');
+        }
+
+        return $collection->take(6)->values()->map(function ($p, $idx) {
+            return [
+                'sr' => $idx + 1,
+                'code' => $p['code'],
+                'party' => $p['party'],
+                'amount' => 'Rs ' . number_format($p['balance'], 2)
+            ];
+        });
+    }
+
+    public function getRecentActivitiesGridData($filter = 'recent')
+    {
+        $sales = collect();
+        $purchases = collect();
+        $vouchers = collect();
+
+        if ($filter == 'recent' || $filter == 'sales') {
+            $sales = DB::table('sales')->latest()->limit(5)->get()->map(function($s) {
+                return [
+                    'icon' => 'fa-receipt text-success',
+                    'bg' => '#ecfdf5',
+                    'title' => 'Sale #' . ($s->invoice_no ?: $s->id),
+                    'subtitle' => 'Sale Transaction',
+                    'amount' => 'Rs ' . number_format($s->total_net ?? 0, 0),
+                    'time' => Carbon::parse($s->created_at)->diffForHumans(),
+                    'created_at' => $s->created_at
+                ];
+            });
+        }
+
+        if ($filter == 'recent' || $filter == 'purchases') {
+            $purchases = DB::table('purchases')->latest()->limit(5)->get()->map(function($p) {
+                return [
+                    'icon' => 'fa-cart-shopping text-primary',
+                    'bg' => '#eef2ff',
+                    'title' => 'Purchase #' . ($p->invoice_no ?: $p->id),
+                    'subtitle' => 'Procurement',
+                    'amount' => 'Rs ' . number_format($p->net_amount ?? 0, 0),
+                    'time' => Carbon::parse($p->created_at)->diffForHumans(),
+                    'created_at' => $p->created_at
+                ];
+            });
+        }
+
+        if ($filter == 'recent' || $filter == 'vouchers') {
+            $vouchers = DB::table('voucher_masters')->latest()->limit(5)->get()->map(function($v) {
+                return [
+                    'icon' => 'fa-file-invoice-dollar text-warning',
+                    'bg' => '#fffbeb',
+                    'title' => 'Voucher #' . ($v->voucher_no ?: $v->id),
+                    'subtitle' => ucfirst($v->voucher_type ?? 'Voucher'),
+                    'amount' => 'Rs ' . number_format($v->total_amount ?? 0, 0),
+                    'time' => Carbon::parse($v->created_at ?? $v->date)->diffForHumans(),
+                    'created_at' => $v->created_at ?? $v->date
+                ];
+            });
+        }
+
+        $all = $sales->concat($purchases)->concat($vouchers)->sortByDesc('created_at')->take(6)->values();
+
+        return $all->map(function ($act, $idx) {
+            return [
+                'sr' => $idx + 1,
+                'party' => $act['title'],
+                'subtitle' => $act['subtitle'],
+                'amount' => $act['amount'],
+                'time' => $act['time'],
+                'icon' => $act['icon'],
+                'bg' => $act['bg']
+            ];
+        });
     }
 }
