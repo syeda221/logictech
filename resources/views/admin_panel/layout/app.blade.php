@@ -271,9 +271,9 @@
             content: none !important;
         }
         .rt_nav_header.horizontal-layout .top_nav {
-            background: #090d16 !important;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4) !important;
+            background: #ffffff !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04) !important;
             height: 68px;
             padding: 0 16px;
             position: relative;
@@ -283,8 +283,8 @@
             width: 38px;
             height: 38px;
             border-radius: 9px;
-            background: rgba(255, 255, 255, 0.06);
-            border: 1.5px solid rgba(255, 255, 255, 0.2);
+            background: #f1f5f9;
+            border: 1.5px solid #cbd5e1;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -296,11 +296,11 @@
             margin-right: 12px;
         }
         .header-company-pill {
-            background: rgba(30, 58, 138, 0.25);
-            border: 1px solid #1d4ed8;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
             border-radius: 10px;
             padding: 6px 14px;
-            color: #ffffff;
+            color: #1e40af;
             font-size: 13px;
             font-weight: 600;
             display: inline-flex;
@@ -309,11 +309,11 @@
             margin-left: 20px;
         }
         .header-support-btn {
-            background: rgba(15, 23, 42, 0.7);
-            border: 1px solid rgba(59, 130, 246, 0.45);
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
             border-radius: 10px;
             padding: 6px 14px;
-            color: #ffffff !important;
+            color: #0f172a !important;
             font-size: 13px;
             font-weight: 600;
             text-decoration: none !important;
@@ -323,16 +323,16 @@
             transition: all 0.2s;
         }
         .header-support-btn:hover {
-            background: rgba(37, 99, 235, 0.25);
-            border-color: rgba(96, 165, 250, 0.6);
+            background: #eff6ff;
+            border-color: #3b82f6;
             transform: translateY(-1px);
         }
         .header-online-pill {
-            background: rgba(6, 78, 59, 0.6);
-            border: 1px solid rgba(16, 185, 129, 0.4);
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
             border-radius: 10px;
             padding: 6px 14px;
-            color: #34d399;
+            color: #047857;
             font-size: 12.5px;
             font-weight: 700;
             display: inline-flex;
@@ -535,7 +535,7 @@
               Navigation
     *===========================-->
         <nav class="rt_nav_header horizontal-layout col-lg-12 col-12 p-0">
-            <div class="top_nav flex-grow-1" style="background: #090d16 !important; border-bottom: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4); position: relative; z-index: 1035;">
+            <div class="top_nav flex-grow-1" style="background: #ffffff !important; border-bottom: 1px solid #e2e8f0; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04); position: relative; z-index: 1035;">
                 <div class="container-fluid px-3 px-md-4 d-flex flex-row h-100 align-items-center justify-content-between">
                     
                     <!-- Left: Dynamic Brand Logo + Company Name Pill -->
@@ -553,10 +553,10 @@
                             @else
                                 {{-- Koi logo nahi — initials badge + company name --}}
                                 <div class="header-pw-badge">
-                                    <span style="color: #ffffff;">{{ $init1 }}</span><span style="color: #ffffff;">{{ $init2 }}</span>
+                                    <span style="color: #2563eb;">{{ $init1 }}</span><span style="color: #1d4ed8;">{{ $init2 }}</span>
                                 </div>
                                 <div class="d-flex flex-column text-start justify-content-center">
-                                    <span style="font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 800; color: #ffffff; line-height: 1.15; letter-spacing: -0.2px;">{{ $dynCompName }}</span>
+                                    <span style="font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 800; color: #0f172a; line-height: 1.15; letter-spacing: -0.2px;">{{ $dynCompName }}</span>
                                     <span style="font-size: 11px; font-weight: 600; color: #94a3b8; letter-spacing: 0.3px; line-height: 1;">Management</span>
                                 </div>
                             @endif
@@ -577,16 +577,16 @@
                             <div style="width: 26px; height: 26px; border-radius: 50%; background: #2563eb; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; flex-shrink: 0;">
                                 <i class="fas fa-phone-alt"></i>
                             </div>
-                            <span style="color: #ffffff;">+92 317 3836223</span>
+                            <span style="color: #0f172a; font-weight: 700;">+92 317 3836223</span>
                         </a>
 
                         <!-- Vertical Divider -->
-                        <div class="d-none d-md-block" style="height: 20px; width: 1px; background: rgba(255, 255, 255, 0.2);"></div>
+                        <div class="d-none d-md-block" style="height: 20px; width: 1px; background: #cbd5e1;"></div>
 
                         <!-- Support Button -->
                         <a href="https://wa.me/923173836223" target="_blank" class="header-support-btn d-none d-md-flex" title="Contact ProWave Support">
-                            <i class="fas fa-headset" style="color: #60a5fa; font-size: 13.5px;"></i>
-                            <span style="color: #ffffff;">Support</span>
+                            <i class="fas fa-headset" style="color: #2563eb; font-size: 13.5px;"></i>
+                            <span style="color: #0f172a;">Support</span>
                         </a>
 
                         <!-- Online Status Pill -->
@@ -603,7 +603,7 @@
                         <!-- Settings Link -->
                         @canany(['settings.view', 'settings.read'])
                             <a href="{{ route('settings.index') }}" class="d-none d-sm-flex align-items-center justify-content-center text-decoration-none" style="width: 28px; height: 28px; font-size: 15px;" title="Settings">
-                                <i class="fas fa-cog" style="color: #94a3b8;"></i>
+                                <i class="fas fa-cog" style="color: #475569;"></i>
                             </a>
                         @endcanany
 
@@ -612,7 +612,7 @@
                             <a class="d-flex align-items-center justify-content-center p-0 text-decoration-none"
                                 id="notificationDropdown" href="#" data-toggle="dropdown" data-display="static"
                                 aria-expanded="false" style="width: 32px; height: 32px; border-radius: 8px; cursor: pointer;">
-                                <i class="fas fa-bell" style="font-size: 16px; color: #94a3b8;"></i>
+                                <i class="fas fa-bell" style="font-size: 16px; color: #475569;"></i>
                                 <span class="badge badge-danger notification-badge"
                                     style="display: none; position: absolute; top: -2px; right: -2px; font-size: 9px; padding: 2px 4px; border-radius: 50%;">0</span>
                             </a>
@@ -642,8 +642,8 @@
                             <a class="d-flex align-items-center justify-content-center p-0 text-decoration-none" 
                                href="#" data-toggle="dropdown" data-display="static" id="profileDropdown" style="cursor: pointer;">
                                 <div class="rounded-circle d-flex align-items-center justify-content-center" 
-                                     style="width: 32px; height: 32px; border: 1.5px solid rgba(255, 255, 255, 0.3); color: #ffffff; font-size: 14px; transition: all 0.2s;">
-                                    <i class="far fa-user" style="color: #ffffff;"></i>
+                                     style="width: 32px; height: 32px; background: #eff6ff; border: 1.5px solid #bfdbfe; color: #2563eb; font-size: 14px; transition: all 0.2s;">
+                                    <i class="far fa-user" style="color: #2563eb;"></i>
                                 </div>
                             </a>
                             <div class="dropdown-menu dropdown-menu-right border-0 shadow-lg p-2"
