@@ -71,6 +71,12 @@
             color: #000000 !important;
         }
 
+        .td-closing-balance, .col-closing-balance {
+            font-size: 1.05rem !important;
+            font-weight: 800 !important;
+            letter-spacing: -0.2px;
+        }
+
         .table-payroll-excel input.form-control-sheet {
             width: 100%;
             border: 1px solid transparent;
@@ -202,7 +208,7 @@
                                     <th style="min-width: 110px;">Other Allowance /Eidi</th>
                                     <th style="min-width: 120px;" class="col-net-payable">Net Payable this month</th>
                                     <th style="min-width: 110px;">Payment this month</th>
-                                    <th style="min-width: 120px;">Closing Balance</th>
+                                    <th style="min-width: 120px;" class="col-closing-balance">Closing Balance</th>
                                     <th style="min-width: 110px;">Payment Date</th>
                                 </tr>
                             </thead>
@@ -285,7 +291,7 @@
                                     <td id="totOtherAllowance" class="text-end pe-2">{{ number_format($totals['other_allowance'], 0) }}</td>
                                     <td id="totNetPayable" class="col-net-payable text-end pe-2 fw-bold">{{ number_format($totals['net_payable'], 0) }}</td>
                                     <td id="totPaymentMonth" class="text-end pe-2 fw-bold">{{ number_format($totals['payment_this_month'], 0) }}</td>
-                                    <td id="totClosingBalance" class="text-end pe-2 fw-bold">{{ number_format($totals['closing_balance'], 0) }}</td>
+                                    <td id="totClosingBalance" class="td-closing-balance text-end pe-2 fw-bold">@if($totals['closing_balance'] > 0)<span class="text-success">+{{ number_format($totals['closing_balance'], 0) }}</span>@elseif($totals['closing_balance'] < 0)<span class="text-danger">-{{ number_format(abs($totals['closing_balance']), 0) }}</span>@else-@endif</td>
                                     <td></td>
                                 </tr>
                             </tbody>
