@@ -234,10 +234,10 @@
                                             <input type="number" step="0.01" class="form-control-sheet inp-ot-days"
                                                 value="{{ $item['overtime_days'] > 0 ? $item['overtime_days'] : '' }}" placeholder="-">
                                         </td>
-                                        <td>
-                                            <input type="number" step="1" class="form-control-sheet inp-ot-pay"
-                                                value="{{ $item['overtime_pay'] > 0 ? $item['overtime_pay'] : '' }}" placeholder="-">
+                                        <td class="td-ot-pay fw-bold text-center">
+                                            {{ $item['overtime_pay'] > 0 ? number_format($item['overtime_pay'], 0) : '-' }}
                                         </td>
+                                        <input type="hidden" class="inp-ot-pay" value="{{ $item['overtime_pay'] }}">
                                         <td class="col-total-pay td-total-pay">
                                             {{ number_format($item['total_pay'], 0) }}
                                         </td>
@@ -255,13 +255,12 @@
                                         <td>
                                             <input type="number" step="1" class="form-control-sheet inp-payment-month fw-bold"
                                                 value="{{ $item['payment_this_month'] }}"
-                                                @if(!empty($item['payroll_id']) || (isset($item['payment_this_month']) && $item['payment_this_month'] != $item['net_payable']))) data-user-edited="true" @endif>
+                                                @if(!empty($item['payroll_id']) && isset($item['payment_this_month']) && $item['payment_this_month'] != $item['net_payable']) data-user-edited="true" @endif>
                                         </td>
-                                        <td>
-                                            <input type="number" step="1" class="form-control-sheet inp-closing-balance fw-bold"
-                                                value="{{ $item['closing_balance'] != 0 ? $item['closing_balance'] : '' }}" placeholder="-"
-                                                @if(!empty($item['payroll_id']) || (isset($item['closing_balance']) && $item['closing_balance'] != 0)) data-user-edited="true" @endif>
+                                        <td class="td-closing-balance fw-bold text-center @if($item['closing_balance'] < 0) text-danger @elseif($item['closing_balance'] > 0) text-success @else text-muted @endif">
+                                            @if($item['closing_balance'] > 0)+{{ number_format($item['closing_balance'], 0) }}@elseif($item['closing_balance'] < 0)-{{ number_format(abs($item['closing_balance']), 0) }}@else-@endif
                                         </td>
+                                        <input type="hidden" class="inp-closing-balance" value="{{ $item['closing_balance'] }}">
                                         <td>
                                             <input type="date" class="form-control-sheet inp-payment-date"
                                                 value="{{ $item['payment_date'] }}">
@@ -393,55 +392,61 @@
                 var basicSalary = parseFloat(tr.querySelector('.inp-basic-salary').value) || 0;
                 var pDays = parseFloat(tr.querySelector('.inp-p-days').value) || 0;
                 
-                // Salary Count = (Basic Salary / 30) * P-Days
+                // 1. Salary Count = (Basic Salary / 30) * P-Days
                 var salaryCount = Math.round((basicSalary / 30) * pDays);
-                tr.querySelector('.td-salary-count').textContent = salaryCount.toLocaleString('en-US');
+                var elSalaryCount = tr.querySelector('.td-salary-count');
+                if (elSalaryCount) elSalaryCount.textContent = salaryCount.toLocaleString('en-US');
 
-                // Overtime Days & Pay (1.5x Multiplier)
+                // 2. Overtime Pay (Locked Formula = round((Basic Salary / 30) * 1.5 * Overtime Days))
                 var otDays = parseFloat(tr.querySelector('.inp-ot-days').value) || 0;
-                var otPayInput = tr.querySelector('.inp-ot-pay');
+                var otPay = Math.round((basicSalary / 30) * 1.5 * otDays);
 
-                if (otDays > 0) {
-                    if (!otPayInput.dataset.userEdited) {
-                        var calculatedOtPay = Math.round((basicSalary / 30) * 1.5 * otDays);
-                        otPayInput.value = calculatedOtPay > 0 ? calculatedOtPay : '';
-                    }
-                } else {
-                    if (!otPayInput.dataset.userEdited) {
-                        otPayInput.value = '';
-                    }
-                }
-                var otPay = parseFloat(otPayInput.value) || 0;
+                var elOtPay = tr.querySelector('.td-ot-pay');
+                if (elOtPay) elOtPay.textContent = otPay > 0 ? otPay.toLocaleString('en-US') : '-';
+                var inpOtPay = tr.querySelector('.inp-ot-pay');
+                if (inpOtPay) inpOtPay.value = otPay;
 
-                // Total Pay = Salary Count + Overtime Pay
+                // 3. Total Pay = Salary Count + Overtime Pay
                 var totalPay = salaryCount + otPay;
-                tr.querySelector('.td-total-pay').textContent = totalPay.toLocaleString('en-US');
+                var elTotalPay = tr.querySelector('.td-total-pay');
+                if (elTotalPay) elTotalPay.textContent = totalPay.toLocaleString('en-US');
 
-                // Previous Balance (from data-prev-balance)
+                // 4. Previous Balance (from data-prev-balance)
                 var prevBal = parseFloat(tr.dataset.prevBalance) || 0;
 
-                // Advances & Other Allowances
+                // 5. Advances & Other Allowances
                 var advances = Math.abs(parseFloat(tr.querySelector('.inp-advances').value) || 0);
                 var otherAllowance = parseFloat(tr.querySelector('.inp-other-allowance').value) || 0;
 
-                // Net Payable = Total Pay + Previous Balance - Advances + Other Allowance
+                // 6. Net Payable = Total Pay + Previous Balance - Advances + Other Allowance
                 var netPayable = totalPay + prevBal - advances + otherAllowance;
-                tr.querySelector('.td-net-payable').textContent = netPayable.toLocaleString('en-US');
+                var elNetPayable = tr.querySelector('.td-net-payable');
+                if (elNetPayable) elNetPayable.textContent = netPayable.toLocaleString('en-US');
 
-                // Sync payment this month default if unmodified
+                // 7. Payment this month input
                 var paymentInput = tr.querySelector('.inp-payment-month');
                 if (!paymentInput.dataset.userEdited) {
                     paymentInput.value = netPayable;
                 }
                 var paymentThisMonth = parseFloat(paymentInput.value) || 0;
 
-                // Auto-calculate Closing Balance = Net Payable - Payment This Month
+                // 8. Closing Balance = Net Payable - Payment This Month (LOCKED & AUTO-CALCULATED)
                 var computedClosing = netPayable - paymentThisMonth;
-
-                var closingInput = tr.querySelector('.inp-closing-balance');
-                if (!closingInput.dataset.userEdited) {
-                    closingInput.value = computedClosing !== 0 ? computedClosing : '';
+                var elClosing = tr.querySelector('.td-closing-balance');
+                if (elClosing) {
+                    if (computedClosing > 0) {
+                        elClosing.className = 'td-closing-balance fw-bold text-center text-success';
+                        elClosing.textContent = '+' + computedClosing.toLocaleString('en-US');
+                    } else if (computedClosing < 0) {
+                        elClosing.className = 'td-closing-balance fw-bold text-center text-danger';
+                        elClosing.textContent = '-' + Math.abs(computedClosing).toLocaleString('en-US');
+                    } else {
+                        elClosing.className = 'td-closing-balance fw-bold text-center text-muted';
+                        elClosing.textContent = '-';
+                    }
                 }
+                var inpClosing = tr.querySelector('.inp-closing-balance');
+                if (inpClosing) inpClosing.value = computedClosing;
 
                 calculateTotals();
             }
@@ -457,7 +462,7 @@
                     var pDays = parseFloat(tr.querySelector('.inp-p-days').value) || 0;
                     var salCount = Math.round((basic / 30) * pDays);
                     var otDays = parseFloat(tr.querySelector('.inp-ot-days').value) || 0;
-                    var otPay = parseFloat(tr.querySelector('.inp-ot-pay').value) || 0;
+                    var otPay = Math.round((basic / 30) * 1.5 * otDays);
                     var totPay = salCount + otPay;
 
                     var prevBal = parseFloat(tr.dataset.prevBalance) || 0;
@@ -503,7 +508,17 @@
                 document.getElementById('totOtherAllowance').textContent = totOtherAllowance.toLocaleString('en-US');
                 document.getElementById('totNetPayable').textContent = totNetPayable.toLocaleString('en-US');
                 document.getElementById('totPaymentMonth').textContent = totPaymentMonth.toLocaleString('en-US');
-                document.getElementById('totClosingBalance').textContent = totClosingBalance.toLocaleString('en-US');
+
+                var elTotClosing = document.getElementById('totClosingBalance');
+                if (elTotClosing) {
+                    if (totClosingBalance > 0) {
+                        elTotClosing.innerHTML = '<span class="text-success">+' + totClosingBalance.toLocaleString('en-US') + '</span>';
+                    } else if (totClosingBalance < 0) {
+                        elTotClosing.innerHTML = '<span class="text-danger">-' + Math.abs(totClosingBalance).toLocaleString('en-US') + '</span>';
+                    } else {
+                        elTotClosing.textContent = '-';
+                    }
+                }
             }
 
             // Run initial calculation for all rows on page load
@@ -514,15 +529,8 @@
             // Event Listeners on inputs
             document.querySelectorAll('#payrollTable input').forEach(function(input) {
                 input.addEventListener('input', function() {
-                    if (this.classList.contains('inp-payment-month') || this.classList.contains('inp-closing-balance') || this.classList.contains('inp-ot-pay')) {
+                    if (this.classList.contains('inp-payment-month')) {
                         this.dataset.userEdited = "true";
-                    }
-                    if (this.classList.contains('inp-ot-days') || this.classList.contains('inp-basic-salary')) {
-                        var tr = this.closest('tr');
-                        if (tr) {
-                            var otPayInput = tr.querySelector('.inp-ot-pay');
-                            if (otPayInput) delete otPayInput.dataset.userEdited;
-                        }
                     }
                     var tr = this.closest('tr');
                     if (tr && tr.dataset.empId) {

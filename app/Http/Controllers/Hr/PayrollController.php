@@ -31,8 +31,8 @@ class PayrollController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        // Get selected month (default to current Y-m, e.g., '2026-08')
-        $month = $request->get('month', date('Y-m'));
+        // Get selected month (default to previous month, e.g., '2026-09')
+        $month = $request->get('month', Carbon::now()->subMonth()->format('Y-m'));
         $prevMonth = Carbon::parse($month.'-01')->subMonth()->format('Y-m');
 
         // Fetch Active Financial Accounts for Payment Account Dropdown
@@ -543,7 +543,7 @@ class PayrollController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        $month = $request->get('month', date('Y-m'));
+        $month = $request->get('month', Carbon::now()->subMonth()->format('Y-m'));
 
         $employees = Employee::with(['designation', 'department', 'salaryStructure'])
             ->where('status', 'active')
