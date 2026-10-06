@@ -111,10 +111,10 @@ class PayrollController extends Controller
                 
                 // Net Payable = Total Pay + Previous Balance - Advances + Other Allowance
                 $netPayable = floatval($p->net_salary ?? ($totalPay + $prevBalance - $advances + $otherAllowance));
-                $paymentThisMonth = floatval($p->payment_this_month ?? $netPayable);
+                $paymentThisMonth = floatval($p->payment_this_month !== null ? $p->payment_this_month : $netPayable);
                 
                 // Closing Balance = Net Payable - Payment This Month
-                $closingBalance = floatval($p->closing_balance ?? ($netPayable - $paymentThisMonth));
+                $closingBalance = floatval($p->closing_balance !== null ? $p->closing_balance : ($netPayable - $paymentThisMonth));
 
                 $paymentDate = $p->payment_date ? $p->payment_date->format('Y-m-d') : date('Y-m-04');
                 $accountId = $p->account_id;
@@ -236,7 +236,7 @@ class PayrollController extends Controller
                 $advances = floatval($row['advances'] ?? 0);
                 $otherAllowance = floatval($row['other_allowance'] ?? 0);
                 $netPayable = floatval($row['net_payable'] ?? ($totalPay + $prevBalance - $advances + $otherAllowance));
-                $paymentThisMonth = floatval($row['payment_this_month'] ?? $netPayable);
+                $paymentThisMonth = (isset($row['payment_this_month']) && $row['payment_this_month'] !== '' && $row['payment_this_month'] !== null) ? floatval($row['payment_this_month']) : $netPayable;
                 $closingBalance = floatval($row['closing_balance'] ?? ($netPayable - $paymentThisMonth));
                 $paymentDate = !empty($row['payment_date']) ? $row['payment_date'] : date('Y-m-d');
                 $accountId = !empty($row['account_id']) ? $row['account_id'] : ($request->account_id ?? null);
@@ -666,6 +666,119 @@ class PayrollController extends Controller
     /**
      * Display Employee Ledger Statement & Transaction Report
      */
+    /**
+     * Helper method to build accurate Employee Ledger Statement Data
+     */
+    protected function getEmployeeLedgerData($selectedEmployee, $startDate, $endDate)
+    {
+        $ledgerEntries = collect([]);
+        $summary = [
+            'opening_balance' => 0,
+            'total_advances_deducted' => 0,
+            'total_salary_earned' => 0,
+            'total_other_allowances' => 0,
+            'total_net_payable' => 0,
+            'total_net_paid' => 0,
+            'closing_balance' => 0,
+        ];
+
+        if (! $selectedEmployee) {
+            return ['ledgerEntries' => $ledgerEntries, 'summary' => $summary];
+        }
+
+        // 1. Fetch Advances / Loans Given to Employee
+        $loans = \App\Models\Hr\Loan::where('employee_id', $selectedEmployee->id)
+            ->whereIn('status', ['approved', 'paid'])
+            ->get();
+
+        foreach ($loans as $loan) {
+            $dateStr = $loan->created_at ? $loan->created_at->format('Y-m-d') : date('Y-m-d');
+            $rawDate = $loan->created_at ? $loan->created_at->format('Y-m-d H:i:s') : '0000-00-00 00:00:00';
+
+            $ledgerEntries->push([
+                'date' => $dateStr,
+                'raw_date' => $rawDate,
+                'type' => 'Advance Given',
+                'description' => 'Advance Salary / Loan Given' . ($loan->reason ? " ({$loan->reason})" : ''),
+                'advance_given' => floatval($loan->amount),
+                'advance_deducted' => 0,
+                'other_allowance' => 0,
+                'salary_earned' => 0,
+                'net_payable' => 0,
+                'net_paid' => 0,
+                'ref' => "ADV-#{$loan->id}",
+                'balance_change' => -floatval($loan->amount), // Employee received cash advance, so owes company (-)
+            ]);
+        }
+
+        // 2. Fetch Monthly Payrolls
+        $payrolls = Payroll::where('employee_id', $selectedEmployee->id)
+            ->where('status', 'paid')
+            ->get();
+
+        foreach ($payrolls as $p) {
+            $dateStr = $p->payment_date ? $p->payment_date->format('Y-m-d') : ($p->month . '-04');
+            $rawDate = $p->month . '-01'; // Sort chronologically by payroll month (e.g. 2026-08-01)
+
+            $monthName = \Carbon\Carbon::parse($p->month.'-01')->format('M Y');
+            $advDeducted = floatval($p->advances ?: $p->deductions ?: 0);
+            $otherAllowance = floatval($p->other_allowance ?: $p->manual_allowances ?: 0);
+            $salaryEarned = floatval($p->total_pay ?: $p->gross_salary ?: $p->basic_salary);
+            $netPayable = floatval($p->net_salary ?: (($salaryEarned + $otherAllowance) - $advDeducted));
+            $netPaid = floatval($p->payment_this_month !== null ? $p->payment_this_month : $p->net_salary);
+
+            // Balance change = +(Salary Earned + Allowances) - Cash Paid
+            $balanceChange = ($salaryEarned + $otherAllowance) - $netPaid;
+
+            $ledgerEntries->push([
+                'date' => $dateStr,
+                'raw_date' => $rawDate,
+                'type' => "Salary Paid ({$monthName})",
+                'description' => "Monthly Salary for {$monthName}",
+                'advance_given' => 0,
+                'advance_deducted' => $advDeducted,
+                'other_allowance' => $otherAllowance,
+                'salary_earned' => $salaryEarned,
+                'net_payable' => $netPayable,
+                'net_paid' => $netPaid,
+                'ref' => "PAY-#{$p->id}",
+                'balance_change' => $balanceChange,
+            ]);
+        }
+
+        // 3. Sort entries chronologically
+        $ledgerEntries = $ledgerEntries->sortBy('raw_date')->values();
+        $filteredEntries = collect([]);
+        $runningBalance = 0;
+
+        foreach ($ledgerEntries as $entry) {
+            $eDate = $entry['date'];
+            $bChange = $entry['balance_change'];
+
+            if ($eDate < $startDate) {
+                $summary['opening_balance'] += $bChange;
+                $runningBalance += $bChange;
+            } elseif ($eDate >= $startDate && $eDate <= $endDate) {
+                $runningBalance += $bChange;
+                $entry['running_balance'] = $runningBalance;
+                $filteredEntries->push($entry);
+
+                $summary['total_advances_deducted'] += $entry['advance_deducted'];
+                $summary['total_salary_earned'] += $entry['salary_earned'];
+                $summary['total_other_allowances'] += $entry['other_allowance'];
+                $summary['total_net_payable'] += $entry['net_payable'];
+                $summary['total_net_paid'] += $entry['net_paid'];
+            }
+        }
+
+        $summary['closing_balance'] = $runningBalance;
+
+        return [
+            'ledgerEntries' => $filteredEntries,
+            'summary' => $summary,
+        ];
+    }
+
     public function employeeLedger(Request $request)
     {
         if (! auth()->user()->can('hr.payroll.view')) {
@@ -683,71 +796,9 @@ class PayrollController extends Controller
 
         $selectedEmployee = $employeeId ? Employee::with(['designation', 'department'])->find($employeeId) : null;
 
-        $ledgerEntries = collect([]);
-        $summary = [
-            'opening_balance' => 0,
-            'total_advances_deducted' => 0,
-            'total_salary_earned' => 0,
-            'total_other_allowances' => 0,
-            'total_net_payable' => 0,
-            'total_net_paid' => 0,
-            'closing_balance' => 0,
-        ];
-
-        if ($selectedEmployee) {
-            $payrolls = Payroll::where('employee_id', $selectedEmployee->id)->where('status', 'paid')->get();
-
-            foreach ($payrolls as $p) {
-                $dateStr = $p->payment_date ? $p->payment_date->format('Y-m-d') : ($p->updated_at ? $p->updated_at->format('Y-m-d') : date('Y-m-d'));
-                $monthName = \Carbon\Carbon::parse($p->month.'-01')->format('M Y');
-                $advDeducted = floatval($p->advances ?: $p->deductions ?: 0);
-                $otherAllowance = floatval($p->other_allowance ?: $p->manual_allowances ?: 0);
-                $salaryEarned = floatval($p->total_pay ?: $p->gross_salary ?: $p->basic_salary);
-                $netPayable = floatval($p->net_salary ?: (($salaryEarned + $otherAllowance) - $advDeducted));
-                $netPaid = floatval($p->payment_this_month ?: $p->net_salary);
-
-                $ledgerEntries->push([
-                    'date' => $dateStr,
-                    'raw_date' => $p->payment_date ? $p->payment_date->timestamp : ($p->updated_at ? $p->updated_at->timestamp : 0),
-                    'type' => "Salary Paid ({$monthName})",
-                    'description' => "Monthly Salary for {$monthName}",
-                    'advance_given' => 0,
-                    'advance_deducted' => $advDeducted,
-                    'other_allowance' => $otherAllowance,
-                    'salary_earned' => $salaryEarned,
-                    'net_payable' => $netPayable,
-                    'net_paid' => $netPaid,
-                    'ref' => "PAY-#{$p->id}",
-                ]);
-            }
-
-            $ledgerEntries = $ledgerEntries->sortBy('raw_date')->values();
-            $filteredEntries = collect([]);
-            $runningBalance = 0;
-
-            foreach ($ledgerEntries as $entry) {
-                $eDate = $entry['date'];
-                $balanceChange = ($entry['net_paid'] + $entry['advance_deducted']) - ($entry['salary_earned'] + $entry['other_allowance']);
-
-                if ($eDate < $startDate) {
-                    $summary['opening_balance'] += $balanceChange;
-                    $runningBalance += $balanceChange;
-                } elseif ($eDate >= $startDate && $eDate <= $endDate) {
-                    $runningBalance += $balanceChange;
-                    $entry['running_balance'] = $runningBalance;
-                    $filteredEntries->push($entry);
-
-                    $summary['total_advances_deducted'] += $entry['advance_deducted'];
-                    $summary['total_salary_earned'] += $entry['salary_earned'];
-                    $summary['total_other_allowances'] += $entry['other_allowance'];
-                    $summary['total_net_payable'] += $entry['net_payable'];
-                    $summary['total_net_paid'] += $entry['net_paid'];
-                }
-            }
-
-            $summary['closing_balance'] = $runningBalance;
-            $ledgerEntries = $filteredEntries;
-        }
+        $ledgerData = $this->getEmployeeLedgerData($selectedEmployee, $startDate, $endDate);
+        $ledgerEntries = $ledgerData['ledgerEntries'];
+        $summary = $ledgerData['summary'];
 
         return view('hr.payroll.employee_ledger', compact(
             'employees',
@@ -775,71 +826,9 @@ class PayrollController extends Controller
 
         $selectedEmployee = $employeeId ? Employee::with(['designation', 'department'])->find($employeeId) : null;
 
-        $ledgerEntries = collect([]);
-        $summary = [
-            'opening_balance' => 0,
-            'total_advances_deducted' => 0,
-            'total_salary_earned' => 0,
-            'total_other_allowances' => 0,
-            'total_net_payable' => 0,
-            'total_net_paid' => 0,
-            'closing_balance' => 0,
-        ];
-
-        if ($selectedEmployee) {
-            $payrolls = Payroll::where('employee_id', $selectedEmployee->id)->where('status', 'paid')->get();
-
-            foreach ($payrolls as $p) {
-                $dateStr = $p->payment_date ? $p->payment_date->format('Y-m-d') : ($p->updated_at ? $p->updated_at->format('Y-m-d') : date('Y-m-d'));
-                $monthName = \Carbon\Carbon::parse($p->month.'-01')->format('M Y');
-                $advDeducted = floatval($p->advances ?: $p->deductions ?: 0);
-                $otherAllowance = floatval($p->other_allowance ?: $p->manual_allowances ?: 0);
-                $salaryEarned = floatval($p->total_pay ?: $p->gross_salary ?: $p->basic_salary);
-                $netPayable = floatval($p->net_salary ?: (($salaryEarned + $otherAllowance) - $advDeducted));
-                $netPaid = floatval($p->payment_this_month ?: $p->net_salary);
-
-                $ledgerEntries->push([
-                    'date' => $dateStr,
-                    'raw_date' => $p->payment_date ? $p->payment_date->timestamp : ($p->updated_at ? $p->updated_at->timestamp : 0),
-                    'type' => "Salary Paid ({$monthName})",
-                    'description' => "Monthly Salary for {$monthName}",
-                    'advance_given' => 0,
-                    'advance_deducted' => $advDeducted,
-                    'other_allowance' => $otherAllowance,
-                    'salary_earned' => $salaryEarned,
-                    'net_payable' => $netPayable,
-                    'net_paid' => $netPaid,
-                    'ref' => "PAY-#{$p->id}",
-                ]);
-            }
-
-            $ledgerEntries = $ledgerEntries->sortBy('raw_date')->values();
-            $filteredEntries = collect([]);
-            $runningBalance = 0;
-
-            foreach ($ledgerEntries as $entry) {
-                $eDate = $entry['date'];
-                $balanceChange = ($entry['net_paid'] + $entry['advance_deducted']) - ($entry['salary_earned'] + $entry['other_allowance']);
-
-                if ($eDate < $startDate) {
-                    $summary['opening_balance'] += $balanceChange;
-                    $runningBalance += $balanceChange;
-                } elseif ($eDate >= $startDate && $eDate <= $endDate) {
-                    $runningBalance += $balanceChange;
-                    $entry['running_balance'] = $runningBalance;
-                    $filteredEntries->push($entry);
-
-                    $summary['total_advances_deducted'] += $entry['advance_deducted'];
-                    $summary['total_salary_earned'] += $entry['salary_earned'];
-                    $summary['total_other_allowances'] += $entry['other_allowance'];
-                    $summary['total_net_payable'] += $entry['net_payable'];
-                    $summary['total_net_paid'] += $entry['net_paid'];
-                }
-            }
-
-            $summary['closing_balance'] = $runningBalance;
-            $ledgerEntries = $filteredEntries;
-        }
+        $ledgerData = $this->getEmployeeLedgerData($selectedEmployee, $startDate, $endDate);
+        $ledgerEntries = $ledgerData['ledgerEntries'];
+        $summary = $ledgerData['summary'];
 
         return view('hr.payroll.print_employee_ledger', compact(
             'selectedEmployee',

@@ -169,8 +169,16 @@
                         <td>{{ $entry['description'] }}</td>
                         <td class="text-right">{{ $entry['salary_earned'] > 0 ? number_format($entry['salary_earned'], 0) : '-' }}</td>
                         <td class="text-right">{{ $entry['other_allowance'] > 0 ? number_format($entry['other_allowance'], 0) : '-' }}</td>
-                        <td class="text-right">{{ $entry['advance_deducted'] > 0 ? number_format($entry['advance_deducted'], 0) : '-' }}</td>
-                        <td class="text-right fw-bold">{{ $entry['net_payable'] > 0 ? number_format($entry['net_payable'], 0) : '-' }}</td>
+                        <td class="text-right">
+                            @if(($entry['advance_given'] ?? 0) > 0)
+                                +{{ number_format($entry['advance_given'], 0) }} (Given)
+                            @elseif($entry['advance_deducted'] > 0)
+                                -{{ number_format($entry['advance_deducted'], 0) }}
+                            @else
+                                -
+                            @endif
+                        </td>
+                        <td class="text-right fw-bold">{{ $entry['net_payable'] != 0 ? number_format($entry['net_payable'], 0) : '-' }}</td>
                         <td class="text-right fw-bold">{{ $entry['net_paid'] > 0 ? number_format($entry['net_paid'], 0) : '-' }}</td>
                         <td class="text-right fw-bold">Rs. {{ number_format($entry['running_balance'], 0) }}</td>
                     </tr>

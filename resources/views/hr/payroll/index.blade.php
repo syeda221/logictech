@@ -261,7 +261,7 @@
                                         <td>
                                             <input type="number" step="1" class="form-control-sheet inp-payment-month fw-bold"
                                                 value="{{ $item['payment_this_month'] }}"
-                                                @if(!empty($item['payroll_id']) && isset($item['payment_this_month']) && $item['payment_this_month'] != $item['net_payable']) data-user-edited="true" @endif>
+                                                @if(!empty($item['payroll_id']) && isset($item['payment_this_month'])) data-user-edited="true" @endif>
                                         </td>
                                         <td class="td-closing-balance fw-bold text-center @if($item['closing_balance'] < 0) text-danger @elseif($item['closing_balance'] > 0) text-success @else text-muted @endif">
                                             @if($item['closing_balance'] > 0)+{{ number_format($item['closing_balance'], 0) }}@elseif($item['closing_balance'] < 0)-{{ number_format(abs($item['closing_balance']), 0) }}@else-@endif
@@ -612,7 +612,8 @@
                         var advances = Math.abs(parseFloat(tr.querySelector('.inp-advances').value) || 0);
                         var otherAllowance = parseFloat(tr.querySelector('.inp-other-allowance').value) || 0;
                         var netPayable = totalPay + prevBal - advances + otherAllowance;
-                        var paymentThisMonth = parseFloat(tr.querySelector('.inp-payment-month').value) || netPayable;
+                        var payValStr = (tr.querySelector('.inp-payment-month').value || '').trim();
+                        var paymentThisMonth = (payValStr !== '' && !isNaN(payValStr)) ? parseFloat(payValStr) : netPayable;
                         var closingBalance = parseFloat(tr.querySelector('.inp-closing-balance').value) || 0;
                         var paymentDate = tr.querySelector('.inp-payment-date').value || '';
 

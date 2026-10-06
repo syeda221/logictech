@@ -248,13 +248,19 @@
                                 </td>
 
                                 <!-- Advances Deducted (-) -->
-                                <td class="text-right font-weight-semibold {{ $entry['advance_deducted'] > 0 ? 'text-danger' : 'text-muted' }}">
-                                    {{ $entry['advance_deducted'] > 0 ? '- Rs. ' . number_format($entry['advance_deducted'], 0) : '-' }}
+                                <td class="text-right font-weight-semibold {{ ($entry['advance_deducted'] > 0 || ($entry['advance_given'] ?? 0) > 0) ? 'text-danger' : 'text-muted' }}">
+                                    @if(($entry['advance_given'] ?? 0) > 0)
+                                        <span class="badge badge-warning text-dark">+ Rs. {{ number_format($entry['advance_given'], 0) }} (Given)</span>
+                                    @elseif($entry['advance_deducted'] > 0)
+                                        - Rs. {{ number_format($entry['advance_deducted'], 0) }}
+                                    @else
+                                        -
+                                    @endif
                                 </td>
 
                                 <!-- Net Payable -->
-                                <td class="text-right font-weight-bold {{ $entry['net_payable'] > 0 ? 'text-warning' : 'text-muted' }}">
-                                    {{ $entry['net_payable'] > 0 ? 'Rs. ' . number_format($entry['net_payable'], 0) : '-' }}
+                                <td class="text-right font-weight-bold {{ $entry['net_payable'] != 0 ? 'text-warning' : 'text-muted' }}">
+                                    {{ $entry['net_payable'] != 0 ? 'Rs. ' . number_format($entry['net_payable'], 0) : '-' }}
                                 </td>
 
                                 <!-- Net Paid -->
@@ -263,7 +269,7 @@
                                 </td>
 
                                 <!-- Running Balance -->
-                                <td class="text-right pr-3 font-weight-bold {{ $entry['running_balance'] != 0 ? 'text-dark' : 'text-muted' }}">
+                                <td class="text-right pr-3 font-weight-bold {{ $entry['running_balance'] < 0 ? 'text-danger' : ($entry['running_balance'] > 0 ? 'text-success' : 'text-muted') }}" title="{{ $entry['running_balance'] < 0 ? 'Employee owes company' : ($entry['running_balance'] > 0 ? 'Company owes employee' : 'Settled') }}">
                                     Rs. {{ number_format($entry['running_balance'], 0) }}
                                 </td>
                             </tr>
