@@ -727,8 +727,8 @@ class PayrollController extends Controller
             $netPayable = floatval($p->net_salary ?: (($salaryEarned + $otherAllowance) - $advDeducted));
             $netPaid = floatval($p->payment_this_month !== null ? $p->payment_this_month : $p->net_salary);
 
-            // Balance change = +(Salary Earned + Allowances) - Cash Paid
-            $balanceChange = ($salaryEarned + $otherAllowance) - $netPaid;
+            // Balance change = Net Payable - Net Amount Paid (as per user requested formula)
+            $balanceChange = $netPayable - $netPaid;
 
             $ledgerEntries->push([
                 'date' => $dateStr,
