@@ -2206,7 +2206,7 @@ class PurchaseController extends Controller
                     ? 'PUR-'.str_pad(((int) preg_replace('/[^0-9]/', '', $lastInvoice)) + 1, 3, '0', STR_PAD_LEFT)
                     : 'PUR-001';
 
-                $warehouseId = \App\Models\Warehouse::first()->id ?? 1;
+                $warehouseId = \App\Models\Warehouse::getDefaultWarehouseId();
                 $branchId = auth()->user()->branch_id ?? \App\Models\Branch::first()->id ?? 1;
 
                 // Format note: M-Bill with description if provided

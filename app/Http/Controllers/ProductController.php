@@ -62,9 +62,9 @@ class ProductController extends Controller
 
     private function upsertStocks(int $productId, float $qtyDelta, int $branchId = 1, int $warehouseId = 1): void
     {
-        // Fallback to first warehouse if the requested one doesn't exist
-        if ($warehouseId === 1 && !\App\Models\Warehouse::find(1)) {
-            $warehouseId = \App\Models\Warehouse::first()->id ?? 1;
+        // Fallback to default warehouse if requested one doesn't exist
+        if (!\App\Models\Warehouse::find($warehouseId)) {
+            $warehouseId = \App\Models\Warehouse::getDefaultWarehouseId();
         }
 
         $stock = \App\Models\WarehouseStock::where('warehouse_id', $warehouseId)
@@ -934,9 +934,13 @@ class ProductController extends Controller
                 $boxesQuantity = 0;
             }
 
+            $targetWhId = ($request->filled('warehouse_id') && \App\Models\Warehouse::find($request->warehouse_id))
+                ? (int) $request->warehouse_id
+                : \App\Models\Warehouse::getDefaultWarehouseId();
+
             // Create Warehouse Stock
             WarehouseStock::create([
-                'warehouse_id' => $request->warehouse_id ?? (\App\Models\Warehouse::first()->id ?? 1), // Default to first warehouse if not selected
+                'warehouse_id' => $targetWhId,
                 'product_id' => $product->id,
                 'quantity' => $boxesQuantity ?? 0,
                 'total_pieces' => $totalStockQty,
@@ -1339,7 +1343,7 @@ class ProductController extends Controller
                     $warehouseStock->remarks = 'Finished Goods (Make-to-Order)';
                     $warehouseStock->save();
                 } else {
-                    $defaultWhId = \App\Models\Warehouse::first()->id ?? 1;
+                    $defaultWhId = \App\Models\Warehouse::getDefaultWarehouseId();
                     WarehouseStock::create([
                         'warehouse_id' => $defaultWhId,
                         'product_id' => $id,
@@ -1359,7 +1363,7 @@ class ProductController extends Controller
                     $warehouseStock->quantity = round($warehouseStock->total_pieces / $ppb, 2);
                     $warehouseStock->save();
                 } else {
-                    $defaultWhId = \App\Models\Warehouse::first()->id ?? 1;
+                    $defaultWhId = \App\Models\Warehouse::getDefaultWarehouseId();
                     $initialPieces = count($variants) > 0 ? array_sum(array_column($variants, 'stock')) : 0;
                     $warehouseStock = \App\Models\WarehouseStock::create([
                         'warehouse_id' => $defaultWhId,

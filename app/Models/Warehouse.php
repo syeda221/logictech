@@ -23,4 +23,19 @@ class Warehouse extends Model
     {
         return $this->attributes['warehouse_name'] ?? ($this->attributes['name'] ?? 'Warehouse');
     }
+
+    /**
+     * Get default warehouse ID or auto-create a default warehouse if none exists
+     */
+    public static function getDefaultWarehouseId(): int
+    {
+        $warehouse = static::first();
+        if (! $warehouse) {
+            $warehouse = static::create([
+                'warehouse_name' => 'Main Warehouse',
+                'location' => 'Main Office',
+            ]);
+        }
+        return (int) $warehouse->id;
+    }
 }
