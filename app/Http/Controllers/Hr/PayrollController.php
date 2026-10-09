@@ -35,8 +35,19 @@ class PayrollController extends Controller
         $month = $request->get('month', Carbon::now()->subMonth()->format('Y-m'));
         $prevMonth = Carbon::parse($month.'-01')->subMonth()->format('Y-m');
 
-        // Fetch Active Financial Accounts for Payment Account Dropdown
-        $accounts = \App\Models\Account::where('status', 1)->orderBy('title', 'asc')->get();
+        // Fetch Active Financial Accounts for Payment Account Dropdown (exclude Accounts Payable & liability accounts)
+        $accounts = \App\Models\Account::where('status', 1)
+            ->where('title', 'not like', '%Accounts Payable%')
+            ->where('title', 'not like', '%Payable%')
+            ->orderBy('title', 'asc')
+            ->get();
+
+        // Find default Cash Account (prefer title matching "Cash")
+        $defaultAccount = $accounts->first(function ($acc) {
+            return preg_match('/cash/i', $acc->title);
+        }) ?? $accounts->first();
+
+        $defaultAccountId = $defaultAccount?->id;
 
         // Get all active employees sorted by ID
         $employees = Employee::with(['designation', 'department', 'salaryStructure'])
@@ -139,7 +150,7 @@ class PayrollController extends Controller
                 $closingBalance = $netPayable - $paymentThisMonth;
 
                 $paymentDate = date('Y-m-04');
-                $accountId = $accounts->first()?->id;
+                $accountId = $defaultAccountId;
                 $status = 'draft';
                 $payrollId = null;
             }
@@ -195,6 +206,7 @@ class PayrollController extends Controller
             'month',
             'employees',
             'accounts',
+            'defaultAccountId',
             'payrolls'
         ))->with('activeTab', 'all');
     }

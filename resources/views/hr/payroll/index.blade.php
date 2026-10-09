@@ -146,7 +146,9 @@
                             <span class="small fw-bold text-secondary">Account:</span>
                             <select id="globalAccountId" class="form-select form-select-sm border-0 bg-transparent fw-bold text-dark" style="min-width: 180px;">
                                 @foreach($accounts as $acc)
-                                    <option value="{{ $acc->id }}">{{ $acc->title }} (Bal: Rs {{ number_format($acc->current_balance ?? 0, 0) }})</option>
+                                    <option value="{{ $acc->id }}" {{ (isset($defaultAccountId) && $defaultAccountId == $acc->id) ? 'selected' : '' }}>
+                                        {{ $acc->title }} (Bal: Rs {{ number_format($acc->current_balance ?? 0, 0) }})
+                                    </option>
                                 @endforeach
                             </select>
                         </div>
@@ -360,7 +362,7 @@
                             <select name="account_id" class="form-select form-select-lg shadow-sm border-slate-300 fw-semibold" style="border-radius: 10px; font-size: 0.9rem;">
                                 <option value="">-- Select Cash / Bank Account --</option>
                                 @foreach($accounts as $acc)
-                                    <option value="{{ $acc->id }}">
+                                    <option value="{{ $acc->id }}" {{ (isset($defaultAccountId) && $defaultAccountId == $acc->id) ? 'selected' : '' }}>
                                         💳 {{ $acc->title }} — (Available Bal: Rs {{ number_format($acc->current_balance ?? 0, 2) }})
                                     </option>
                                 @endforeach
