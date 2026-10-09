@@ -115,13 +115,43 @@
         }
 
         .btn-sheet-action {
-            padding: 8px 16px;
+            height: 38px;
+            padding: 6px 14px;
             font-weight: 600;
+            font-size: 0.85rem;
             border-radius: 8px;
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 6px;
+            white-space: nowrap;
             transition: all 0.2s;
+        }
+
+        .top-bar-box {
+            height: 38px;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 4px 10px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+        }
+
+        .top-bar-box select, .top-bar-box input {
+            border: none !important;
+            background: transparent !important;
+            outline: none !important;
+            box-shadow: none !important;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #1e293b;
+            padding: 0 4px !important;
+            margin: 0;
+            height: 100%;
+            cursor: pointer;
         }
     </style>
 
@@ -138,13 +168,13 @@
                     </div>
 
                     <!-- Top Bar Controls -->
-                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <div class="d-flex align-items-center flex-wrap" style="gap: 8px;">
 
                         <!-- Payment Account Dropdown -->
-                        <div class="d-flex align-items-center gap-2 bg-light p-1 px-2 rounded border">
-                            <i class="fa fa-wallet text-secondary"></i>
-                            <span class="small fw-bold text-secondary">Account:</span>
-                            <select id="globalAccountId" class="form-select form-select-sm border-0 bg-transparent fw-bold text-dark" style="min-width: 180px;">
+                        <div class="top-bar-box">
+                            <i class="fa fa-wallet text-primary" style="font-size: 0.9rem;"></i>
+                            <span class="small font-weight-bold text-secondary" style="white-space: nowrap;">Account:</span>
+                            <select id="globalAccountId" style="min-width: 220px;">
                                 @foreach($accounts as $acc)
                                     <option value="{{ $acc->id }}" {{ (isset($defaultAccountId) && $defaultAccountId == $acc->id) ? 'selected' : '' }}>
                                         {{ $acc->title }} (Bal: Rs {{ number_format($acc->current_balance ?? 0, 0) }})
@@ -154,9 +184,12 @@
                         </div>
 
                         <!-- Month Selector Form -->
-                        <form method="GET" action="{{ route('hr.payroll.index') }}" class="d-flex align-items-center gap-1">
-                            <input type="month" id="month" name="month" class="form-control form-control-sm fw-bold"
-                                value="{{ $month }}" onchange="this.form.submit()">
+                        <form method="GET" action="{{ route('hr.payroll.index') }}" class="d-flex align-items-center m-0">
+                            <div class="top-bar-box">
+                                <i class="fa fa-calendar-alt text-info" style="font-size: 0.9rem;"></i>
+                                <input type="month" id="month" name="month"
+                                    value="{{ $month }}" onchange="this.form.submit()">
+                            </div>
                         </form>
 
                         <!-- Issue Advance Salary Button -->
