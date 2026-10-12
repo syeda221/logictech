@@ -31,9 +31,6 @@ class PayrollController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        // Clean up any historical duplicate payroll vouchers and calibrate account balances
-        self::cleanupDuplicatePayrollTransactions();
-
         // Get selected month (default to previous month, e.g., '2026-09')
         $month = $request->get('month', Carbon::now()->subMonth()->format('Y-m'));
         $prevMonth = Carbon::parse($month.'-01')->subMonth()->format('Y-m');
@@ -45,24 +42,29 @@ class PayrollController extends Controller
             ->orderBy('title', 'asc')
             ->get();
 
-        // Find default Cash Account (prefer title matching "Cash")
-        $defaultAccount = $accounts->first(function ($acc) {
-            return preg_match('/cash/i', $acc->title);
-        }) ?? $accounts->first();
+        // Get existing payroll records for this month
+        $existingPayrolls = Payroll::where('month', $month)
+            ->where('payroll_type', 'monthly')
+            ->get()
+            ->keyBy('employee_id');
 
-        $defaultAccountId = $defaultAccount?->id;
+        // Determine payment account for the sheet:
+        // Prefer the account already saved with this month's payrolls, otherwise default to Cash
+        $savedAccountId = $existingPayrolls->first(function($p) { return !empty($p->account_id); })?->account_id;
+        if ($savedAccountId && $accounts->contains('id', $savedAccountId)) {
+            $defaultAccountId = $savedAccountId;
+        } else {
+            $defaultAccount = $accounts->first(function ($acc) {
+                return preg_match('/cash/i', $acc->title);
+            }) ?? $accounts->first();
+            $defaultAccountId = $defaultAccount?->id;
+        }
 
         // Get all active employees sorted by ID
         $employees = Employee::with(['designation', 'department', 'salaryStructure'])
             ->where('status', 'active')
             ->orderBy('id', 'asc')
             ->get();
-
-        // Get existing payroll records for this month
-        $existingPayrolls = Payroll::where('month', $month)
-            ->where('payroll_type', 'monthly')
-            ->get()
-            ->keyBy('employee_id');
 
         // Get most recent saved monthly payroll before selected $month for each employee
         $prevPayrolls = Payroll::where('month', '<', $month)
@@ -258,7 +260,39 @@ class PayrollController extends Controller
                 $paymentDate = !empty($row['payment_date']) ? $row['payment_date'] : date('Y-m-d');
                 $accountId = !empty($row['account_id']) ? $row['account_id'] : ($request->account_id ?? null);
 
-                // Update employee basic salary if changed
+                // Look up any existing saved record for this employee and month
+                $existingPayroll = Payroll::where('employee_id', $employeeId)
+                    ->where('month', $month)
+                    ->where('payroll_type', 'monthly')
+                    ->first();
+
+                // Check if this row is completely UNTOUCHED / UNCHANGED
+                if ($existingPayroll) {
+                    $prevBasic = floatval($existingPayroll->basic_salary);
+                    $prevPDays = floatval($existingPayroll->p_days);
+                    $prevOtDays = floatval($existingPayroll->overtime_days);
+                    $prevAdvances = floatval($existingPayroll->advances);
+                    $prevAllowance = floatval($existingPayroll->other_allowance);
+                    $prevPayment = floatval($existingPayroll->payment_this_month);
+                    $prevAccountId = $existingPayroll->account_id;
+
+                    $isRowUnchanged = (
+                        abs($prevBasic - $basicSalary) < 0.01 &&
+                        abs($prevPDays - $pDays) < 0.01 &&
+                        abs($prevOtDays - $otDays) < 0.01 &&
+                        abs($prevAdvances - $advances) < 0.01 &&
+                        abs($prevAllowance - $otherAllowance) < 0.01 &&
+                        abs($prevPayment - $paymentThisMonth) < 0.01 &&
+                        ($prevAccountId == $accountId || empty($accountId))
+                    );
+
+                    if ($isRowUnchanged) {
+                        // Unchanged row! Skip completely with zero financial, voucher, or ledger impact
+                        continue;
+                    }
+                }
+
+                // If row was modified or is new, proceed:
                 $employee = Employee::find($employeeId);
                 if ($employee && $basicSalary > 0 && $employee->basic_salary != $basicSalary) {
                     if (\Illuminate\Support\Facades\Schema::hasColumn('hr_employees', 'basic_salary')) {
@@ -276,17 +310,65 @@ class PayrollController extends Controller
                     }
                 }
 
-                // Check existing payroll record before saving
-                $existingPayroll = Payroll::where('employee_id', $employeeId)
-                    ->where('month', $month)
-                    ->where('payroll_type', 'monthly')
-                    ->first();
-
+                // Handle Loan / Advance Deductions delta
                 $prevAdvances = $existingPayroll ? floatval($existingPayroll->advances) : 0;
-                $prevPayment = $existingPayroll ? floatval($existingPayroll->payment_this_month) : 0;
-                $prevAccountId = $existingPayroll ? $existingPayroll->account_id : null;
+                $deltaAdvances = $advances - $prevAdvances;
+                if ($deltaAdvances > 0) {
+                    $loans = \App\Models\Hr\Loan::where('employee_id', $employeeId)
+                        ->where('status', 'approved')
+                        ->whereRaw('paid_amount < amount')
+                        ->get();
 
-                // Create or Update Payroll Record
+                    $remDeduction = $deltaAdvances;
+                    foreach ($loans as $loan) {
+                        if ($remDeduction <= 0) break;
+                        $unpaid = $loan->amount - $loan->paid_amount;
+                        $payAmount = min($remDeduction, $unpaid);
+                        $loan->increment('paid_amount', $payAmount);
+                        $remDeduction -= $payAmount;
+                    }
+                } elseif ($deltaAdvances < 0) {
+                    $refundAdvances = abs($deltaAdvances);
+                    $loans = \App\Models\Hr\Loan::where('employee_id', $employeeId)
+                        ->where('paid_amount', '>', 0)
+                        ->orderBy('id', 'desc')
+                        ->get();
+
+                    foreach ($loans as $loan) {
+                        if ($refundAdvances <= 0) break;
+                        $refundAmount = min($refundAdvances, $loan->paid_amount);
+                        $loan->decrement('paid_amount', $refundAmount);
+                        $refundAdvances -= $refundAmount;
+                    }
+                }
+
+                // Reverse previous payment from previous account if this row was already saved with payment
+                if ($existingPayroll && $existingPayroll->account_id && floatval($existingPayroll->payment_this_month) > 0) {
+                    $prevPaymentAmt = floatval($existingPayroll->payment_this_month);
+                    $prevAccId = $existingPayroll->account_id;
+
+                    $oldVouchers = \App\Models\VoucherMaster::where('remarks', 'like', "%Payroll #{$existingPayroll->id}%")->get();
+                    $reversedViaVoucher = false;
+                    foreach ($oldVouchers as $ov) {
+                        if ($journalService) {
+                            $journalService->reverseEntriesForSource($ov);
+                            $reversedViaVoucher = true;
+                        }
+                        $ov->details()->delete();
+                        $ov->delete();
+                    }
+
+                    if (!$reversedViaVoucher) {
+                        $prevAcc = \App\Models\Account::find($prevAccId);
+                        if ($prevAcc) {
+                            $prevAcc->increment('current_balance', $prevPaymentAmt);
+                        }
+                    }
+
+                    \App\Models\AccountHistory::where('note', 'like', "%Ref Payroll #{$existingPayroll->id}%")->delete();
+                }
+
+                // Save or Update Payroll Record
                 $payroll = Payroll::updateOrCreate(
                     [
                         'employee_id' => $employeeId,
@@ -318,119 +400,51 @@ class PayrollController extends Controller
                     ]
                 );
 
-                // Handle Loan / Advance Deductions Idempotently
-                $deltaAdvances = $advances - $prevAdvances;
-                if ($deltaAdvances > 0) {
-                    $loans = \App\Models\Hr\Loan::where('employee_id', $employeeId)
-                        ->where('status', 'approved')
-                        ->whereRaw('paid_amount < amount')
-                        ->get();
-
-                    $remDeduction = $deltaAdvances;
-                    foreach ($loans as $loan) {
-                        if ($remDeduction <= 0) break;
-                        $unpaid = $loan->amount - $loan->paid_amount;
-                        $payAmount = min($remDeduction, $unpaid);
-                        $loan->increment('paid_amount', $payAmount);
-                        $remDeduction -= $payAmount;
-                    }
-                } elseif ($deltaAdvances < 0) {
-                    $refundAdvances = abs($deltaAdvances);
-                    $loans = \App\Models\Hr\Loan::where('employee_id', $employeeId)
-                        ->where('paid_amount', '>', 0)
-                        ->orderBy('id', 'desc')
-                        ->get();
-
-                    foreach ($loans as $loan) {
-                        if ($refundAdvances <= 0) break;
-                        $refundAmount = min($refundAdvances, $loan->paid_amount);
-                        $loan->decrement('paid_amount', $refundAmount);
-                        $refundAdvances -= $refundAmount;
-                    }
-                }
-
-                // Handle Financial Account & Payment Voucher Idempotently
-                $existingVouchers = \App\Models\VoucherMaster::where('remarks', 'like', "%Payroll #{$payroll->id}%")->get();
-                $isPaymentUnchanged = ($existingPayroll && $existingVouchers->isNotEmpty() && $prevAccountId == $accountId && abs($prevPayment - $paymentThisMonth) < 0.01);
-
-                if ($isPaymentUnchanged) {
-                    // Ensure only 1 voucher exists if duplicates existed previously
-                    if ($existingVouchers->count() > 1) {
-                        $keepV = $existingVouchers->first();
-                        foreach ($existingVouchers as $ev) {
-                            if ($ev->id !== $keepV->id) {
-                                if ($journalService) {
-                                    $journalService->reverseEntriesForSource($ev);
-                                }
-                                $ev->details()->delete();
-                                $ev->delete();
-                            }
-                        }
-                    }
-                    $oldHistories = \App\Models\AccountHistory::where('note', 'like', "%Ref Payroll #{$payroll->id}%")->get();
-                    if ($oldHistories->count() > 1) {
-                        $keepH = $oldHistories->last();
-                        foreach ($oldHistories as $oh) {
-                            if ($oh->id !== $keepH->id) {
-                                $oh->delete();
-                            }
-                        }
-                    }
-                    continue;
-                }
-
-                // If payment or account changed, reverse previous vouchers and journal entries
-                if ($existingVouchers->isNotEmpty()) {
-                    foreach ($existingVouchers as $ev) {
-                        if ($journalService) {
-                            $journalService->reverseEntriesForSource($ev);
-                        }
-                        $ev->details()->delete();
-                        $ev->delete();
-                    }
-                }
-
-                \App\Models\AccountHistory::where('note', 'like', "%Ref Payroll #{$payroll->id}%")->delete();
-
-                // Record Financial Account History if Payment Account is specified and payment > 0
+                // Apply new payment to the selected account if payment > 0
                 if ($accountId && $paymentThisMonth > 0) {
                     $account = \App\Models\Account::find($accountId);
                     if ($account) {
+                        $deductedViaVoucher = false;
+
                         if ($voucherService) {
-                            $salariesAccount = \App\Models\Account::where('title', 'like', '%Salary%')
-                                ->orWhere('title', 'like', '%Payroll%')
-                                ->first() ?? $account;
+                            try {
+                                $salariesAccount = $this->getSalariesExpenseAccount($account->id);
 
-                            $voucherData = [
-                                'voucher_type' => \App\Models\VoucherMaster::TYPE_PAYMENT ?? 'payment',
-                                'date' => $paymentDate,
-                                'status' => \App\Models\VoucherMaster::STATUS_POSTED ?? 'posted',
-                                'remarks' => "Salary Paid to {$employee->full_name} for {$month} (Payroll #{$payroll->id})",
-                            ];
+                                $voucherData = [
+                                    'voucher_type' => \App\Models\VoucherMaster::TYPE_PAYMENT ?? 'payment',
+                                    'date' => $paymentDate,
+                                    'status' => \App\Models\VoucherMaster::STATUS_POSTED ?? 'posted',
+                                    'remarks' => "Salary Paid to {$employee->full_name} for {$month} (Payroll #{$payroll->id})",
+                                ];
 
-                            $lines = [
-                                [
-                                    'account_id' => $salariesAccount->id,
-                                    'debit' => $paymentThisMonth,
-                                    'credit' => 0,
-                                    'narration' => "Salary for {$employee->full_name} ({$month})",
-                                ],
-                                [
-                                    'account_id' => $account->id,
-                                    'debit' => 0,
-                                    'credit' => $paymentThisMonth,
-                                    'narration' => "Paid from {$account->title}",
-                                ],
-                            ];
+                                $lines = [
+                                    [
+                                        'account_id' => $salariesAccount->id,
+                                        'debit' => $paymentThisMonth,
+                                        'credit' => 0,
+                                        'narration' => "Salary for {$employee->full_name} ({$month})",
+                                    ],
+                                    [
+                                        'account_id' => $account->id,
+                                        'debit' => 0,
+                                        'credit' => $paymentThisMonth,
+                                        'narration' => "Paid from {$account->title}",
+                                    ],
+                                ];
 
-                            $voucherService->createVoucher($voucherData, $lines, auth()->id());
-                            $account->refresh();
-                        } else {
+                                $voucherService->createVoucher($voucherData, $lines, auth()->id());
+                                $account->refresh();
+                                $deductedViaVoucher = true;
+                            } catch (\Exception $ex) {
+                                \Log::warning("Voucher creation for payroll payment failed: " . $ex->getMessage());
+                            }
+                        }
+
+                        if (!$deductedViaVoucher) {
                             $account->decrement('current_balance', $paymentThisMonth);
                             $account->refresh();
                         }
 
-                        // Create Account History Entry for Payroll Expense (Audit Trail)
                         \App\Models\AccountHistory::create([
                             'account_id' => $account->id,
                             'old_balance' => $account->current_balance + $paymentThisMonth,
@@ -502,10 +516,7 @@ class PayrollController extends Controller
                     $voucherService = class_exists(\App\Services\VoucherService::class) ? app(\App\Services\VoucherService::class) : null;
                     if ($voucherService) {
                         try {
-                            $salariesAccount = \App\Models\Account::where('title', 'like', '%Salary%')
-                                ->orWhere('title', 'like', '%Advance%')
-                                ->orWhere('title', 'like', '%Payroll%')
-                                ->first() ?? $account;
+                            $salariesAccount = $this->getSalariesExpenseAccount($account->id);
 
                             $voucherData = [
                                 'voucher_type' => \App\Models\VoucherMaster::TYPE_PAYMENT ?? 'payment',
@@ -1878,5 +1889,39 @@ class PayrollController extends Controller
             DB::rollBack();
             \Log::error('Payroll transaction cleanup failed: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Get or auto-create dedicated Salaries & Wages Expense Account
+     */
+    protected function getSalariesExpenseAccount($excludeAccountId = null)
+    {
+        $query = \App\Models\Account::where(function ($q) {
+            $q->where('title', 'like', '%Salary%')
+              ->orWhere('title', 'like', '%Payroll%');
+        });
+
+        if ($excludeAccountId) {
+            $query->where('id', '!=', $excludeAccountId);
+        }
+
+        $account = $query->first();
+
+        if (! $account) {
+            $expenseHead = \App\Models\AccountHead::where('name', 'like', '%Expense%')->first()
+                ?? \App\Models\AccountHead::first();
+
+            $account = \App\Models\Account::create([
+                'head_id' => $expenseHead?->id,
+                'title' => 'Salaries & Wages Expense',
+                'account_code' => 'EXP-SAL',
+                'opening_balance' => 0,
+                'current_balance' => 0,
+                'type' => 'Debit',
+                'status' => 1,
+            ]);
+        }
+
+        return $account;
     }
 }
