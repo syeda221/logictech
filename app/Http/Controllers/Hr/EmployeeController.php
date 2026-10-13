@@ -130,16 +130,29 @@ class EmployeeController extends Controller
             if (! auth()->user()->can('hr.employees.create')) {
                 return response()->json(['error' => 'Unauthorized action.'], 403);
             }
-            // Create User Account
-            $pwd = $request->filled('password') ? $request->password : '12345678';
-            $user = \App\Models\User::create([
-                'name' => $fullName,
-                'email' => $email,
-                'password' => \Illuminate\Support\Facades\Hash::make($pwd),
-            ]);
 
-            $data['user_id'] = $user->id;
-            $employee = Employee::create($data);
+            // Guard against accidental rapid duplicate creation (within last 5 seconds)
+            $recentDuplicate = Employee::where('first_name', $request->first_name)
+                ->where('created_at', '>=', now()->subSeconds(5))
+                ->when($request->phone, function ($q) use ($request) {
+                    $q->where('phone', $request->phone);
+                })
+                ->first();
+
+            if ($recentDuplicate) {
+                $employee = $recentDuplicate;
+            } else {
+                // Create User Account
+                $pwd = $request->filled('password') ? $request->password : '12345678';
+                $user = \App\Models\User::create([
+                    'name' => $fullName,
+                    'email' => $email,
+                    'password' => \Illuminate\Support\Facades\Hash::make($pwd),
+                ]);
+
+                $data['user_id'] = $user->id;
+                $employee = Employee::create($data);
+            }
         }
 
         // Always sync Salary Structure so payroll calculations work seamlessly

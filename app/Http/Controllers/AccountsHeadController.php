@@ -14,13 +14,14 @@ class AccountsHeadController extends Controller
     {
         $heads = AccountHead::withCount('accounts')->orderBy('name', 'asc')->get();
 
-        // Exclude system control accounts (AR, AP, SALES, PURCHASE)
-        $excludedCodes = ['AR', 'AP', 'SALES', 'PURCHASE'];
-        $excludedTitles = ['Accounts Receivable', 'Accounts Payable', 'Sales Revenue', 'Purchase Expense'];
+        // Exclude system control accounts (AR, AP, SALES, PURCHASE, EXP-SAL)
+        $excludedCodes = ['AR', 'AP', 'SALES', 'PURCHASE', 'EXP-SAL'];
+        $excludedTitles = ['Accounts Receivable', 'Accounts Payable', 'Sales Revenue', 'Purchase Expense', 'Salaries & Wages Expense'];
 
         $accounts = Account::with(['head', 'histories.user'])
             ->whereNotIn('account_code', $excludedCodes)
             ->whereNotIn('title', $excludedTitles)
+            ->whereNotNull('head_id')
             ->orderBy('id', 'asc')
             ->get();
 

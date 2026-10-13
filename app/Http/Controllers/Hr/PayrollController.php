@@ -35,9 +35,18 @@ class PayrollController extends Controller
         $month = $request->get('month', Carbon::now()->subMonth()->format('Y-m'));
         $prevMonth = Carbon::parse($month.'-01')->subMonth()->format('Y-m');
 
-        // Fetch Active Financial Accounts for Payment Account Dropdown (exclude Accounts Payable & liability accounts)
+        // Fetch Active Financial Accounts for Payment Account Dropdown (only Cash & Bank liquid accounts)
+        $cashAndBankHeads = \App\Models\AccountHead::whereIn('name', ['Cash', 'Bank'])->pluck('id');
         $accounts = \App\Models\Account::where('status', 1)
-            ->where('title', 'not like', '%Accounts Payable%')
+            ->where(function ($q) use ($cashAndBankHeads) {
+                $q->whereIn('head_id', $cashAndBankHeads)
+                  ->orWhere('title', 'like', '%cash%')
+                  ->orWhere('title', 'like', '%bank%');
+            })
+            ->whereNotIn('account_code', ['EXP-SAL', 'AR', 'AP', 'SALES', 'PURCHASE'])
+            ->where('title', 'not like', '%Expense%')
+            ->where('title', 'not like', '%Revenue%')
+            ->where('title', 'not like', '%Receivable%')
             ->where('title', 'not like', '%Payable%')
             ->orderBy('title', 'asc')
             ->get();
@@ -1892,34 +1901,28 @@ class PayrollController extends Controller
     }
 
     /**
-     * Get or auto-create dedicated Salaries & Wages Expense Account
+     * Get dedicated Salaries & Wages Expense Account (System Control Account)
      */
     protected function getSalariesExpenseAccount($excludeAccountId = null)
     {
-        $query = \App\Models\Account::where(function ($q) {
-            $q->where('title', 'like', '%Salary%')
-              ->orWhere('title', 'like', '%Payroll%');
-        });
-
-        if ($excludeAccountId) {
-            $query->where('id', '!=', $excludeAccountId);
-        }
-
-        $account = $query->first();
+        $account = \App\Models\Account::where('account_code', 'EXP-SAL')
+            ->orWhere('title', 'like', '%Salari%')
+            ->orWhere('title', 'like', '%Salary%')
+            ->orWhere('title', 'like', '%Payroll%')
+            ->first();
 
         if (! $account) {
-            $expenseHead = \App\Models\AccountHead::where('name', 'like', '%Expense%')->first()
-                ?? \App\Models\AccountHead::first();
-
-            $account = \App\Models\Account::create([
-                'head_id' => $expenseHead?->id,
-                'title' => 'Salaries & Wages Expense',
-                'account_code' => 'EXP-SAL',
-                'opening_balance' => 0,
-                'current_balance' => 0,
-                'type' => 'Debit',
-                'status' => 1,
-            ]);
+            $account = \App\Models\Account::firstOrCreate(
+                ['account_code' => 'EXP-SAL'],
+                [
+                    'head_id' => null,
+                    'title' => 'Salaries & Wages Expense',
+                    'opening_balance' => 0,
+                    'current_balance' => 0,
+                    'type' => 'Debit',
+                    'status' => 1,
+                ]
+            );
         }
 
         return $account;

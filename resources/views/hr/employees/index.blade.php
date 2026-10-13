@@ -198,7 +198,7 @@
                     </button>
                 </div>
                 <form id="employeeForm" action="{{ route('hr.employees.store') }}" method="POST"
-                    enctype="multipart/form-data" data-ajax-validate="true">
+                    enctype="multipart/form-data">
                     @csrf
                     <input type="hidden" name="edit_id" id="edit_id">
                     <div class="modal-body">
@@ -257,8 +257,12 @@
     <script>
         $(document).ready(function() {
             // Submit Employee Form via AJAX
+            var isSubmitting = false;
             $('#employeeForm').on('submit', function(e) {
                 e.preventDefault();
+                if (isSubmitting) return false;
+                isSubmitting = true;
+
                 var form = $(this);
                 var actionUrl = form.attr('action');
                 var formData = new FormData(this);
@@ -293,6 +297,7 @@
                         }
                     },
                     error: function(err) {
+                        isSubmitting = false;
                         submitBtn.prop('disabled', false).html('<i class="fa fa-check"></i> <span>Save Employee</span>');
                         var msg = 'Failed to save employee';
                         if (err.responseJSON) {
