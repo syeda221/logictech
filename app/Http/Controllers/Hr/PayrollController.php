@@ -823,8 +823,9 @@ class PayrollController extends Controller
             $advDeducted = floatval($p->advances ?: $p->deductions ?: 0);
             $otherAllowance = floatval($p->other_allowance ?: $p->manual_allowances ?: 0);
             $salaryEarned = floatval($p->total_pay ?: $p->gross_salary ?: $p->basic_salary);
-            $netPayable = floatval($p->net_salary ?: (($salaryEarned + $otherAllowance) - $advDeducted));
-            $netPaid = floatval($p->payment_this_month !== null ? $p->payment_this_month : $p->net_salary);
+            // Current month net payable (before applying previous balance, because running balance already carries forward the previous balance)
+            $netPayable = floatval(($salaryEarned + $otherAllowance) - $advDeducted);
+            $netPaid = floatval($p->payment_this_month !== null ? $p->payment_this_month : $netPayable);
 
             // Balance change = Net Payable - Net Amount Paid (as per user requested formula)
             $balanceChange = $netPayable - $netPaid;
