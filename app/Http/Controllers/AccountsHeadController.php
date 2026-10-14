@@ -233,12 +233,17 @@ class AccountsHeadController extends Controller
                 $voucherNo = $entry->source->invoice_no;
             }
 
+            $displayDesc = $entry->description ?? '—';
+            if (($displayDesc === '—' || str_starts_with($displayDesc, 'Paid from')) && $entry->source && ! empty($entry->source->remarks)) {
+                $displayDesc = $entry->source->remarks;
+            }
+
             $entriesByMonth[$m][] = [
                 'id' => $entry->id,
                 'date' => \Carbon\Carbon::parse($entry->entry_date)->format('d/m/Y'),
                 'raw_date' => \Carbon\Carbon::parse($entry->entry_date)->format('Y-m-d'),
                 'voucher_no' => $voucherNo,
-                'description' => $entry->description ?? '—',
+                'description' => $displayDesc,
                 'party_name' => $partyInfo['name'],
                 'party_type' => $partyInfo['type'],
                 'party_initial' => $partyInfo['initial'],
@@ -371,9 +376,24 @@ class AccountsHeadController extends Controller
             }
         }
 
-        // Regex check if description mentions employee or person: "Salary for [Name] (2026-08)" or "Salary Paid to [Name]"
-        if (! $partyName && $entry->description) {
-            if (preg_match('/(?:Salary\s+for|Salary\s+Paid\s+to|Paid\s+to|Advance\s+Salary\s+to|Advance\s+Salary\s+Paid\s+to)\s+([A-Za-z\s]+?)(?:\s*\(|\s+for|\s*$)/i', $entry->description, $pm)) {
+        // Regex check if description or source remarks mention employee or person
+        if (! $partyName) {
+            $sourceRemarks = isset($entry->source->remarks) ? $entry->source->remarks : '';
+            $checkText = ($entry->description ?? '') . ' ' . $sourceRemarks;
+
+            if ($entry->source_type && $entry->source_id) {
+                try {
+                    $siblingDesc = JournalEntry::where('source_type', $entry->source_type)
+                        ->where('source_id', $entry->source_id)
+                        ->where('id', '!=', $entry->id)
+                        ->pluck('description')
+                        ->filter()
+                        ->implode(' ');
+                    $checkText .= ' ' . $siblingDesc;
+                } catch (\Exception $ex) {}
+            }
+
+            if (preg_match('/(?:Salary\s+Paid\s+to|Salary\s+for|Salary\s+Paid:\s*Rs\.?\s*[\d,.]+\s+to|Paid\s+to|Advance\s+Salary\s+to|Advance\s+Salary\s+Paid\s+to)\s+([A-Za-z\s]+?)(?:\s*\(|\s+for|\s*$)/i', $checkText, $pm)) {
                 $candidate = trim($pm[1]);
                 if (strlen($candidate) > 2) {
                     $partyName = $candidate;
