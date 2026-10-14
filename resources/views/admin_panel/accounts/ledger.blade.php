@@ -422,8 +422,125 @@
         letter-spacing: -0.01em;
     }
 
+    /* 12-Month Calendar Overview Cards */
+    .erp-calendar-section {
+        background: #ffffff;
+        border: 1.5px solid #dbeafe;
+        border-radius: 14px;
+        padding: 1.25rem 1.35rem;
+        box-shadow: 0 1px 4px rgba(37, 99, 235, 0.05);
+        margin-bottom: 1.75rem;
+    }
+    .erp-calendar-header {
+        border-bottom: 1px solid #f1f5f9;
+        padding-bottom: 0.85rem;
+    }
+    .erp-month-card {
+        background: #ffffff;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 0.90rem 0.95rem;
+        transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+        cursor: pointer;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 110px;
+        user-select: none;
+    }
+    .erp-month-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 18px -2px rgba(37, 99, 235, 0.14);
+        border-color: #3b82f6;
+    }
+    .erp-month-card.has-data {
+        border-color: #bfdbfe;
+        background: linear-gradient(180deg, #ffffff 0%, #f0f7ff 100%);
+    }
+    .erp-month-card.has-data:hover {
+        border-color: #2563eb;
+        background: #ffffff;
+    }
+    .erp-month-card.empty-month {
+        opacity: 0.72;
+        background: #fbfcfe;
+    }
+    .erp-month-card.empty-month:hover {
+        opacity: 1;
+        border-color: #cbd5e1;
+    }
+    .erp-month-card.is-current-month {
+        border: 2px solid #2563eb !important;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+    .erp-month-card.is-current-month::after {
+        content: 'Current';
+        position: absolute;
+        top: -9px;
+        right: 10px;
+        background: #2563eb;
+        color: #ffffff;
+        font-size: 0.60rem;
+        font-weight: 800;
+        padding: 1px 6px;
+        border-radius: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    .month-badge {
+        font-size: 0.82rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 3px 8px;
+        border-radius: 6px;
+        background-color: #f1f5f9;
+        color: #475569;
+    }
+    .month-badge.active {
+        background-color: #eff6ff;
+        color: #1d4ed8;
+        border: 1px solid #bfdbfe;
+    }
+    .compact-amount-badge {
+        font-size: 0.76rem;
+        font-weight: 700;
+        color: #059669;
+        background: #ecfdf5;
+        border: 1px solid #a7f3d0;
+        padding: 1px 7px;
+        border-radius: 20px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+    .month-amount-val {
+        font-size: 1.05rem;
+        font-weight: 800;
+        color: #0f172a;
+        margin: 0.35rem 0 0.15rem 0;
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        letter-spacing: -0.01em;
+    }
+    .currency-symbol {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #64748b;
+    }
+    .txn-count-pill {
+        font-size: 0.72rem;
+        font-weight: 600;
+    }
+    .click-icon {
+        font-size: 0.70rem;
+        transition: transform 0.15s ease;
+    }
+    .erp-month-card:hover .click-icon {
+        transform: translateX(2px);
+        color: #2563eb !important;
+    }
+
     @media print {
-        .header, .sidebar, .erp-filter-card, .erp-page-header .btn-erp-outline, .erp-page-header .btn-erp-primary, .btn-erp-outline-danger {
+        .header, .sidebar, .erp-filter-card, .erp-calendar-section, .erp-page-header .btn-erp-outline, .erp-page-header .btn-erp-primary, .btn-erp-outline-danger {
             display: none !important;
         }
         .main-content {
@@ -530,6 +647,88 @@
                             <p class="erp-kpi-sub">Current book value</p>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            {{-- 12-Month Interactive Payment Calendar --}}
+            <div class="erp-calendar-section">
+                <div class="erp-calendar-header d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 mb-3">
+                    <div>
+                        <h5 class="m-0 font-weight-bold text-dark d-flex align-items-center" style="font-size: 1.05rem; gap: 8px;">
+                            <i class="fas fa-calendar-alt text-primary"></i> 12-Month Payment & Activity Calendar
+                            <span class="badge badge-primary px-2 py-1 ms-1" style="font-size: 0.72rem; font-weight: 700; border-radius: 6px;">Year {{ $selectedYear }}</span>
+                        </h5>
+                        <p class="text-muted small m-0 mt-1">
+                            Click on any month card below to view date-wise breakdown of payments & vouchers (kb kb kis kis ko di hai).
+                        </p>
+                    </div>
+
+                    {{-- Top Year Filter Dropdown --}}
+                    <div class="d-flex align-items-center gap-2">
+                        <label for="yearSelector" class="small font-weight-bold text-secondary mb-0 text-nowrap">Filter Year:</label>
+                        <div class="input-group input-group-sm" style="width: 150px;">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text bg-white border-right-0 text-primary">
+                                    <i class="fas fa-calendar-check"></i>
+                                </span>
+                            </div>
+                            <select id="yearSelector" class="form-control form-control-sm border-left-0 font-weight-bold" onchange="changeCalendarYear(this.value)">
+                                @foreach($availableYears as $yr)
+                                    <option value="{{ $yr }}" {{ $yr == $selectedYear ? 'selected' : '' }}>Year {{ $yr }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- 12 Month Boxes Grid --}}
+                <div class="row g-2 g-md-3">
+                    @foreach($monthlyCalendar as $mKey => $m)
+                        @php
+                            $hasTxn = $m['count'] > 0;
+                            $isCurrentMonth = ($selectedYear == intval(date('Y')) && $m['month_num'] == intval(date('n')));
+                        @endphp
+                        <div class="col-6 col-sm-4 col-md-3 col-xl-2 mb-3">
+                            <div class="erp-month-card {{ $hasTxn ? 'has-data' : 'empty-month' }} {{ $isCurrentMonth ? 'is-current-month' : '' }}"
+                                 onclick="openMonthModal({{ $m['month_num'] }})"
+                                 role="button"
+                                 title="Click to view {{ $m['full_name'] }} detailed transactions">
+                                
+                                {{-- Month Name & Compact Amount Tag --}}
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <span class="month-badge {{ $hasTxn ? 'active' : '' }}">
+                                        {{ $m['short_name'] }}
+                                    </span>
+                                    @if($hasTxn)
+                                        <span class="compact-amount-badge">
+                                            {{ $m['compact_amount'] }}
+                                        </span>
+                                    @else
+                                        <span class="text-muted small">-</span>
+                                    @endif
+                                </div>
+
+                                {{-- Main Pay Amount --}}
+                                <div class="month-amount-val text-truncate" title="Total Outflow / Paid: Rs. {{ number_format($m['paid_amount'], 2) }}">
+                                    @if($hasTxn)
+                                        <span class="currency-symbol">Rs.</span> {{ number_format($m['paid_amount'], 0) }}
+                                    @else
+                                        <span class="text-muted" style="font-weight: 500; font-size: 0.85rem;">Rs. 0</span>
+                                    @endif
+                                </div>
+
+                                {{-- Bottom Meta: Count & Arrow Icon --}}
+                                <div class="d-flex align-items-center justify-content-between pt-1 border-top" style="border-color: #f1f5f9 !important;">
+                                    <span class="txn-count-pill {{ $hasTxn ? 'text-primary font-weight-bold' : 'text-muted' }}">
+                                        <i class="fas fa-receipt mr-1 me-1"></i> {{ $m['count'] }} {{ \Illuminate\Support\Str::plural('Txn', $m['count']) }}
+                                    </span>
+                                    <span class="click-icon text-muted">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
                 </div>
             </div>
 
@@ -783,5 +982,218 @@
         </div>
     </div>
 </div>
+
+{{-- Interactive Month Details Modal --}}
+<div class="modal fade" id="monthDetailsModal" tabindex="-1" role="dialog" aria-labelledby="monthModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" role="document">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 14px; overflow: hidden;">
+            <div class="modal-header bg-light border-bottom py-3 px-4 d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center" style="gap: 12px;">
+                    <div style="width: 42px; height: 42px; border-radius: 10px; background: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title font-weight-bold text-dark m-0" id="monthModalTitle">
+                            Month Transactions
+                        </h5>
+                        <p class="text-muted small m-0 mt-1" id="monthModalSubtitle">
+                            Account: <strong>{{ $account->title }}</strong>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center" style="gap: 10px;">
+                    <span class="badge badge-success px-3 py-2 font-monospace" id="modalTotalPaidBadge" style="font-size: 0.85rem; font-weight: 700; border-radius: 8px;">
+                        Paid: Rs. 0
+                    </span>
+                    <button type="button" class="close text-dark" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close" style="font-size: 1.5rem; outline: none; border: none; background: transparent;">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-body p-0">
+                <div class="p-3 bg-light border-bottom d-flex flex-wrap align-items-center justify-content-between" style="gap: 10px;">
+                    <div class="input-group input-group-sm" style="max-width: 300px;">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text bg-white border-right-0"><i class="fas fa-search text-muted"></i></span>
+                        </div>
+                        <input type="text" id="modalSearchInput" class="form-control border-left-0" placeholder="Filter by party, description, voucher...">
+                    </div>
+                    <div class="d-flex align-items-center" style="gap: 10px;">
+                        <span class="small font-weight-bold text-secondary" id="modalEntryCount">0 transactions</span>
+                        <a href="#" id="modalFilterMainLedgerBtn" class="btn btn-sm btn-outline-primary" style="font-size: 0.80rem; font-weight: 600; border-radius: 6px;">
+                            <i class="fas fa-external-link-alt mr-1 me-1"></i> Open In Main Ledger
+                        </a>
+                    </div>
+                </div>
+
+                <div class="table-responsive" style="max-height: 480px;">
+                    <table class="erp-table table-hover mb-0" id="modalTxnTable">
+                        <thead>
+                            <tr>
+                                <th class="erp-col-date">DATE</th>
+                                <th class="erp-col-voucher">VOUCHER NO</th>
+                                <th class="erp-col-desc">DESCRIPTION</th>
+                                <th class="erp-col-party">PARTY / PERSON (KIS KO DI HAI)</th>
+                                <th class="erp-col-dr">DEBIT (DR)</th>
+                                <th class="erp-col-cr">CREDIT (CR)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modalTxnTableBody">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                        <tfoot id="modalTxnTableFoot">
+                            <tr>
+                                <td colspan="4" class="text-right text-end font-weight-bold pr-3 pe-3 text-dark">Total This Month:</td>
+                                <td class="erp-col-dr font-weight-bold text-success font-monospace" id="modalFootDebit" style="font-size: 0.95rem;">Rs. 0</td>
+                                <td class="erp-col-cr font-weight-bold text-danger font-monospace" id="modalFootCredit" style="font-size: 0.95rem;">Rs. 0</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <div class="modal-footer bg-light py-2 px-4 d-flex justify-content-between align-items-center">
+                <span class="small text-muted font-italic">
+                    <i class="fas fa-info-circle mr-1 me-1 text-primary"></i> Date-wise General Ledger transactions for {{ $account->title }}
+                </span>
+                <button type="button" class="btn btn-secondary btn-sm px-3" data-dismiss="modal" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Monthly Data passed from Controller
+    const monthlyCalendarData = @json($monthlyCalendar);
+    let currentMonthEntries = [];
+
+    function changeCalendarYear(year) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('year', year);
+        window.location.href = url.toString();
+    }
+
+    function formatNumber(num, decimals = 0) {
+        return parseFloat(num || 0).toLocaleString('en-US', {
+            minimumFractionDigits: decimals,
+            maximumFractionDigits: decimals
+        });
+    }
+
+    function openMonthModal(monthNum) {
+        const m = monthlyCalendarData[monthNum];
+        if (!m) return;
+
+        currentMonthEntries = m.entries || [];
+
+        // Set Title & Badges
+        document.getElementById('monthModalTitle').innerHTML = '<i class="fas fa-calendar-alt text-primary mr-1 me-1"></i> ' + m.full_name + ' Details';
+        document.getElementById('monthModalSubtitle').innerHTML = 'Account: <strong class="text-dark">{{ $account->title }}</strong> | Period: ' + m.from_date + ' to ' + m.to_date;
+        document.getElementById('modalTotalPaidBadge').innerHTML = 'Paid / Outflow: Rs. ' + formatNumber(m.paid_amount, 2);
+        document.getElementById('modalEntryCount').innerHTML = m.count + ' transaction' + (m.count === 1 ? '' : 's');
+
+        // Update Filter Link
+        const filterBtn = document.getElementById('modalFilterMainLedgerBtn');
+        const baseUrl = "{{ route('accounts.ledger', $account->id) }}";
+        filterBtn.href = baseUrl + '?from_date=' + m.from_date + '&to_date=' + m.to_date;
+
+        // Render Table Rows
+        renderModalTable(currentMonthEntries);
+
+        // Reset search input
+        const searchInput = document.getElementById('modalSearchInput');
+        if (searchInput) searchInput.value = '';
+
+        // Show Modal (Compatible with Bootstrap 4 & 5)
+        const modalEl = document.getElementById('monthDetailsModal');
+        if (window.bootstrap && bootstrap.Modal) {
+            try {
+                const bModal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                bModal.show();
+            } catch (e) {
+                if (window.jQuery) $(modalEl).modal('show');
+            }
+        } else if (window.jQuery) {
+            $(modalEl).modal('show');
+        }
+    }
+
+    function renderModalTable(entries) {
+        const tbody = document.getElementById('modalTxnTableBody');
+        const footDebit = document.getElementById('modalFootDebit');
+        const footCredit = document.getElementById('modalFootCredit');
+
+        if (!entries || entries.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-muted"><i class="fas fa-calendar-times fa-2x mb-2 text-light"></i><p class="m-0 font-italic">No transactions recorded in this month.</p></td></tr>';
+            footDebit.innerText = 'Rs. 0';
+            footCredit.innerText = 'Rs. 0';
+            return;
+        }
+
+        let totDr = 0;
+        let totCr = 0;
+        let html = '';
+
+        entries.forEach(function(e) {
+            totDr += parseFloat(e.debit || 0);
+            totCr += parseFloat(e.credit || 0);
+
+            const drHtml = e.debit > 0
+                ? '<span class="erp-amount-num font-weight-bold" style="color: #059669;">' + formatNumber(e.debit, 2) + '</span>'
+                : '<span class="text-muted font-monospace">-</span>';
+
+            const crHtml = e.credit > 0
+                ? '<span class="erp-amount-num font-weight-bold" style="color: #dc2626;">' + formatNumber(e.credit, 2) + '</span>'
+                : '<span class="text-muted font-monospace">-</span>';
+
+            const partyHtml = e.party_name && e.party_name !== '—'
+                ? '<div class="d-flex align-items-center" style="gap: 8px;">' +
+                    '<div class="erp-avatar erp-avatar-registered">' + (e.party_initial || 'P') + '</div>' +
+                    '<div class="d-flex flex-column text-truncate" style="line-height: 1.25;">' +
+                        '<span class="font-weight-bold text-dark text-truncate" title="' + e.party_name + '">' + e.party_name + '</span>' +
+                        '<div><span class="badge-party-type">' + e.party_type + '</span></div>' +
+                    '</div>' +
+                  '</div>'
+                : '<span class="text-muted font-weight-medium">—</span>';
+
+            html += '<tr>' +
+                '<td class="erp-col-date"><span class="font-monospace text-dark font-weight-medium" style="font-size: 0.88rem;">' + e.date + '</span></td>' +
+                '<td class="erp-col-voucher"><span class="erp-bill-tag">' + (e.voucher_no || '-') + '</span></td>' +
+                '<td class="erp-col-desc"><span class="text-dark font-weight-medium" style="font-size: 0.88rem; line-height: 1.45;">' + (e.description || '—') + '</span></td>' +
+                '<td class="erp-col-party">' + partyHtml + '</td>' +
+                '<td class="erp-col-dr">' + drHtml + '</td>' +
+                '<td class="erp-col-cr">' + crHtml + '</td>' +
+            '</tr>';
+        });
+
+        tbody.innerHTML = html;
+        footDebit.innerText = 'Rs. ' + formatNumber(totDr, 2);
+        footCredit.innerText = 'Rs. ' + formatNumber(totCr, 2);
+    }
+
+    // Modal Live Search Filter
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('modalSearchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                const q = this.value.trim().toLowerCase();
+                if (!q) {
+                    renderModalTable(currentMonthEntries);
+                    return;
+                }
+                const filtered = currentMonthEntries.filter(function(e) {
+                    return (e.party_name && e.party_name.toLowerCase().includes(q)) ||
+                           (e.party_type && e.party_type.toLowerCase().includes(q)) ||
+                           (e.description && e.description.toLowerCase().includes(q)) ||
+                           (e.voucher_no && e.voucher_no.toLowerCase().includes(q)) ||
+                           (e.date && e.date.includes(q));
+                });
+                renderModalTable(filtered);
+            });
+        }
+    });
+</script>
 @endsection
 
