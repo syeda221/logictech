@@ -1204,10 +1204,24 @@
                                             <li><a href="{{ route('branch.index') }}"><i class="fa-solid fa-code-branch"></i>
                                                     Branches</a></li>
                                         @endcan
+                                        @canany(['settings.view', 'settings.read', 'settings.edit'])
+                                            <li><a href="{{ route('settings.index') }}"><i class="fa-solid fa-sliders"></i>
+                                                    ERP Settings</a></li>
+                                        @endcanany
                                     </ul>
                                 </div>
                             @endcanany
                         </li>
+
+                        <!-- ERP Settings -->
+                        @canany(['settings.view', 'settings.read', 'settings.edit', 'settings.create'])
+                            <li class="nav-item">
+                                <a href="{{ route('settings.index') }}" class="nav-link">
+                                    <i class="menu_icon fas fa-sliders-h"></i>
+                                    <span class="menu-title">ERP Settings</span>
+                                </a>
+                            </li>
+                        @endcanany
 
 
                         <!-- Website Management -->

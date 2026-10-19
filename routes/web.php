@@ -382,6 +382,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/repairs/create', [\App\Http\Controllers\RepairController::class, 'create'])->name('repair.create');
     Route::post('/repairs/store', [\App\Http\Controllers\RepairController::class, 'store'])->name('repair.store');
     Route::get('/repairs/{id}', [\App\Http\Controllers\RepairController::class, 'show'])->name('repair.show');
+    Route::get('/repairs/{id}/edit', [\App\Http\Controllers\RepairController::class, 'edit'])->name('repairs.edit');
+    Route::match(['put', 'patch', 'post'], '/repairs/{id}/update', [\App\Http\Controllers\RepairController::class, 'update'])->name('repairs.update');
     Route::post('/repairs/{id}/status', [\App\Http\Controllers\RepairController::class, 'updateStatus'])->name('repair.status.update');
     Route::post('/repairs/{id}/deliver', [\App\Http\Controllers\RepairController::class, 'deliver'])->name('repair.deliver');
     Route::delete('/repairs/{id}', [\App\Http\Controllers\RepairController::class, 'destroy'])->name('repair.destroy');
@@ -634,6 +636,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/repair/create', [\App\Http\Controllers\RepairController::class, 'create'])->name('repair.create');
     Route::post('/repair', [\App\Http\Controllers\RepairController::class, 'store'])->name('repair.store');
     Route::get('/repair/{id}', [\App\Http\Controllers\RepairController::class, 'show'])->name('repair.show');
+    Route::get('/repair/{id}/edit', [\App\Http\Controllers\RepairController::class, 'edit'])->name('repair.edit');
+    Route::match(['put', 'patch', 'post'], '/repair/{id}/update', [\App\Http\Controllers\RepairController::class, 'update'])->name('repair.update');
     Route::post('/repair/{id}/status', [\App\Http\Controllers\RepairController::class, 'updateStatus'])->name('repair.status.update');
     Route::post('/repair/{id}/deliver', [\App\Http\Controllers\RepairController::class, 'deliver'])->name('repair.deliver');
     Route::delete('/repair/{id}', [\App\Http\Controllers\RepairController::class, 'destroy'])->name('repair.destroy');

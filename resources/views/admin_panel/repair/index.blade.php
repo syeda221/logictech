@@ -582,9 +582,24 @@
 
                                             {{-- Reported Defect --}}
                                             <td>
-                                                <div class="text-dark" style="font-size: 0.74rem;" title="{{ $repair->problem_description }}">
-                                                    {{ Str::limit($repair->problem_description, 45) }}
-                                                </div>
+                                                @php
+                                                    $cleanDefect = $repair->reported_defect;
+                                                    $hasValidDefect = !empty($cleanDefect) && $cleanDefect !== '—' && $cleanDefect !== '[]';
+                                                @endphp
+                                                @if($hasValidDefect)
+                                                    <div class="text-dark fw-medium" style="font-size: 0.74rem;" title="{{ $cleanDefect }}">
+                                                        <i class="fas fa-wrench text-danger me-1" style="font-size: 0.68rem;"></i>{{ Str::limit($cleanDefect, 60) }}
+                                                    </div>
+                                                @else
+                                                    <div class="text-muted fst-italic" style="font-size: 0.72rem;">
+                                                        <i class="fas fa-tools text-muted me-1" style="font-size: 0.68rem;"></i>General Inspection &amp; Service
+                                                    </div>
+                                                @endif
+                                                @if($repair->accessories_received)
+                                                    <div class="text-secondary small mt-0.5" style="font-size: 0.67rem;" title="Accessories: {{ $repair->accessories_received }}">
+                                                        <i class="fas fa-plug text-primary me-1"></i>Acc: {{ Str::limit($repair->accessories_received, 28) }}
+                                                    </div>
+                                                @endif
                                             </td>
 
                                             {{-- Received Date --}}
@@ -660,6 +675,11 @@
                                                                  <li>
                                                                      <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('repair.show', $repair->id) }}">
                                                                          <i class="fas fa-eye text-primary fa-fw"></i> View Details
+                                                                     </a>
+                                                                 </li>
+                                                                 <li>
+                                                                     <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-primary fw-semibold" href="{{ route('repair.edit', $repair->id) }}">
+                                                                         <i class="fas fa-edit text-primary fa-fw"></i> Edit Job
                                                                      </a>
                                                                  </li>
                                                                  <li>

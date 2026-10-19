@@ -15,6 +15,9 @@ class WebsiteSettingsController extends Controller
         }
 
         $settings = Setting::where('group', 'website')->pluck('value', 'key')->toArray();
+        if (empty($settings['web_contact_address'])) {
+            $settings['web_contact_address'] = Setting::get('company_address', '');
+        }
         $categories = \App\Models\Category::all();
         
         return view('admin_panel.website_settings.index', compact('settings', 'categories'));
@@ -26,6 +29,7 @@ class WebsiteSettingsController extends Controller
             'site_name' => 'nullable|string|max:255',
             'contact_email' => 'nullable|email|max:255',
             'contact_phone' => 'nullable|string|max:50',
+            'contact_address' => 'nullable|string',
             'facebook_link' => 'nullable|url',
             'instagram_link' => 'nullable|url',
             'tiktok_link' => 'nullable|url',
@@ -55,7 +59,7 @@ class WebsiteSettingsController extends Controller
         }
 
         $keys = [
-            'site_name', 'contact_email', 'contact_phone',
+            'site_name', 'contact_email', 'contact_phone', 'contact_address',
             'facebook_link', 'instagram_link', 'tiktok_link', 'whatsapp_number',
             'shipping_policy', 'return_policy', 'about_us', 'home_banner_text',
             'easypaisa_account_title', 'easypaisa_mobile_number',
@@ -92,6 +96,20 @@ class WebsiteSettingsController extends Controller
                 ]
             );
             Cache::forget('setting_web_' . $key);
+        }
+
+        // Also sync ERP settings if matching fields are provided
+        if ($request->has('contact_address')) {
+            Setting::set('company_address', $request->input('contact_address'));
+        }
+        if ($request->has('site_name')) {
+            Setting::set('company_name', $request->input('site_name'));
+        }
+        if ($request->has('contact_phone')) {
+            Setting::set('company_phone', $request->input('contact_phone'));
+        }
+        if ($request->has('contact_email')) {
+            Setting::set('company_email', $request->input('contact_email'));
         }
 
         if ($request->hasFile('home_banner_image')) {

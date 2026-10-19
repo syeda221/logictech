@@ -8,6 +8,7 @@ use App\Models\Warehouse;
 use App\Models\Unit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class ReportingController extends Controller
 {
@@ -187,6 +188,43 @@ class ReportingController extends Controller
                 }
             }
 
+            // 3. Fetch from drawer_transactions (Cashbook drawer expense out)
+            if (!$expenseCategoryId || $expenseCategoryId === 'all') {
+                $dtQuery = DB::table('drawer_transactions')
+                    ->where('type', 'out')
+                    ->where('category', 'expense');
+                if ($dateFrom) {
+                    $dtQuery->whereDate('created_at', '>=', $dateFrom);
+                }
+                if ($dateTo) {
+                    $dtQuery->whereDate('created_at', '<=', $dateTo);
+                }
+                $dtList = $dtQuery->orderBy('created_at', 'desc')->get();
+                foreach ($dtList as $dt) {
+                    $amt = (float)$dt->amount;
+                    $totalExpenseAmount += $amt;
+                    $catName = 'Cash Drawer Expense';
+
+                    if (!isset($categoryTotals[$catName])) {
+                        $categoryTotals[$catName] = 0;
+                    }
+                    $categoryTotals[$catName] += $amt;
+
+                    $expenseRows[] = [
+                        'id'            => 'dt_' . $dt->id,
+                        'voucher_no'    => 'DRW-' . $dt->id,
+                        'date'          => date('d M Y', strtotime($dt->created_at)),
+                        'raw_date'      => $dt->created_at,
+                        'category_name' => $catName,
+                        'party_name'    => 'Cash Drawer',
+                        'narration'     => $dt->description ?: 'Drawer Expense Out',
+                        'remarks'       => $dt->description ?: '-',
+                        'amount'        => $amt,
+                        'source'        => 'Cashbook'
+                    ];
+                }
+            }
+
             usort($expenseRows, function($a, $b) {
                 return strtotime($b['raw_date']) - strtotime($a['raw_date']);
             });
@@ -217,9 +255,21 @@ class ReportingController extends Controller
 
         if ($itemType && $itemType !== 'all') {
             if ($itemType === 'finish_goods') {
-                $productsQuery->whereIn('item_type', ['finish_goods', 'both']);
+                $productsQuery->where(function ($q) {
+                    $q->whereIn('item_type', ['finish_goods', 'both'])
+                      ->orWhere(function ($sub) {
+                          $sub->where(function($s) { $s->whereNull('item_type')->orWhere('item_type', ''); })
+                              ->where('is_part', 0);
+                      });
+                });
             } elseif ($itemType === 'raw_material') {
-                $productsQuery->whereIn('item_type', ['raw_material', 'both']);
+                $productsQuery->where(function ($q) {
+                    $q->whereIn('item_type', ['raw_material', 'both'])
+                      ->orWhere(function ($sub) {
+                          $sub->where(function($s) { $s->whereNull('item_type')->orWhere('item_type', ''); })
+                              ->where('is_assembled', 0);
+                      });
+                });
             } else {
                 $productsQuery->where('item_type', $itemType);
             }
@@ -330,12 +380,26 @@ class ReportingController extends Controller
                 $purchasesQuery = DB::table('purchase_items as pi')
                     ->join('purchases as pur', 'pur.id', '=', 'pi.purchase_id')
                     ->where('pi.product_id', $product->id)
-                    ->whereIn('pur.status_purchase', ['approved', 'Returned', 'Partial']);
+                    ->whereIn('pur.status_purchase', ['approved', 'posted', 'Returned', 'Partial']);
                 if ($warehouseId && $warehouseId !== 'all') {
                     $purchasesQuery->where('pur.warehouse_id', $warehouseId);
                 }
-                if ($dateFrom) $purchasesQuery->whereDate('pur.created_at', '>=', $dateFrom);
-                if ($dateTo)   $purchasesQuery->whereDate('pur.created_at', '<=', $dateTo);
+                if ($dateFrom) {
+                    $purchasesQuery->where(function ($q) use ($dateFrom) {
+                        $q->whereDate('pur.purchase_date', '>=', $dateFrom)
+                          ->orWhere(function ($sub) use ($dateFrom) {
+                              $sub->whereNull('pur.purchase_date')->whereDate('pur.created_at', '>=', $dateFrom);
+                          });
+                    });
+                }
+                if ($dateTo) {
+                    $purchasesQuery->where(function ($q) use ($dateTo) {
+                        $q->whereDate('pur.purchase_date', '<=', $dateTo)
+                          ->orWhere(function ($sub) use ($dateTo) {
+                              $sub->whereNull('pur.purchase_date')->whereDate('pur.created_at', '<=', $dateTo);
+                          });
+                    });
+                }
                 $purchasesList = $purchasesQuery->select('pi.qty as total_pieces', 'pi.line_total', 'pi.color')->get();
 
                 // Fetch all purchase returns
@@ -357,15 +421,18 @@ class ReportingController extends Controller
                 $adjList = $adjQuery->select('qty', 'note')->get();
 
                 // Fetch Material Usage for variant
-                $usageQuery = DB::table('material_usage_items as mui')
-                    ->join('material_usages as mu', 'mu.id', '=', 'mui.material_usage_id')
-                    ->where('mui.product_id', $product->id);
-                if ($warehouseId && $warehouseId !== 'all') {
-                    $usageQuery->where('mu.warehouse_id', $warehouseId);
+                $usageList = collect();
+                if (Schema::hasTable('material_usage_items') && Schema::hasTable('material_usages')) {
+                    $usageQuery = DB::table('material_usage_items as mui')
+                        ->join('material_usages as mu', 'mu.id', '=', 'mui.material_usage_id')
+                        ->where('mui.product_id', $product->id);
+                    if ($warehouseId && $warehouseId !== 'all') {
+                        $usageQuery->where('mu.warehouse_id', $warehouseId);
+                    }
+                    if ($dateFrom) $usageQuery->whereDate('mu.date', '>=', $dateFrom);
+                    if ($dateTo)   $usageQuery->whereDate('mu.date', '<=', $dateTo);
+                    $usageList = $usageQuery->select('mui.qty_used', 'mui.total_cost', 'mui.notes')->get();
                 }
-                if ($dateFrom) $usageQuery->whereDate('mu.date', '>=', $dateFrom);
-                if ($dateTo)   $usageQuery->whereDate('mu.date', '<=', $dateTo);
-                $usageList = $usageQuery->select('mui.qty_used', 'mui.total_cost', 'mui.notes')->get();
 
                 $saleIds = $returnsList->pluck('sale_id')->unique()->toArray();
                 $saleItemsMap = [];
@@ -600,18 +667,22 @@ class ReportingController extends Controller
                 $adjustments = (float) $adjQuery->sum('qty');
 
                 // Material Usage (Consumption in Production)
-                $usageQuery = DB::table('material_usage_items as mui')
-                    ->join('material_usages as mu', 'mu.id', '=', 'mui.material_usage_id')
-                    ->where('mui.product_id', $product->id);
-                if ($warehouseId && $warehouseId !== 'all') {
-                    $usageQuery->where('mu.warehouse_id', $warehouseId);
-                }
-                if ($dateFrom) $usageQuery->whereDate('mu.date', '>=', $dateFrom);
-                if ($dateTo)   $usageQuery->whereDate('mu.date', '<=', $dateTo);
+                $materialUsedQty  = 0;
+                $materialUsedCost = 0;
+                if (Schema::hasTable('material_usage_items') && Schema::hasTable('material_usages')) {
+                    $usageQuery = DB::table('material_usage_items as mui')
+                        ->join('material_usages as mu', 'mu.id', '=', 'mui.material_usage_id')
+                        ->where('mui.product_id', $product->id);
+                    if ($warehouseId && $warehouseId !== 'all') {
+                        $usageQuery->where('mu.warehouse_id', $warehouseId);
+                    }
+                    if ($dateFrom) $usageQuery->whereDate('mu.date', '>=', $dateFrom);
+                    if ($dateTo)   $usageQuery->whereDate('mu.date', '<=', $dateTo);
 
-                $usageStats = $usageQuery->selectRaw('COALESCE(SUM(mui.qty_used), 0) as total_qty, COALESCE(SUM(mui.total_cost), 0) as total_cost')->first();
-                $materialUsedQty  = (float) ($usageStats->total_qty ?? 0);
-                $materialUsedCost = (float) ($usageStats->total_cost ?? 0);
+                    $usageStats = $usageQuery->selectRaw('COALESCE(SUM(mui.qty_used), 0) as total_qty, COALESCE(SUM(mui.total_cost), 0) as total_cost')->first();
+                    $materialUsedQty  = (float) ($usageStats->total_qty ?? 0);
+                    $materialUsedCost = (float) ($usageStats->total_cost ?? 0);
+                }
 
                 // Opening stock = Closing Balance - Purchased + Material Used + Sold - Sale Return + Purchase Return - Adjustments
                 $initial = max(0, $balance - $purchased + $materialUsedQty + $sold - $returnedQty + $pReturned - $adjustments);
@@ -2747,13 +2818,28 @@ class ReportingController extends Controller
 
         if (is_array($dateFilter) && !empty($dateFilter)) {
             if (isset($dateFilter['before'])) {
-                $query->where('purchases.purchase_date', '<=', $dateFilter['before']);
+                $query->where(function ($q) use ($dateFilter) {
+                    $q->whereDate('purchases.purchase_date', '<=', $dateFilter['before'])
+                      ->orWhere(function ($sub) use ($dateFilter) {
+                          $sub->whereNull('purchases.purchase_date')->whereDate('purchases.created_at', '<=', $dateFilter['before']);
+                      });
+                });
             }
             if (isset($dateFilter['from']) && !empty($dateFilter['from'])) {
-                $query->whereDate('purchases.created_at', '>=', $dateFilter['from']);
+                $query->where(function ($q) use ($dateFilter) {
+                    $q->whereDate('purchases.purchase_date', '>=', $dateFilter['from'])
+                      ->orWhere(function ($sub) use ($dateFilter) {
+                          $sub->whereNull('purchases.purchase_date')->whereDate('purchases.created_at', '>=', $dateFilter['from']);
+                      });
+                });
             }
             if (isset($dateFilter['to']) && !empty($dateFilter['to'])) {
-                $query->whereDate('purchases.created_at', '<=', $dateFilter['to']);
+                $query->where(function ($q) use ($dateFilter) {
+                    $q->whereDate('purchases.purchase_date', '<=', $dateFilter['to'])
+                      ->orWhere(function ($sub) use ($dateFilter) {
+                          $sub->whereNull('purchases.purchase_date')->whereDate('purchases.created_at', '<=', $dateFilter['to']);
+                      });
+                });
             }
         }
 

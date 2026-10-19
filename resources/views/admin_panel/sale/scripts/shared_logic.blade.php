@@ -283,7 +283,7 @@
   </tr>
   <!-- EXPANDABLE SPECIFICATIONS SUB-ROW -->
   <tr class="specs-subrow bg-light d-none" style="border-top: 1px dashed #cbd5e1;">
-    <td colspan="12" class="p-2 bg-light">
+    <td colspan="10" class="p-2 bg-light">
       <div class="p-2.5 bg-white rounded-3 border shadow-sm" style="border-color: #cbd5e1 !important; border-left: 3px solid #2563eb !important;">
         <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom" style="border-color: #f1f5f9 !important;">
           <div class="d-flex align-items-center gap-2">

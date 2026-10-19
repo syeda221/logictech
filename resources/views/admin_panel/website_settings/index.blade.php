@@ -412,6 +412,11 @@
                         <label class="form-label-custom">WhatsApp Number</label>
                         <input type="text" name="whatsapp_number" class="form-control-custom" value="{{ $settings['web_whatsapp_number'] ?? '' }}" placeholder="Enter WhatsApp Number" {{ ((empty($settings['web_whatsapp_number']) && !$canCreate) || (!empty($settings['web_whatsapp_number']) && !$canEdit)) ? 'disabled' : '' }}>
                     </div>
+                    <div class="col-12">
+                        <label class="form-label-custom"><i class="fas fa-map-marker-alt text-danger me-1"></i> Contact Address (Company / Invoice Address)</label>
+                        <textarea name="contact_address" class="form-control-custom" rows="2" style="height: auto; min-height: 60px;" placeholder="Enter Official Company / Contact Address..." {{ ((empty($settings['web_contact_address']) && !$canCreate) || (!empty($settings['web_contact_address']) && !$canEdit)) ? 'disabled' : '' }}>{{ $settings['web_contact_address'] ?? '' }}</textarea>
+                        <small class="text-muted" style="font-size: 11.5px;">This address is synchronized with the ERP Company Address and appears on Invoice headers and Website contact details.</small>
+                    </div>
                 </div>
             </div>
         </div>

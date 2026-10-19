@@ -466,7 +466,7 @@ class ProductController extends Controller
             $query->where('item_type', $request->item_type);
         }
 
-        $products   = $query->latest()->paginate(20)->withQueryString();
+        $products   = $query->orderBy('id', 'asc')->paginate(20)->withQueryString();
         $categories = Category::orderBy('name')->get();
         $brands     = Brand::orderBy('name')->get();
         $units      = Unit::orderBy('name')->get();
@@ -1249,6 +1249,9 @@ class ProductController extends Controller
                 $final_color = Product::where('id', $id)->value('color');
             }
 
+            $oldProduct = Product::find($id);
+            $oldColor = $oldProduct ? $oldProduct->color : null;
+
             Product::where('id', $id)->update([
                 'creater_id' => $userId,
                 'category_id' => $request->category_id,
@@ -1263,8 +1266,8 @@ class ProductController extends Controller
                 'color' => $final_color,
                 'purchase_discount_percent' => $request->purchase_discount_percent ?? 0,
                 'sale_discount_percent' => $request->sale_discount_percent ?? 0,
-                'alert_quantity' => $request->alert_quantity,
-                'alert_carton_quantity' => $request->alert_carton_quantity,
+                'alert_quantity' => $request->alert_quantity ?? $request->alert_carton_quantity,
+                'alert_carton_quantity' => $request->alert_carton_quantity ?? $request->alert_quantity,
 
                 // New Fields
                 'size_mode' => $mode,
@@ -1354,22 +1357,44 @@ class ProductController extends Controller
                     ]);
                 }
             } else {
+                $newInitialPieces = count($variants) > 0 ? array_sum(array_column($variants, 'stock')) : (float)($request->piece_quantity ?: (($request->boxes_quantity ?? 0) * $ppb));
+                $oldVariants = is_string($oldColor) ? json_decode($oldColor, true) : (is_array($oldColor) ? $oldColor : []);
+                $oldInitialPieces = (is_array($oldVariants) && count($oldVariants) > 0) ? array_sum(array_column($oldVariants, 'stock')) : 0;
+
+                $initMovement = StockMovement::where('product_id', $id)->where('ref_type', 'INIT')->first();
+                if ($initMovement) {
+                    $stockDiff = $newInitialPieces - (float)$initMovement->qty;
+                    $initMovement->qty = $newInitialPieces;
+                    $initMovement->save();
+                } else {
+                    $stockDiff = $newInitialPieces - (float)$oldInitialPieces;
+                    if ($newInitialPieces > 0) {
+                        StockMovement::create([
+                            'product_id' => $id,
+                            'type'       => 'adjustment',
+                            'qty'        => $newInitialPieces,
+                            'ref_type'   => 'INIT',
+                            'note'       => 'Initial Stock',
+                        ]);
+                    }
+                }
+
                 if ($warehouseStock) {
                     // If total_pieces was 0 but quantity was set, recover total_pieces
                     if ((float)$warehouseStock->total_pieces <= 0 && (float)$warehouseStock->quantity > 0) {
                         $warehouseStock->total_pieces = round($warehouseStock->quantity * $ppb, 2);
                     }
+                    $warehouseStock->total_pieces = round($warehouseStock->total_pieces + $stockDiff, 2);
                     // Keep the actual pieces we have, just update the box display approximation
                     $warehouseStock->quantity = round($warehouseStock->total_pieces / $ppb, 2);
                     $warehouseStock->save();
                 } else {
                     $defaultWhId = \App\Models\Warehouse::getDefaultWarehouseId();
-                    $initialPieces = count($variants) > 0 ? array_sum(array_column($variants, 'stock')) : 0;
                     $warehouseStock = \App\Models\WarehouseStock::create([
                         'warehouse_id' => $defaultWhId,
                         'product_id' => $id,
-                        'total_pieces' => $initialPieces,
-                        'quantity' => $ppb > 0 ? round($initialPieces / $ppb, 2) : $initialPieces,
+                        'total_pieces' => $newInitialPieces,
+                        'quantity' => $ppb > 0 ? round($newInitialPieces / $ppb, 2) : $newInitialPieces,
                         'price' => 0,
                         'remarks' => 'Auto-created on product update',
                     ]);

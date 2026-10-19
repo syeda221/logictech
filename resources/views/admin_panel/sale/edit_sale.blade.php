@@ -904,7 +904,7 @@
                                                 </tr>
                                                 <!-- EXPANDABLE SPECIFICATIONS SUB-ROW -->
                                                 <tr class="specs-subrow bg-light {{ ($item->technical_name || $item->technical_specs || $item->technical_remarks) ? '' : 'd-none' }}" style="border-top: 1px dashed #cbd5e1;">
-                                                    <td colspan="11" class="p-2 bg-light">
+                                                    <td colspan="10" class="p-2 bg-light">
                                                         <div class="p-2.5 bg-white rounded-3 border shadow-sm" style="border-color: #cbd5e1 !important; border-left: 3px solid #2563eb !important;">
                                                             <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom" style="border-color: #f1f5f9 !important;">
                                                                 <div class="d-flex align-items-center gap-2">
@@ -938,7 +938,7 @@
                                     </tbody>
                                     <tfoot>
                                         <tr id="gridAlertRow" class="d-none">
-                                            <td colspan="11" class="p-1 border-0" style="background-color: transparent !important;">
+                                            <td colspan="10" class="p-1 border-0" style="background-color: transparent !important;">
                                                 <div id="gridAlertBox" class="alert alert-warning d-flex align-items-center justify-content-between px-2 py-1 mb-0 rounded border border-warning shadow-sm" style="font-size: 0.78rem; font-weight: 600; color: #856404; background-color: #fff3cd;">
                                                     <div class="d-flex align-items-center gap-1">
                                                         <i class="fas fa-exclamation-triangle text-warning me-1 alert-icon" style="font-size: 0.85rem;"></i>
@@ -949,7 +949,7 @@
                                             </td>
                                         </tr>
                                         <tr>
-                                            <td colspan="9" class="text-end fw-bold text-uppercase" style="font-size:0.78rem; color: #1e40af;">Invoice Total:</td>
+                                            <td colspan="8" class="text-end fw-bold text-uppercase" style="font-size:0.78rem; color: #1e40af;">Invoice Total:</td>
                                             <td class="text-end fw-bold fs-6" style="color: #059669;"><span id="totalAmount">0.00</span></td>
                                             <td></td>
                                         </tr>

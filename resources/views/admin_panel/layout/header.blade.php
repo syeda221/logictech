@@ -401,7 +401,7 @@
                         </li>
 
                         <!-- Settings -->
-                        @if (auth()->user()->email === 'admin@admin.com')
+                        @if (auth()->user()->hasRole('Super Admin') || auth()->user()->canany(['settings.view', 'settings.read', 'settings.edit']) || auth()->user()->email === 'admin@admin.com')
                             <li class="nav-item">
                                 <a href="{{ route('settings.index') }}" class="nav-link"><i
                                         class="menu_icon feather ft-settings"></i><span

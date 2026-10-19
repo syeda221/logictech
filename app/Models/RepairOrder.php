@@ -150,4 +150,43 @@ class RepairOrder extends Model
             default => ucfirst(str_replace('_', ' ', $this->status)),
         };
     }
+
+    /**
+     * Get clean customer reported defect / fault description text.
+     * Automatically extracts the actual reported fault from JSON payload if stored as itemized JSON array.
+     */
+    public function getReportedDefectAttribute(): string
+    {
+        $raw = $this->problem_description;
+        if (empty($raw)) {
+            return '—';
+        }
+
+        if (is_string($raw) && (str_starts_with(trim($raw), '[') || str_starts_with(trim($raw), '{'))) {
+            $decoded = json_decode($raw, true);
+            if (is_array($decoded)) {
+                $faults = [];
+                foreach ($decoded as $item) {
+                    if (is_array($item)) {
+                        $fault = trim($item['problem_description'] ?? $item['defect'] ?? $item['fault'] ?? $item['reported_defect'] ?? '');
+                        if (empty($fault) && !empty($item['desc']) && !isset($item['item_name'])) {
+                            $fault = trim($item['desc']);
+                        }
+                        if (!empty($fault) && !in_array($fault, $faults)) {
+                            $faults[] = $fault;
+                        }
+                    } elseif (is_string($item) && !empty(trim($item))) {
+                        $faults[] = trim($item);
+                    }
+                }
+                if (!empty($faults)) {
+                    return implode('; ', $faults);
+                }
+
+                return '—';
+            }
+        }
+
+        return (string) $raw;
+    }
 }

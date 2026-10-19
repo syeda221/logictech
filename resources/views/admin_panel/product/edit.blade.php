@@ -259,7 +259,7 @@
                                                 <span class="text-muted fw-normal" style="font-size: 0.72rem; text-transform: none;">Choose whether this item is Raw Material or Finished Goods</span>
                                             </label>
                                             <div class="btn-group w-100 p-1 bg-light rounded-3 border" role="group" aria-label="Item Classification">
-                                                <input type="radio" class="btn-check" name="item_type" id="type_raw_material" value="raw_material" autocomplete="off" {{ ($product->item_type ?? 'raw_material') === 'raw_material' ? 'checked' : '' }}>
+                                                <input type="radio" class="btn-check" name="item_type" id="type_raw_material" value="raw_material" autocomplete="off" {{ ($product->item_type ?? 'raw_material') !== 'finish_goods' ? 'checked' : '' }}>
                                                 <label class="btn btn-outline-warning rounded-2 py-2 fw-bold text-dark d-flex align-items-center justify-content-center gap-2" for="type_raw_material">
                                                     <i class="fas fa-boxes-stacked"></i>
                                                     <span>Raw Material</span>
@@ -454,8 +454,9 @@
 
                                         {{-- Common Alert Quantity --}}
                                         <div class="col-md-3">
-                                            <label class="form-label-pro text-danger">Low Stock Alert (Cartons)</label>
-                                            <input type="number" class="form-control-pro border-danger" name="alert_carton_quantity" id="alert_carton_quantity" min="0" value="{{ $product->alert_carton_quantity }}" placeholder="e.g. 5">
+                                            <label class="form-label-pro text-danger">Low Stock Alert (Cartons / Pcs)</label>
+                                            <input type="number" class="form-control-pro border-danger" name="alert_carton_quantity" id="alert_carton_quantity" min="0" value="{{ $product->alert_carton_quantity ?? $product->alert_quantity }}" placeholder="e.g. 5">
+                                            <input type="hidden" name="alert_quantity" id="alert_quantity" value="{{ $product->alert_quantity ?? $product->alert_carton_quantity }}">
                                         </div>
                                     </div>
                                 </div>
@@ -598,6 +599,15 @@
 @endsection
 
 @section('js')
+    @php
+        $existingVariants = [];
+        if (!empty($product->color)) {
+            $decoded = is_string($product->color) ? json_decode($product->color, true) : $product->color;
+            if (is_array($decoded)) {
+                $existingVariants = $decoded;
+            }
+        }
+    @endphp
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // --- UI Elements ---
@@ -680,46 +690,6 @@
                 if (el) el.innerText = val;
             }
 
-            function toggleFactorColumns() {
-                if (!unitDropdown) return;
-                const mode = unitDropdown.value;
-                const showFactor = (mode === 'by_kg' || mode === 'by_meter');
-                
-                const headers = document.querySelectorAll('.factor-header');
-                headers.forEach(h => {
-                    if (showFactor && variantMode !== 'weight') {
-                        h.classList.remove('d-none');
-                        h.textContent = (mode === 'by_kg') ? 'Piece Weight (g)' : 'Piece Length (m)';
-                    } else {
-                        h.classList.add('d-none');
-                    }
-                });
-                
-                const cols = document.querySelectorAll('.factor-col');
-                cols.forEach(c => {
-                    if (showFactor && variantMode !== 'weight') {
-                        c.classList.remove('d-none');
-                    } else {
-                        c.classList.add('d-none');
-                        const inp = c.querySelector('input');
-                        if (inp) inp.value = '0';
-                    }
-                });
- 
-                const mainFactorCol = document.querySelector('.factor-col-main');
-                if (mainFactorCol) {
-                    if (showFactor) {
-                        mainFactorCol.classList.remove('d-none');
-                        const lbl = mainFactorCol.querySelector('.factor-label');
-                        if (lbl) lbl.textContent = (mode === 'by_kg') ? 'Piece Weight (g)' : 'Piece Length (m)';
-                    } else {
-                        mainFactorCol.classList.add('d-none');
-                        const inp = mainFactorCol.querySelector('input');
-                        if (inp) inp.value = '0';
-                    }
-                }
-            }
-
             // Events
             form.querySelectorAll('input').forEach(i => i.addEventListener('input', calculate));
 
@@ -762,6 +732,20 @@
             // AJAX Submission
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
+
+                if (variantMode === 'weight' && !variantsContainer.classList.contains('d-none')) {
+                    const factors = Array.from(document.querySelectorAll('input[name="variant_conv_factor[]"]')).map(el => parseFloat(el.value));
+                    const uniqueFactors = new Set(factors);
+                    if (factors.length !== uniqueFactors.size) {
+                        Swal.fire({icon: 'error', title: 'Validation Error', text: 'A variant with the same Conv Factor already exists.'});
+                        return;
+                    }
+                    if (factors.some(f => f <= 0 || isNaN(f))) {
+                        Swal.fire({icon: 'error', title: 'Validation Error', text: 'Conv Factor must be greater than 0.'});
+                        return;
+                    }
+                }
+
                  const vStocks = document.querySelectorAll('input[name="variant_stock[]"]');
                  const vSale = document.querySelectorAll('input[name="variant_sale_price[]"]');
                  const vWholesale = document.querySelectorAll('input[name="variant_wholesale_price[]"]');
@@ -795,6 +779,9 @@
                      document.getElementById('weight_per_piece').value = firstWeight;
                      document.getElementById('purchase_price_per_piece').value = firstPurch;
                      document.getElementById('alert_carton_quantity').value = firstAlert;
+                     if (document.getElementById('alert_quantity')) {
+                         document.getElementById('alert_quantity').value = firstAlert;
+                     }
                  } else {
                      document.getElementById('wholesale_price_hidden').value = document.getElementById('wholesale_price').value;
                      document.getElementById('weight_per_piece_hidden').value = document.getElementById('weight_per_piece').value;
@@ -1303,17 +1290,34 @@
                     convCols.forEach(c => c.classList.add('d-none'));
                     pieceWtOnlyCols.forEach(c => c.classList.add('d-none'));
                 }
-            function updateItemTypeVisibility() {
+
+                const mainFactorCol = document.querySelector('.factor-col-main');
+                if (mainFactorCol) {
+                    if (mode === 'by_kg' || mode === 'by_meter') {
+                        mainFactorCol.classList.remove('d-none');
+                        const lbl = mainFactorCol.querySelector('.factor-label');
+                        if (lbl) lbl.textContent = (mode === 'by_kg') ? 'Piece Weight (g)' : 'Piece Length (m)';
+                    } else {
+                        mainFactorCol.classList.add('d-none');
+                        const inp = mainFactorCol.querySelector('input');
+                        if (inp) inp.value = '0';
+                    }
+                }
+            }
+
+            function updateItemTypeVisibility(resetValues = false) {
                 const isFinishGoods = document.getElementById('type_finish_goods')?.checked;
                 if (isFinishGoods) {
                     $('.stock-col').hide();
                     $('.alert-col').hide();
                     $('.purch-col').hide();
                     $('.purch-field-col').hide();
-                    $('input[name="variant_stock[]"]').val(0);
-                    $('input[name="variant_alert_qty[]"]').val(0);
-                    $('#purchase_price_per_piece').val(0);
-                    $('input[name="variant_purchase_price[]"]').val(0).prop('required', false);
+                    if (resetValues) {
+                        $('input[name="variant_stock[]"]').val(0);
+                        $('input[name="variant_alert_qty[]"]').val(0);
+                        $('#purchase_price_per_piece').val(0);
+                    }
+                    $('input[name="variant_purchase_price[]"]').prop('required', false);
                 } else {
                     $('.stock-col').show();
                     $('.alert-col').show();
@@ -1321,8 +1325,8 @@
                     $('.purch-field-col').show();
                 }
             }
-            $('input[name="item_type"]').on('change', updateItemTypeVisibility);
-            updateItemTypeVisibility();
+            $('input[name="item_type"]').on('change', function() { updateItemTypeVisibility(true); });
+            updateItemTypeVisibility(false);
 
             enableVariantsBtn.addEventListener('click', function() {
                 if (variantsBody.children.length === 0) {
@@ -1330,7 +1334,7 @@
                 } else {
                     addVariantRow();
                 }
-                updateItemTypeVisibility();
+                updateItemTypeVisibility(false);
                 if (typeof isMobile === 'function' && isMobile()) {
                     if (typeof rebuildMobileCards === 'function') rebuildMobileCards();
                     const cards = document.querySelectorAll('.mob-variant-card');
@@ -1370,54 +1374,47 @@
                 }
             });
 
-            form.addEventListener('submit', function(e) {
-                if (variantMode === 'weight' && !variantsContainer.classList.contains('d-none')) {
-                    const factors = Array.from(document.querySelectorAll('input[name="variant_conv_factor[]"]')).map(el => parseFloat(el.value));
-                    const uniqueFactors = new Set(factors);
-                    if (factors.length !== uniqueFactors.size) {
-                        e.preventDefault();
-                        Swal.fire({icon: 'error', title: 'Validation Error', text: 'A variant with the same Conv Factor already exists.'});
-                        return;
-                    }
-                    if (factors.some(f => f <= 0 || isNaN(f))) {
-                        e.preventDefault();
-                        Swal.fire({icon: 'error', title: 'Validation Error', text: 'Conv Factor must be greater than 0.'});
-                        return;
-                    }
-                }
-            });
-
             // Initialize existing variants
-            const existingColorStr = `{!! addslashes($product->color ?? 'null') !!}`;
+            const existingVariants = {!! json_encode($existingVariants) !!};
             try {
-                const parsed = JSON.parse(existingColorStr);
-                if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'object') {
-                    // Determine mode initially based on existing data if possible, though unit dropdown should rule
-                    const currentUnit = unitDropdown ? unitDropdown.value : 'by_pieces';
-                    variantMode = isWeightUnit(currentUnit) ? 'weight' : 'standard';
-                    
-                    applyVariantModeUI();
-                    
-                    variantsContainer.classList.remove('d-none');
-                    variantsBody.innerHTML = ''; // clear default empty row
-                    
-                    parsed.forEach(v => {
-                        if (variantMode === 'weight') {
-                            if (v.is_base_variant == 1) {
-                                addBaseVariantRow(v);
-                            } else {
-                                addVariantRow(null, v);
-                            }
+                const currentUnit = unitDropdown ? unitDropdown.value : 'by_pieces';
+                variantMode = isWeightUnit(currentUnit) ? 'weight' : 'standard';
+                
+                applyVariantModeUI();
+                
+                variantsContainer.classList.remove('d-none');
+                variantsBody.innerHTML = ''; // clear default empty row
+                
+                if (Array.isArray(existingVariants) && existingVariants.length > 0) {
+                    existingVariants.forEach((v, idx) => {
+                        if (v.is_base_variant == 1 || idx === 0) {
+                            addBaseVariantRow(v);
                         } else {
                             addVariantRow(null, v);
                         }
                     });
+                } else {
+                    addBaseVariantRow({
+                        name: productNameInput.value || '',
+                        size: '-',
+                        color: '-',
+                        unit: (unitDropdown && unitDropdown.value === 'by_cartons') ? 'Carton' : 'Pcs',
+                        stock: {{ (float)($product->boxes_quantity ?: $product->piece_quantity ?: 0) }},
+                        conv_factor: {{ (float)($product->pieces_per_box ?: 1) }},
+                        weight_per_piece: {{ (float)($product->weight_per_piece ?: 1000) }},
+                        sale_price: {{ (float)($product->sale_price_per_piece ?: $product->sale_price_per_box ?: 0) }},
+                        wholesale_price: {{ (float)($product->wholesale_price ?: 0) }},
+                        purch_price: {{ (float)($product->purchase_price_per_piece ?: 0) }},
+                        alert: {{ (float)($product->alert_carton_quantity ?: $product->alert_quantity ?: 0) }},
+                        barcode: '{{ $product->barcode_path }}',
+                        is_base_variant: 1
+                    });
                 }
-            } catch(e) { console.error(e); }
- 
-            // Call updateMode to set initial visible states
-            updateMode();
- 
+            } catch(e) { console.error('Error initializing variants:', e); }
+
+            toggleFactorColumns();
+            updateItemTypeVisibility(false);
+
         });
 
         // ============================================================

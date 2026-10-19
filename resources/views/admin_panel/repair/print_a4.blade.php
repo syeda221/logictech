@@ -1,9 +1,9 @@
 @php
     /* ── Company Settings ── */
     $coName    = \App\Models\Setting::get('company_name', 'LOGIC TECH ENGINEERING');
-    $coAddr    = \App\Models\Setting::get('company_address', 'Hno 2/11B near bight future high school husri distric hyderabad');
-    $coEmail   = \App\Models\Setting::get('company_email', 'info@logictech.com.pk');
-    $coPhone   = \App\Models\Setting::get('company_phone', '0300-9464887, 0321-9596972');
+    $coAddr    = \App\Models\Setting::get('company_address') ?: \App\Models\Setting::get('web_contact_address', '');
+    $coEmail   = \App\Models\Setting::get('company_email') ?: \App\Models\Setting::get('web_contact_email', 'info@logictech.com.pk');
+    $coPhone   = \App\Models\Setting::get('company_phone') ?: \App\Models\Setting::get('web_contact_phone', '0336-1500082');
     $coLogo    = \App\Models\Setting::getLogoUrl();
 
     /* ── Financial Calculations ── */
@@ -348,8 +348,9 @@
             $descExtra = [];
             if (!empty($repair->brand_model)) $descExtra[] = 'Model: ' . $repair->brand_model;
             if (!empty($repair->serial_no)) $descExtra[] = 'SN: ' . $repair->serial_no;
-            if (!empty($repair->problem_description) && !is_array(json_decode($repair->problem_description, true)) && $repair->problem_description !== $descTitle) {
-                $descExtra[] = $repair->problem_description;
+            $defectText = $repair->reported_defect;
+            if (!empty($defectText) && $defectText !== '—' && $defectText !== $descTitle) {
+                $descExtra[] = $defectText;
             }
             $defaultSubject = $descTitle . (!empty($descExtra) ? ' (' . implode(' | ', $descExtra) . ')' : '');
             $subjectText = !empty($repair->subject) ? $repair->subject : $defaultSubject;

@@ -55,6 +55,19 @@ class SettingsController extends Controller
                     if (in_array($key, ['company_logo', 'company_stamp', 'company_signature'])) continue;
                     Setting::set($key, $value);
                 }
+
+                // Keep website settings in sync with company settings
+                $syncMap = [
+                    'company_address' => 'web_contact_address',
+                    'company_name'    => 'web_site_name',
+                    'company_phone'   => 'web_contact_phone',
+                    'company_email'   => 'web_contact_email',
+                ];
+                foreach ($syncMap as $companyKey => $webKey) {
+                    if (isset($validated['settings'][$companyKey])) {
+                        Setting::set($webKey, $validated['settings'][$companyKey], 'website', 'string');
+                    }
+                }
             }
 
             // Handle company logo removal or update

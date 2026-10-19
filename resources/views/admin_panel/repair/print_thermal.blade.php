@@ -211,7 +211,7 @@
         {{-- Fault Description Box --}}
         <div class="box-section">
             <div style="font-size: 9px; font-weight: bold; text-decoration: underline;">REPORTED PROBLEM / DEFECT:</div>
-            <div style="font-size: 10px; margin-top: 2px;">{{ $repair->problem_description }}</div>
+            <div style="font-size: 10px; margin-top: 2px;">{{ $repair->reported_defect }}</div>
         </div>
 
         {{-- Financial Settlement --}}

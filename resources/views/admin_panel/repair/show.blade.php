@@ -171,6 +171,9 @@
                         <a href="{{ route('repair.print.a4', $repair->id) }}" target="_blank" class="btn btn-primary btn-erp-action fw-bold">
                             <i class="fas fa-file-invoice"></i> Print A4 Invoice
                         </a>
+                        <a href="{{ route('repair.edit', $repair->id) }}" class="btn btn-outline-primary btn-erp-action bg-white fw-bold">
+                            <i class="fas fa-edit text-primary"></i> Edit Job
+                        </a>
 
                         @if ($repair->status !== 'delivered')
                             <button type="button" class="btn btn-warning text-white btn-erp-action" data-toggle="modal" data-target="#statusModal" data-bs-toggle="modal" data-bs-target="#statusModal">

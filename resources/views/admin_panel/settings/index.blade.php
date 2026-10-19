@@ -60,6 +60,54 @@
                             <div class="tab-content" id="settingsTabContent">
                                 <!-- Company Tab -->
                                 <div class="tab-pane fade show active" id="company" role="tabpanel">
+                                    <!-- Company Profile & Invoice Information Section -->
+                                    <div class="card mb-4 border shadow-sm" style="background-color: #ffffff;">
+                                        <div class="card-header bg-white font-weight-bold d-flex align-items-center" style="border-bottom: 2px solid #e2e8f0;">
+                                            <i class="fas fa-building text-primary mr-2"></i> Company Information (Printed on Invoices & Receipts)
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="font-weight-bold text-dark">Company Name <span class="text-danger">*</span></label>
+                                                    <input type="text" name="settings[company_name]" class="form-control" value="{{ \App\Models\Setting::get('company_name', 'LOGIC TECH ENGINEERING') }}" required {{ !$canEditSettings ? 'disabled' : '' }}>
+                                                    <small class="form-text text-muted">Official business / company name displayed on invoice headers</small>
+                                                </div>
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="font-weight-bold text-dark">Primary Phone / Mobile</label>
+                                                    <input type="text" name="settings[company_phone]" class="form-control" value="{{ \App\Models\Setting::get('company_phone', '92 336 1500082') }}" placeholder="e.g. 92 336 1500082" {{ !$canEditSettings ? 'disabled' : '' }}>
+                                                    <small class="form-text text-muted">Primary contact phone number printed on invoices</small>
+                                                </div>
+                                                <div class="col-12 mb-3">
+                                                    <label class="font-weight-bold text-dark" style="font-size: 0.95rem;">
+                                                        <i class="fas fa-map-marker-alt text-danger mr-1"></i> Company Address (Invoice Header) <span class="text-danger">*</span>
+                                                    </label>
+                                                    <textarea name="settings[company_address]" class="form-control" rows="2" placeholder="Enter full official address (e.g. Street / Area / Industrial Zone, City, Pakistan)..." style="font-size: 14px; font-weight: 500;" required {{ !$canEditSettings ? 'disabled' : '' }}>{{ \App\Models\Setting::get('company_address', '') }}</textarea>
+                                                    <small class="form-text text-muted">This address will be printed at the top of all Sale Invoices, Repair Job Sheets, and Purchase Orders.</small>
+                                                </div>
+                                                <div class="col-md-4 mb-3">
+                                                    <label class="font-weight-bold text-dark">Company Email</label>
+                                                    <input type="email" name="settings[company_email]" class="form-control" value="{{ \App\Models\Setting::get('company_email', 'info@logictech.com.pk') }}" placeholder="info@logictech.com.pk" {{ !$canEditSettings ? 'disabled' : '' }}>
+                                                    <small class="form-text text-muted">Official contact email on invoices</small>
+                                                </div>
+                                                <div class="col-md-4 mb-3">
+                                                    <label class="font-weight-bold text-dark">NTN Number</label>
+                                                    <input type="text" name="settings[company_ntn]" class="form-control" value="{{ \App\Models\Setting::get('company_ntn', '5561761-4') }}" placeholder="5561761-4" {{ !$canEditSettings ? 'disabled' : '' }}>
+                                                    <small class="form-text text-muted">National Tax Number on invoices</small>
+                                                </div>
+                                                <div class="col-md-4 mb-3">
+                                                    <label class="font-weight-bold text-dark">STRN Number</label>
+                                                    <input type="text" name="settings[company_strn]" class="form-control" value="{{ \App\Models\Setting::get('company_strn', '') }}" placeholder="Optional STRN" {{ !$canEditSettings ? 'disabled' : '' }}>
+                                                    <small class="form-text text-muted">Sales Tax Registration Number</small>
+                                                </div>
+                                                <div class="col-md-4 mb-3">
+                                                    <label class="font-weight-bold text-dark">Currency Symbol</label>
+                                                    <input type="text" name="settings[currency_symbol]" class="form-control" value="{{ \App\Models\Setting::get('currency_symbol', 'PKR') }}" placeholder="PKR" {{ !$canEditSettings ? 'disabled' : '' }}>
+                                                    <small class="form-text text-muted">Currency used in system (e.g. PKR)</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <!-- Company Logo Section -->
                                     @php
                                         $companyLogo = \App\Models\Setting::getLogoUrl();
@@ -185,7 +233,7 @@
 
                                     @if (isset($settings['company']))
                                         @foreach ($settings['company'] as $setting)
-                                            @if ($setting['key'] === 'company_logo')
+                                            @if (in_array($setting['key'], ['company_logo', 'company_stamp', 'company_signature', 'company_name', 'company_address', 'company_phone', 'company_email', 'company_ntn', 'company_strn', 'currency_symbol']))
                                                 @continue
                                             @endif
                                             <div class="form-group">

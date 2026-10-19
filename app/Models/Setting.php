@@ -22,7 +22,26 @@ class Setting extends Model
         return Cache::remember($cacheKey, 3600, function () use ($key, $default) {
             $setting = self::where('key', $key)->first();
             
-            if (!$setting) {
+            if (!$setting || $setting->value === null || $setting->value === '') {
+                // Cross-check sibling key for address, phone, email between ERP & Website
+                $siblings = [
+                    'company_address' => 'web_contact_address',
+                    'web_contact_address' => 'company_address',
+                    'company_phone' => 'web_contact_phone',
+                    'web_contact_phone' => 'company_phone',
+                    'company_email' => 'web_contact_email',
+                    'web_contact_email' => 'company_email',
+                    'company_name' => 'web_site_name',
+                    'web_site_name' => 'company_name',
+                ];
+
+                if (isset($siblings[$key])) {
+                    $sib = self::where('key', $siblings[$key])->first();
+                    if ($sib && $sib->value !== null && $sib->value !== '') {
+                        return self::castValue($sib->value, $sib->type);
+                    }
+                }
+
                 return $default;
             }
 
@@ -50,6 +69,21 @@ class Setting extends Model
         $setting->save();
 
         Cache::forget('setting_' . $key);
+
+        // Clear sibling cache as well
+        $siblings = [
+            'company_address' => 'web_contact_address',
+            'web_contact_address' => 'company_address',
+            'company_phone' => 'web_contact_phone',
+            'web_contact_phone' => 'company_phone',
+            'company_email' => 'web_contact_email',
+            'web_contact_email' => 'company_email',
+            'company_name' => 'web_site_name',
+            'web_site_name' => 'company_name',
+        ];
+        if (isset($siblings[$key])) {
+            Cache::forget('setting_' . $siblings[$key]);
+        }
 
         return true;
     }

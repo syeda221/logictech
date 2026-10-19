@@ -234,7 +234,7 @@
                 </div>
             @endif
             <div class="company-name">{{ \App\Models\Setting::get('company_name', 'LOGIC TECH ENGINEERING') }}</div>
-            <div style="font-size: 12px;">{{ \App\Models\Setting::get('company_address', '01-KM Sharaqpur Road') }}</div>
+            <div style="font-size: 12px;">{{ \App\Models\Setting::get('company_address') ?: \App\Models\Setting::get('web_contact_address', '') }}</div>
         </div>
 
         <div class="invoice-title">Delivery Challan</div>

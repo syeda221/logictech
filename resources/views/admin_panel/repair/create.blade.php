@@ -307,11 +307,31 @@
                                         </div>
                                     </div>
 
-                                    <div class="row g-2">
+                                    <div class="row g-2 mb-3">
                                         <div class="col-12">
-                                            <label class="form-label required">Reported Fault, Physical Condition &amp; Accessories Received</label>
+                                            <label class="form-label required">
+                                                <i class="fas fa-wrench text-danger me-1"></i> Reported Fault / Problem Description
+                                            </label>
                                             <textarea name="problem_description" id="problemDescription" rows="3" class="form-control"
-                                                placeholder="Enter reported fault / problem description, physical condition, and accessories received..." required>{{ old('problem_description') }}</textarea>
+                                                placeholder="Enter customer reported fault / defect description..." required>{{ old('problem_description') }}</textarea>
+                                        </div>
+                                    </div>
+
+                                    <div class="row g-2">
+                                        <div class="col-md-6">
+                                            <label class="form-label">
+                                                <i class="fas fa-plug text-primary me-1"></i> Accessories Received With Unit
+                                            </label>
+                                            <input type="text" name="accessories_received" id="accessoriesReceived" class="form-control"
+                                                value="{{ old('accessories_received') }}" placeholder="e.g. Power Cable, Induction Coil, Foot Switch, etc.">
+                                            <small class="text-muted" style="font-size: 0.68rem;">Visible on Job Sheet, A4 Invoice, and Register</small>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">
+                                                <i class="fas fa-eye text-secondary me-1"></i> Physical Condition / Appearance
+                                            </label>
+                                            <input type="text" name="physical_condition" id="physicalCondition" class="form-control"
+                                                value="{{ old('physical_condition') }}" placeholder="e.g. Intact casing, minor scratches on front panel">
                                         </div>
                                     </div>
                                 </div>

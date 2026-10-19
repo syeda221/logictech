@@ -90,7 +90,11 @@ class SaleController extends Controller
         $stats = [
             'total_count' => $sales->count(),
             'total_net' => (float) $sales->sum('total_net'),
-            'total_discount' => (float) $sales->sum('total_extradiscount'),
+            'total_discount' => (float) $sales->sum(function ($s) {
+                $inline_val = $s->items ? $s->items->sum('discount_amount') : 0;
+                $extra_disc = (float) ($s->total_extradiscount ?? 0);
+                return $inline_val + $extra_disc;
+            }),
             'posted_count' => $sales->where('sale_status', 'posted')->count(),
             'draft_count' => $sales->where('sale_status', 'draft')->count(),
             'booked_count' => $sales->where('sale_status', 'booked')->count(),

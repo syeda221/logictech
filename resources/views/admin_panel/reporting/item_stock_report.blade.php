@@ -520,7 +520,6 @@ $(document).ready(function() {
                     <th class="text-center" style="width:70px;">History</th>
                 </tr>
             `);
-        }
         } else if (mode === 'expenses') {
             // Operational Expense Report Columns
             thead.append(`
@@ -545,7 +544,8 @@ $(document).ready(function() {
         tfooter.empty();
 
         if (!data || data.length === 0) {
-            tbody.append(`<tr><td colspan="12" class="text-center py-5 text-muted">No data found for the selected filters.</td></tr>`);
+            let colSpan = (mode === 'expenses') ? 8 : ((mode === 'ledger') ? 11 : 12);
+            tbody.append(`<tr><td colspan="${colSpan}" class="text-center py-5 text-muted">No data found for the selected filters.</td></tr>`);
             return;
         }
 

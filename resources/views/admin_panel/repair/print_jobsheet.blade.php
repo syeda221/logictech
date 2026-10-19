@@ -1,9 +1,9 @@
 @php
     /* ── Company Settings ── */
     $coName    = \App\Models\Setting::get('company_name', 'LOGIC TECH ENGINEERING');
-    $coAddr    = \App\Models\Setting::get('company_address', 'Hno 2/11B near bight future high school husri distric hyderabad');
-    $coEmail   = \App\Models\Setting::get('company_email', 'info@logictech.com.pk');
-    $coPhone   = \App\Models\Setting::get('company_phone', '0336-1500082');
+    $coAddr    = \App\Models\Setting::get('company_address') ?: \App\Models\Setting::get('web_contact_address', '');
+    $coEmail   = \App\Models\Setting::get('company_email') ?: \App\Models\Setting::get('web_contact_email', 'info@logictech.com.pk');
+    $coPhone   = \App\Models\Setting::get('company_phone') ?: \App\Models\Setting::get('web_contact_phone', '0336-1500082');
     $coLogo    = \App\Models\Setting::getLogoUrl();
 
     $itemsData = json_decode($repair->problem_description, true);

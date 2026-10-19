@@ -306,6 +306,158 @@ class RepairController extends Controller
     }
 
     /**
+     * Show the form for editing an existing repair job.
+     */
+    public function edit($id)
+    {
+        $repair = RepairOrder::with(['customer', 'product', 'advanceAccount'])->findOrFail($id);
+
+        $customers = Customer::orderBy('customer_name')->get();
+
+        $accounts = Account::whereHas('head', function ($q) {
+            $q->whereIn('name', ['Cash', 'Bank', 'cash', 'bank']);
+        })->orWhereIn('id', [4, 5, 7, 8, 9])->where('status', 1)->orderBy('title')->get();
+
+        $products = Product::where('item_type', 'finish_goods')
+            ->orderBy('item_name')
+            ->get();
+
+        $itemsData = [];
+        if (!empty($repair->problem_description) && is_string($repair->problem_description) && (str_starts_with(trim($repair->problem_description), '[') || str_starts_with(trim($repair->problem_description), '{'))) {
+            $decoded = json_decode($repair->problem_description, true);
+            if (is_array($decoded)) {
+                $itemsData = $decoded;
+            }
+        }
+        $reportedDefect = $repair->reported_defect;
+
+        return view('admin_panel.repair.edit', compact('repair', 'customers', 'accounts', 'products', 'itemsData', 'reportedDefect'));
+    }
+
+    /**
+     * Update an existing repair job details.
+     */
+    public function update(Request $request, $id)
+    {
+        $repair = RepairOrder::findOrFail($id);
+
+        $validated = $request->validate([
+            'customer_id' => 'nullable|exists:customers,id',
+            'customer_name' => 'nullable|string|max:150',
+            'customer_phone' => 'required|string|max:50',
+            'customer_address' => 'nullable|string|max:255',
+            'product_id' => 'nullable|exists:products,id',
+            'item_name' => 'required|string|max:255',
+            'brand_model' => 'nullable|string|max:150',
+            'serial_no' => 'nullable|string|max:150',
+            'problem_description' => 'required|string',
+            'accessories_received' => 'nullable|string|max:255',
+            'physical_condition' => 'nullable|string|max:255',
+            'technician_notes' => 'nullable|string',
+            'received_date' => 'required|date',
+            'expected_delivery_date' => 'nullable|date',
+            'priority' => 'required|in:normal,high,urgent',
+            'status' => 'required|in:received,diagnosing,in_progress,waiting_parts,completed,delivered,cancelled',
+            'estimated_cost' => 'nullable|numeric|min:0',
+            'advance_paid' => 'nullable|numeric|min:0',
+            'advance_account_id' => 'nullable|exists:accounts,id',
+        ]);
+
+        if (empty($validated['customer_id']) && empty($validated['customer_name'])) {
+            return back()->withInput()->with('error', 'Please enter customer name or select an existing customer.');
+        }
+
+        $estimatedCost = (float) ($validated['estimated_cost'] ?? 0);
+        $advancePaid = (float) ($validated['advance_paid'] ?? 0);
+
+        if ($advancePaid > 0 && empty($validated['advance_account_id'])) {
+            return back()->withInput()->with('error', 'Please select an account for the advance payment.');
+        }
+
+        // Format problem_description as JSON payload matching store structure
+        $itemsData = [
+            [
+                'sn' => 1,
+                'item_name' => $validated['item_name'],
+                'brand_model' => $validated['brand_model'] ?? '',
+                'serial_no' => $validated['serial_no'] ?? '',
+                'problem_description' => $validated['problem_description'],
+                'estimated_cost' => $estimatedCost,
+            ]
+        ];
+        $problemPayload = json_encode($itemsData);
+
+        try {
+            DB::beginTransaction();
+
+            $oldStatus = $repair->status;
+            $oldAdvance = (float) $repair->advance_paid;
+
+            // Compute total charges & due amount
+            $totalCharges = (float) $repair->total_charges > 0 ? (float) $repair->total_charges : $estimatedCost;
+            $finalPaid = (float) $repair->final_paid;
+            $dueAmount = max(0, $totalCharges - $advancePaid - $finalPaid);
+
+            $repair->update([
+                'customer_id' => $validated['customer_id'] ?? null,
+                'customer_name' => $validated['customer_name'] ?? null,
+                'customer_phone' => $validated['customer_phone'],
+                'customer_address' => $validated['customer_address'] ?? null,
+                'product_id' => $validated['product_id'] ?? null,
+                'item_name' => $validated['item_name'],
+                'brand_model' => $validated['brand_model'] ?? null,
+                'serial_no' => $validated['serial_no'] ?? null,
+                'problem_description' => $problemPayload,
+                'accessories_received' => $validated['accessories_received'] ?? null,
+                'physical_condition' => $validated['physical_condition'] ?? null,
+                'technician_notes' => $validated['technician_notes'] ?? null,
+                'received_date' => $validated['received_date'],
+                'expected_delivery_date' => $validated['expected_delivery_date'] ?? null,
+                'priority' => $validated['priority'],
+                'status' => $validated['status'],
+                'estimated_cost' => $estimatedCost,
+                'total_charges' => $totalCharges,
+                'advance_paid' => $advancePaid,
+                'advance_account_id' => $advancePaid > 0 ? $validated['advance_account_id'] : null,
+                'due_amount' => $dueAmount,
+            ]);
+
+            // If advance payment was newly introduced or changed, record voucher
+            if ($advancePaid > 0 && $repair->advance_account_id && $advancePaid > $oldAdvance) {
+                $additionalAdvance = $advancePaid - $oldAdvance;
+                $this->recordPaymentVoucher(
+                    $repair,
+                    $repair->advance_account_id,
+                    $additionalAdvance,
+                    $repair->received_date->format('Y-m-d'),
+                    "Advance Adjustment for Repair #{$repair->repair_no} - {$repair->item_name}"
+                );
+            }
+
+            // Create Audit Log
+            RepairOrderLog::create([
+                'repair_order_id' => $repair->id,
+                'user_id' => Auth::id(),
+                'action' => 'updated',
+                'from_status' => $oldStatus,
+                'to_status' => $repair->status,
+                'amount' => $advancePaid,
+                'account_id' => $repair->advance_account_id,
+                'notes' => 'Repair job intake details updated.',
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('repair.show', $repair->id)
+                ->with('success', "Repair Job #{$repair->repair_no} updated successfully!");
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withInput()->with('error', 'Error updating repair order: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Update repair status and diagnostic notes.
      */
     public function updateStatus(Request $request, $id)

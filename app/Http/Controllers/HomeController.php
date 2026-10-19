@@ -213,6 +213,8 @@ class HomeController extends Controller
                 $lowStockProducts = \App\Models\Product::withSum('warehouseStocks', 'total_pieces')
                     ->whereNotNull('alert_carton_quantity')
                     ->where('is_active', 1)
+                    ->where('item_type', '!=', \App\Models\Product::TYPE_FINISH_GOODS)
+                    ->whereIn('item_type', [\App\Models\Product::TYPE_RAW_MATERIAL, \App\Models\Product::TYPE_BOTH])
                     ->get()
                     ->filter(function ($p) {
                         $stock = (float) ($p->warehouse_stocks_sum_total_pieces ?? 0);
@@ -637,41 +639,63 @@ class HomeController extends Controller
 
     public function getRawLowStockData($filter = 'critical')
     {
-        $products = \App\Models\Product::withSum('warehouseStocks', 'total_pieces')
+        $products = \App\Models\Product::with(['unit'])
+            ->withSum('warehouseStocks', 'total_pieces')
             ->where('is_active', 1)
+            ->where('item_type', '!=', \App\Models\Product::TYPE_FINISH_GOODS)
+            ->whereIn('item_type', [\App\Models\Product::TYPE_RAW_MATERIAL, \App\Models\Product::TYPE_BOTH])
             ->get();
 
         $mapped = $products->map(function ($p) {
-            $stock = (float) ($p->warehouse_stocks_sum_total_pieces ?? 0);
+            $stockPieces = (float) ($p->warehouse_stocks_sum_total_pieces ?? 0);
             $ppb = $p->pieces_per_box > 0 ? $p->pieces_per_box : 1;
-            $cartons = floor($stock / $ppb);
-            $p->current_cartons = $cartons;
-            $p->alert_qty = (float) ($p->alert_carton_quantity ?? 0);
-            $p->deficit = $cartons - $p->alert_qty;
+            
+            $isCartonMode = ($p->size_mode === 'by_cartons') || ($ppb > 1 && !in_array($p->size_mode, ['by_kg', 'by_gm', 'by_meter', 'by_feet', 'by_ton']));
+            $stockDisplayVal = $isCartonMode ? floor($stockPieces / $ppb) : $stockPieces;
+
+            $unitLabel = $p->unit->name ?? match($p->size_mode) {
+                'by_kg' => 'Kg',
+                'by_gm' => 'Gm',
+                'by_ton' => 'Ton',
+                'by_meter' => 'Mtr',
+                'by_feet' => 'Ft',
+                'by_cartons' => 'ctns',
+                'by_size' => 'M²',
+                default => ($isCartonMode ? 'ctns' : 'pcs'),
+            };
+
+            $p->current_stock_num = $stockDisplayVal;
+            $p->unit_label = $unitLabel;
+            $p->alert_qty = (float) ($p->alert_carton_quantity ?? $p->alert_quantity ?? 0);
+            $p->deficit = $stockDisplayVal - $p->alert_qty;
             return $p;
         });
 
         if ($filter == 'critical') {
-            $filtered = $mapped->filter(fn($p) => $p->alert_qty > 0 && $p->current_cartons < $p->alert_qty)
-                               ->sortBy('deficit');
+            $filtered = $mapped->filter(function ($p) {
+                return ($p->alert_qty > 0) ? ($p->current_stock_num < $p->alert_qty) : ($p->current_stock_num <= 0);
+            })->sortBy('deficit');
         } elseif ($filter == 'low') {
-            $filtered = $mapped->filter(fn($p) => $p->alert_qty > 0 && $p->current_cartons < $p->alert_qty)
-                               ->sortBy('current_cartons');
+            $filtered = $mapped->filter(function ($p) {
+                return ($p->alert_qty > 0) ? ($p->current_stock_num <= $p->alert_qty) : ($p->current_stock_num <= 5);
+            })->sortBy('current_stock_num');
         } elseif ($filter == 'out_of_stock') {
-            $filtered = $mapped->filter(fn($p) => $p->current_cartons <= 0)
-                               ->sortBy('current_cartons');
+            $filtered = $mapped->filter(fn($p) => $p->current_stock_num <= 0)
+                               ->sortBy('current_stock_num');
         } else {
-            $filtered = $mapped->sortBy('current_cartons');
+            $filtered = $mapped->sortBy('current_stock_num');
         }
 
         return $filtered->take(15)->values()->map(function ($p, $idx) {
+            $unit = $p->unit_label ?? 'ctns';
+            $isLow = ($p->alert_qty > 0) ? ($p->current_stock_num < $p->alert_qty) : ($p->current_stock_num <= 0);
             return [
                 'sr' => $idx + 1,
-                'product' => $p->item_name ?: ($p->product_name ?: 'Product Item'),
-                'stock' => $p->current_cartons . ' ctns',
-                'alert' => $p->alert_qty . ' ctns',
+                'product' => $p->item_name ?: ($p->product_name ?: 'Raw Material'),
+                'stock' => $p->current_stock_num . ' ' . $unit,
+                'alert' => $p->alert_qty . ' ' . $unit,
                 'pieces' => number_format($p->warehouse_stocks_sum_total_pieces ?? 0) . ' pcs',
-                'is_low' => $p->current_cartons < $p->alert_qty
+                'is_low' => $isLow
             ];
         });
     }
