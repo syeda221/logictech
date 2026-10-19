@@ -422,22 +422,54 @@
             }
         }
 
-        /* Prevent menu items from ever wrapping onto a second line on desktop */
+        /* Desktop navbar: Keep Dashboard on far left, center rest of nav, NEVER overlap on small screens */
         @media (min-width: 992px) {
             .rt_nav_header.horizontal-layout .nav-bottom .page-navigation {
+                display: flex !important;
                 flex-wrap: nowrap !important;
+                align-items: center !important;
+                justify-content: flex-start !important;
+                width: 100% !important;
+                position: relative !important;
+            }
+
+            .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item.nav-item-dashboard {
+                position: static !important;
+                flex-shrink: 0 !important;
+                margin: 0 !important;
+            }
+
+            .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item.nav-item-dashboard > .nav-link {
+                padding-left: 0 !important;
+                padding-right: 12px !important;
+            }
+
+            /* Center the main navigation menu using auto margins */
+            .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item.nav-center-first {
+                margin-left: auto !important;
+            }
+
+            .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item:last-child {
+                margin-right: auto !important;
             }
         }
 
-        /* Clean menu links: no bulky margins or extra padding that causes overflow */
+        /* Clean menu links: increased font size 14.5px, responsive padding to prevent overflow & overlap */
         .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item > .nav-link {
             color: #334155 !important;
-            padding: 18px 10px !important;
+            padding: 15px 9px !important;
             font-weight: 600 !important;
-            font-size: 13.5px !important;
+            font-size: 14.5px !important;
             white-space: nowrap !important;
             margin: 0 !important;
             transition: color 0.15s ease-in-out;
+        }
+
+        @media (min-width: 1400px) {
+            .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item > .nav-link {
+                padding: 16px 13px !important;
+                font-size: 15px !important;
+            }
         }
 
         .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item > .nav-link:hover,
@@ -450,6 +482,7 @@
         .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item > .nav-link .menu_icon {
             color: #64748b !important;
             margin-right: 5px;
+            font-size: 14.5px !important;
         }
 
         .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item > .nav-link:hover .menu_icon,
@@ -810,11 +843,11 @@
             </script>
             <div class="nav-bottom">
                 <div class="container-fluid" style="padding: 0 20px;">
-                    <ul class="nav page-navigation justify-content-center">
+                    <ul class="nav page-navigation">
                         <!--=========================*
                               Home
                     *===========================-->
-                        <li class="nav-item">
+                        <li class="nav-item nav-item-dashboard">
                             <a href="{{ url('/home') }}" class="nav-link"><i
                                     class="menu_icon fas fa-home"></i><span class="menu-title">Dashboard</span></a>
 
@@ -822,7 +855,7 @@
                         <!--=========================*
                               UI Features
                     *===========================-->
-                        <li class="nav-item mega-menu">
+                        <li class="nav-item mega-menu nav-center-first">
                             @canany(['products.view', 'discount.products.view', 'categories.view', 'subcategories.view',
                                 'brands.view', 'units.view', 'vendors.view', 'purchases.view', 'purchase_pos.create',
                                 'warehouse.view', 'warehouse.stock.view', 'stock.transfer.view', 'stock.adjust.view', 'stock.adjust.create',
