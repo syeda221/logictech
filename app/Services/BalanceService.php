@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Account;
 use App\Models\Customer;
+use App\Models\CustomerLedger;
 use App\Models\JournalEntry;
 use App\Models\VoucherDetail;
 use App\Models\VoucherMaster;
@@ -25,6 +26,9 @@ class BalanceService
         if (! $customer) {
             return 0;
         }
+
+        // Auto-sync opening balance if present in customer table but journal/ledger entry is missing
+        $this->ensureCustomerOpeningBalanceSynced($customer);
 
         // Sum of all journal entries for this customer (includes Opening Balance journal entry)
         $journalBalance = JournalEntry::where('party_type', Customer::class)
@@ -62,6 +66,9 @@ class BalanceService
                 'transactions' => [],
             ];
         }
+
+        // Auto-sync opening balance if present in customer table but journal/ledger entry is missing
+        $this->ensureCustomerOpeningBalanceSynced($customer);
 
         // Get opening balance (balance before start date)
         $openingBalance = $this->getCustomerBalanceBeforeDate($customerId, $startDate);
@@ -568,6 +575,171 @@ class BalanceService
         }
 
         return $account->id;
+    }
+
+    /**
+     * Synchronize customer opening balance in CustomerLedger and JournalEntry
+     */
+    public function syncCustomerOpeningBalance(Customer $customer, float $oldOpening = 0, float $newOpening = 0): void
+    {
+        // 1. Sync Journal Entry
+        try {
+            $arId = $this->getAccountsReceivableId();
+            $journalService = app(JournalEntryService::class);
+
+            $obJournal = JournalEntry::where(function ($q) use ($customer) {
+                $q->where('source_type', Customer::class)
+                    ->where('source_id', $customer->id);
+            })->orWhere(function ($q) use ($customer) {
+                $q->where('party_type', Customer::class)
+                    ->where('party_id', $customer->id)
+                    ->where('description', 'Opening Balance');
+            })->first();
+
+            $entryDate = $customer->created_at ? $customer->created_at->format('Y-m-d') : now()->format('Y-m-d');
+
+            if ($obJournal) {
+                if ($newOpening > 0) {
+                    $oldDebit = (float) $obJournal->debit;
+                    $journalDiff = $newOpening - $oldDebit;
+
+                    $obJournal->debit = $newOpening;
+                    $obJournal->party_type = Customer::class;
+                    $obJournal->party_id = $customer->id;
+                    $obJournal->source_type = Customer::class;
+                    $obJournal->source_id = $customer->id;
+                    $obJournal->account_id = $arId;
+                    $obJournal->save();
+
+                    // Adjust Account current_balance
+                    $account = Account::find($arId);
+                    if ($account && $journalDiff != 0) {
+                        $account->current_balance = ($account->current_balance ?? 0) + $journalDiff;
+                        $account->save();
+                    }
+                } else {
+                    // Deleted or zeroed opening balance
+                    $account = Account::find($obJournal->account_id);
+                    if ($account) {
+                        $account->current_balance = ($account->current_balance ?? 0) - (float) $obJournal->debit;
+                        $account->save();
+                    }
+                    $obJournal->delete();
+                }
+            } else {
+                if ($newOpening > 0) {
+                    $journalService->recordEntry(
+                        $customer,
+                        $arId,
+                        $newOpening,
+                        0,
+                        "Opening Balance",
+                        $entryDate,
+                        $customer
+                    );
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::error("syncCustomerOpeningBalance (Journal) Error: " . $e->getMessage());
+        }
+
+        // 2. Sync CustomerLedger
+        try {
+            $openingLedger = CustomerLedger::where('customer_id', $customer->id)
+                ->where(function ($q) {
+                    $q->where('opening_balance', '>', 0)
+                        ->orWhere('description', 'Opening Balance');
+                })
+                ->orderBy('id', 'asc')
+                ->first();
+
+            if ($openingLedger) {
+                $oldLedgerOpening = (float) $openingLedger->opening_balance;
+                $ledgerDiff = $newOpening - $oldLedgerOpening;
+
+                if ($newOpening > 0) {
+                    $openingLedger->opening_balance = $newOpening;
+                    $openingLedger->closing_balance = (float)$openingLedger->previous_balance + $newOpening;
+                    $openingLedger->save();
+                } else {
+                    $openingLedger->delete();
+                }
+
+                // If ledgerDiff != 0, update all subsequent ledger entries for this customer
+                if ($ledgerDiff != 0) {
+                    CustomerLedger::where('customer_id', $customer->id)
+                        ->where('id', '>', $openingLedger->id)
+                        ->increment('previous_balance', $ledgerDiff);
+
+                    CustomerLedger::where('customer_id', $customer->id)
+                        ->where('id', '>', $openingLedger->id)
+                        ->increment('closing_balance', $ledgerDiff);
+                }
+            } else {
+                if ($newOpening > 0) {
+                    $newLedger = CustomerLedger::create([
+                        'customer_id' => $customer->id,
+                        'admin_or_user_id' => auth()->id() ?? 1,
+                        'previous_balance' => 0,
+                        'opening_balance' => $newOpening,
+                        'closing_balance' => $newOpening,
+                        'description' => 'Opening Balance',
+                        'created_at' => $customer->created_at ?? now(),
+                        'updated_at' => now(),
+                    ]);
+
+                    // If other ledger entries existed, shift their previous and closing balances
+                    CustomerLedger::where('customer_id', $customer->id)
+                        ->where('id', '!=', $newLedger->id)
+                        ->increment('previous_balance', $newOpening);
+
+                    CustomerLedger::where('customer_id', $customer->id)
+                        ->where('id', '!=', $newLedger->id)
+                        ->increment('closing_balance', $newOpening);
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::error("syncCustomerOpeningBalance (Ledger) Error: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Ensure customer's opening balance is synchronized if present in customer master
+     */
+    public function ensureCustomerOpeningBalanceSynced(Customer $customer): void
+    {
+        $opening = (float) ($customer->opening_balance ?? 0);
+        if ($opening <= 0) {
+            return;
+        }
+
+        $obJournal = JournalEntry::where(function ($q) use ($customer) {
+            $q->where('source_type', Customer::class)
+                ->where('source_id', $customer->id);
+        })->orWhere(function ($q) use ($customer) {
+            $q->where('party_type', Customer::class)
+                ->where('party_id', $customer->id)
+                ->where('description', 'Opening Balance');
+        })->first();
+
+        $openingLedger = CustomerLedger::where('customer_id', $customer->id)
+            ->where(function ($q) {
+                $q->where('opening_balance', '>', 0)
+                    ->orWhere('description', 'Opening Balance');
+            })->first();
+
+        $needsSync = false;
+        if (! $obJournal || abs((float)$obJournal->debit - $opening) > 0.001) {
+            $needsSync = true;
+        }
+        if (! $openingLedger || abs((float)$openingLedger->opening_balance - $opening) > 0.001) {
+            $needsSync = true;
+        }
+
+        if ($needsSync) {
+            $oldJournalDebit = $obJournal ? (float) $obJournal->debit : 0;
+            $this->syncCustomerOpeningBalance($customer, $oldJournalDebit, $opening);
+        }
     }
 
     /**

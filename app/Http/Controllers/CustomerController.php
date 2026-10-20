@@ -166,36 +166,12 @@ class CustomerController extends Controller
         // Customer create
         $customer = Customer::create($data);
 
-        // Ledger me entry agar opening balance dia gaya ho
-        $opening = $data['opening_balance'] ?? 0;
+        // Ledger & Journal me entry agar opening balance dia gaya ho
+        $opening = (float) ($data['opening_balance'] ?? 0);
 
         if ($opening > 0) {
-            CustomerLedger::create([
-                'customer_id' => $customer->id,
-                'admin_or_user_id' => Auth::id(),
-                'previous_balance' => 0,
-                'opening_balance' => $opening,
-                'closing_balance' => $opening,
-            ]);
-
-            // ✅ Record Journal Entry for Opening Balance (Accounting)
-            try {
-                $balanceService = app(\App\Services\BalanceService::class);
-                $journalService = app(\App\Services\JournalEntryService::class);
-                $arId = $balanceService->getAccountsReceivableId();
-
-                $journalService->recordEntry(
-                    $customer,
-                    $arId,
-                    $opening, // Debit (Asset)
-                    0,        // Credit
-                    "Opening Balance",
-                    now()->format('Y-m-d'),
-                    $customer
-                );
-            } catch (\Exception $e) {
-                \Log::error("Customer Opening Balance Journal Error: " . $e->getMessage());
-            }
+            $balanceService = app(\App\Services\BalanceService::class);
+            $balanceService->syncCustomerOpeningBalance($customer, 0, $opening);
         }
 
         if ($request->ajax()) {
@@ -221,9 +197,16 @@ class CustomerController extends Controller
     public function update(Request $request, $id)
     {
         $customer = Customer::findOrFail($id);
-        $data = $request->except('_token');
+        $oldOpeningBalance = (float) ($customer->opening_balance ?? 0);
 
+        $data = $request->except('_token');
         $customer->update($data);
+
+        $newOpeningBalance = isset($data['opening_balance']) ? (float) $data['opening_balance'] : $oldOpeningBalance;
+
+        // Synchronize opening balance in CustomerLedger and JournalEntry
+        $balanceService = app(\App\Services\BalanceService::class);
+        $balanceService->syncCustomerOpeningBalance($customer, $oldOpeningBalance, $newOpeningBalance);
 
         return redirect()->route('customers.index')->with('success', 'Customer updated successfully.');
     }
@@ -252,8 +235,23 @@ class CustomerController extends Controller
                 // Use Balance Service for accurate Statement
                 $balanceService = app(\App\Services\BalanceService::class);
                 
-                $startDate = $request->from_date ?? '2000-01-01';
-                $endDate = $request->to_date ?? date('Y-m-d');
+                $startDate = '2000-01-01';
+                if ($request->filled('from_date')) {
+                    try {
+                        $startDate = \Carbon\Carbon::createFromFormat('d/m/Y', $request->from_date)->format('Y-m-d');
+                    } catch (\Exception $e) {
+                        $startDate = date('Y-m-d', strtotime($request->from_date));
+                    }
+                }
+
+                $endDate = date('Y-m-d');
+                if ($request->filled('to_date')) {
+                    try {
+                        $endDate = \Carbon\Carbon::createFromFormat('d/m/Y', $request->to_date)->format('Y-m-d');
+                    } catch (\Exception $e) {
+                        $endDate = date('Y-m-d', strtotime($request->to_date));
+                    }
+                }
                 
                 $data = $balanceService->getCustomerLedger($request->customer_id, $startDate, $endDate);
                 
