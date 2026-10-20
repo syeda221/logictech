@@ -422,53 +422,109 @@
             }
         }
 
-        /* Desktop navbar: Keep Dashboard on far left, center rest of nav, NEVER overlap on small screens */
+        /* ── Modern Centered Navbar with Left Pinned Dashboard ── */
         @media (min-width: 992px) {
+            .rt_nav_header.horizontal-layout .nav-bottom .container-fluid {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                position: relative !important;
+                padding: 0 20px !important;
+            }
+
+            .nav-dashboard-corner {
+                flex-shrink: 0 !important;
+                display: flex !important;
+                align-items: center !important;
+            }
+
+            .nav-dashboard-corner .nav-link {
+                color: #2563eb !important;
+                font-weight: 700 !important;
+                font-size: 15.5px !important;
+                padding: 15px 0 !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                white-space: nowrap !important;
+                text-decoration: none !important;
+            }
+
+            .nav-dashboard-corner .nav-link .menu_icon {
+                color: #2563eb !important;
+                font-size: 16px !important;
+                margin-right: 6px;
+            }
+
             .rt_nav_header.horizontal-layout .nav-bottom .page-navigation {
                 display: flex !important;
                 flex-wrap: nowrap !important;
                 align-items: center !important;
-                justify-content: flex-start !important;
-                width: 100% !important;
-                position: relative !important;
+                justify-content: center !important;
+                flex-grow: 1 !important;
+                margin: 0 auto !important;
+                padding: 0 !important;
+                list-style: none !important;
             }
 
-            .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item.nav-item-dashboard {
-                position: static !important;
+            .nav-right-balance {
+                width: 125px !important;
                 flex-shrink: 0 !important;
-                margin: 0 !important;
-            }
-
-            .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item.nav-item-dashboard > .nav-link {
-                padding-left: 0 !important;
-                padding-right: 12px !important;
-            }
-
-            /* Center the main navigation menu using auto margins */
-            .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item.nav-center-first {
-                margin-left: auto !important;
-            }
-
-            .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item:last-child {
-                margin-right: auto !important;
+                visibility: hidden !important;
+                pointer-events: none !important;
             }
         }
 
-        /* Clean menu links: increased font size 14.5px, responsive padding to prevent overflow & overlap */
-        .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item > .nav-link {
-            color: #334155 !important;
-            padding: 15px 9px !important;
-            font-weight: 600 !important;
-            font-size: 14.5px !important;
+        @media (max-width: 1250px) {
+            .nav-right-balance {
+                display: none !important;
+            }
+        }
+
+        @media (max-width: 991.98px) {
+            .nav-dashboard-corner {
+                border-bottom: 1px solid #f1f5f9;
+                padding-bottom: 6px;
+                margin-bottom: 6px;
+            }
+            .nav-dashboard-corner .nav-link {
+                color: #2563eb !important;
+                font-weight: 700 !important;
+                font-size: 15px !important;
+                padding: 10px 6px !important;
+                display: flex !important;
+                align-items: center !important;
+            }
+            .nav-right-balance {
+                display: none !important;
+            }
+        }
+
+        /* Clean menu links: bold font, increased font size 15.5px - 16px */
+        .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item > .nav-link,
+        .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item > .nav-link .menu-title {
+            color: #0f172a !important;
+            padding: 15px 12px !important;
+            font-weight: 700 !important;
+            font-size: 15.5px !important;
             white-space: nowrap !important;
             margin: 0 !important;
+            letter-spacing: -0.15px;
             transition: color 0.15s ease-in-out;
         }
 
         @media (min-width: 1400px) {
-            .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item > .nav-link {
-                padding: 16px 13px !important;
-                font-size: 15px !important;
+            .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item > .nav-link,
+            .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item > .nav-link .menu-title {
+                padding: 16px 14px !important;
+                font-size: 16px !important;
+            }
+        }
+
+        @media (max-width: 1199.98px) {
+            .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item > .nav-link,
+            .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item > .nav-link .menu-title {
+                padding: 15px 8px !important;
+                font-size: 14.5px !important;
             }
         }
 
@@ -480,9 +536,10 @@
         }
 
         .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item > .nav-link .menu_icon {
-            color: #64748b !important;
-            margin-right: 5px;
-            font-size: 14.5px !important;
+            color: #475569 !important;
+            margin-right: 6px;
+            font-size: 15.5px !important;
+            transition: color 0.15s ease-in-out;
         }
 
         .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item > .nav-link:hover .menu_icon,
@@ -843,19 +900,18 @@
             </script>
             <div class="nav-bottom">
                 <div class="container-fluid" style="padding: 0 20px;">
-                    <ul class="nav page-navigation">
-                        <!--=========================*
-                              Home
-                    *===========================-->
-                        <li class="nav-item nav-item-dashboard">
-                            <a href="{{ url('/home') }}" class="nav-link"><i
-                                    class="menu_icon fas fa-home"></i><span class="menu-title">Dashboard</span></a>
+                    <!-- Left Corner: Dashboard Link -->
+                    <div class="nav-dashboard-corner">
+                        <a href="{{ url('/home') }}" class="nav-link"><i
+                                class="menu_icon fas fa-home"></i><span class="menu-title">Dashboard</span></a>
+                    </div>
 
-                        </li>
+                    <!-- Center: Navigation Menu -->
+                    <ul class="nav page-navigation justify-content-center">
                         <!--=========================*
                               UI Features
                     *===========================-->
-                        <li class="nav-item mega-menu nav-center-first">
+                        <li class="nav-item mega-menu">
                             @canany(['products.view', 'discount.products.view', 'categories.view', 'subcategories.view',
                                 'brands.view', 'units.view', 'vendors.view', 'purchases.view', 'purchase_pos.create',
                                 'warehouse.view', 'warehouse.stock.view', 'stock.transfer.view', 'stock.adjust.view', 'stock.adjust.create',
@@ -1312,6 +1368,9 @@
                         @endif
 
                     </ul>
+
+                    <!-- Right: Balance Spacer for Perfect Dead-Center Navigation -->
+                    <div class="nav-right-balance" aria-hidden="true"></div>
                 </div>
             </div>
         </nav>
