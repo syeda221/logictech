@@ -533,10 +533,10 @@
                                     <th class="ps-2 text-center" style="width: 65px;">BILL#</th>
                                     <th style="min-width: 140px;">ISSUED BY</th>
                                     <th style="width: 130px;">M.BILL / REF</th>
-                                    <th style="min-width: 180px;">PRODUCTS</th>
-                                    <th class="text-center" style="width: 110px;">OPENING STOCK</th>
+                                    <th style="min-width: 220px;">PRODUCTS</th>
+                                    <th class="text-center" style="width: 120px;">OPENING STOCK</th>
                                     <th class="text-center" style="width: 90px;">QTY ISSUED</th>
-                                    <th class="text-center" style="width: 120px;">REMAINING STOCK</th>
+                                    <th class="text-center" style="width: 130px;">REMAINING STOCK</th>
                                     <th class="text-center" style="width: 80px;">DATE</th>
                                     <th class="text-center" style="width: 80px;">STATUS</th>
                                     <th class="pe-2 text-center" style="width: 80px;">ACTION</th>
@@ -588,15 +588,30 @@
                                         </td>
 
                                         {{-- Product Names --}}
-                                        <td title="{{ $materialNames }}" class="text-muted small" style="max-width: 180px;">
-                                            <div class="text-truncate fw-semibold text-dark" style="max-width: 180px; font-size: 0.78rem;">
-                                                {{ $materialNames }}
+                                        <td class="small" style="min-width: 220px;" data-search="{{ $materialNames }}" title="{{ $materialNames }}">
+                                            <div class="d-flex flex-column gap-1">
+                                                @foreach($u->items as $it)
+                                                    <div class="d-flex align-items-center justify-content-between gap-2 py-0.5" style="font-size: 0.77rem; line-height: 1.35; border-bottom: 1px dashed #f1f5f9;">
+                                                        <span class="fw-semibold text-dark">
+                                                            <i class="fas fa-cube text-primary me-1" style="font-size: 0.65rem;"></i>{{ $it->product->item_name ?? 'Item' }}
+                                                        </span>
+                                                        <span class="badge bg-light text-primary border font-monospace px-1.5 py-0.5 text-nowrap" style="font-size: 0.70rem;">
+                                                            {{ number_format($it->qty_used, 1) }} {{ $it->unit_name }}
+                                                        </span>
+                                                    </div>
+                                                @endforeach
                                             </div>
                                         </td>
 
                                         {{-- Opening Stock --}}
-                                        <td class="text-center font-monospace fw-semibold text-primary" style="font-size: 0.78rem;" title="{{ $openingStocks }}">
-                                            {{ $openingStocks }}
+                                        <td class="text-center font-monospace fw-semibold text-primary" style="font-size: 0.78rem;" title="{{ $openingStocks }}" data-search="{{ $openingStocks }}">
+                                            <div class="d-flex flex-column gap-1">
+                                                @foreach($u->items as $it)
+                                                    <div class="py-0.5 text-nowrap" style="font-size: 0.76rem; line-height: 1.35; border-bottom: 1px dashed transparent;">
+                                                        {{ number_format($it->available_stock_at_time, 2) }} {{ $it->unit_name }}
+                                                    </div>
+                                                @endforeach
+                                            </div>
                                         </td>
 
                                         {{-- Qty Issued --}}
@@ -605,8 +620,15 @@
                                         </td>
 
                                         {{-- Remaining Stock --}}
-                                        <td class="text-center font-monospace fw-bold text-success" style="font-size: 0.78rem;" title="{{ $remainingStocks }}">
-                                            {{ $remainingStocks }}
+                                        <td class="text-center font-monospace fw-bold text-success" style="font-size: 0.78rem;" title="{{ $remainingStocks }}" data-search="{{ $remainingStocks }}">
+                                            <div class="d-flex flex-column gap-1">
+                                                @foreach($u->items as $it)
+                                                    @php $rem = max(0, $it->available_stock_at_time - $it->qty_used); @endphp
+                                                    <div class="py-0.5 text-nowrap" style="font-size: 0.76rem; line-height: 1.35; border-bottom: 1px dashed transparent;">
+                                                        {{ number_format($rem, 2) }} {{ $it->unit_name }}
+                                                    </div>
+                                                @endforeach
+                                            </div>
                                         </td>
 
                                         {{-- Date --}}
@@ -636,6 +658,11 @@
                                                     <li>
                                                         <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('material_usage.show', $u->id) }}" target="_blank">
                                                             <i class="fas fa-file-invoice text-info fa-fw"></i> View Slip
+                                                        </a>
+                                                    </li>
+                                                    <li>
+                                                        <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('material_usage.edit', $u->id) }}">
+                                                            <i class="fas fa-edit text-warning fa-fw"></i> Edit
                                                         </a>
                                                     </li>
                                                     @can('material.usage.delete')

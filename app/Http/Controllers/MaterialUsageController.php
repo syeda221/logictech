@@ -204,6 +204,15 @@ class MaterialUsageController extends Controller
         }
 
         $availableStock = $warehouseStock ? (float) ($warehouseStock->total_pieces ?? $warehouseStock->quantity ?? 0) : 0.0;
+
+        // If editing an existing usage, add back whatever qty this usage voucher already consumed
+        if ($request->filled('usage_id')) {
+            $existingQty = MaterialUsageItem::where('material_usage_id', $request->usage_id)
+                ->where('product_id', $product->id)
+                ->sum('qty_used');
+            $availableStock += (float) $existingQty;
+        }
+
         $unitCost = (float) ($product->purchase_price_per_piece ?? $product->purchase_price_per_m2 ?? 0.0);
         $unitName = $product->unit ? ($product->unit->unit_name ?? $product->unit->name ?? 'Pcs') : 'Pcs';
 
@@ -393,6 +402,235 @@ class MaterialUsageController extends Controller
         }
 
         return view('admin_panel.material_usage.show', compact('usage'));
+    }
+
+    /**
+     * Show form to edit material usage voucher
+     */
+    public function edit($id)
+    {
+        $this->checkPermission();
+        $defaultWarehouse = $this->getDefaultWarehouse();
+
+        $usage = MaterialUsage::with(['warehouse', 'items.product.unit'])->findOrFail($id);
+
+        $rawMaterials = Product::whereIn('item_type', ['raw_material', 'both'])
+            ->with(['unit', 'category_relation', 'warehouseStocks'])
+            ->withSum('warehouseStocks', 'total_pieces')
+            ->orderBy('item_name')
+            ->get();
+
+        // Calculate quantity of each product already in this voucher so we can reflect true available stock
+        $usageItemQtyMap = $usage->items->groupBy('product_id')->map(function ($rows) {
+            return $rows->sum('qty_used');
+        });
+
+        $rawMaterialsJson = $rawMaterials->map(function ($rm) use ($usageItemQtyMap) {
+            $currentStock = (float) ($rm->warehouse_stocks_sum_total_pieces ?? 0);
+            $alreadyIssuedInThisVoucher = (float) ($usageItemQtyMap[$rm->id] ?? 0);
+            $effectiveStock = $currentStock + $alreadyIssuedInThisVoucher;
+
+            return [
+                'id'    => $rm->id,
+                'name'  => $rm->item_name,
+                'code'  => $rm->item_code ?? '-',
+                'stock' => $effectiveStock,
+                'unit'  => $rm->unit->name ?? $rm->unit->unit_name ?? 'Pcs',
+                'cost'  => (float) ($rm->purchase_price_per_piece ?? 0),
+            ];
+        })->values();
+
+        return view('admin_panel.material_usage.edit', compact(
+            'usage',
+            'defaultWarehouse',
+            'rawMaterials',
+            'rawMaterialsJson',
+            'usageItemQtyMap'
+        ));
+    }
+
+    /**
+     * Update material usage voucher and adjust warehouse stock
+     */
+    public function update(Request $request, $id)
+    {
+        $this->checkPermission();
+
+        $usage = MaterialUsage::with('items')->findOrFail($id);
+
+        $defaultWarehouse = $this->getDefaultWarehouse();
+        $warehouseId = $request->warehouse_id ?: ($usage->warehouse_id ?: $defaultWarehouse->id);
+
+        $request->validate([
+            'date'    => 'required|date',
+            'purpose' => 'nullable|string|max:255',
+            'remarks' => 'nullable|string',
+        ]);
+
+        $submittedItems = $request->items;
+        if (! $submittedItems && $request->has('product_id')) {
+            $submittedItems = [];
+            foreach ($request->product_id as $idx => $pid) {
+                if ($pid) {
+                    $submittedItems[] = [
+                        'product_id' => $pid,
+                        'qty_used'   => $request->qty_used[$idx] ?? 0,
+                        'notes'      => $request->notes[$idx] ?? null,
+                    ];
+                }
+            }
+        }
+
+        if (empty($submittedItems) || ! is_array($submittedItems)) {
+            return redirect()->back()->withInput()->with('error', 'Please add at least one raw material to issue.');
+        }
+
+        DB::beginTransaction();
+        try {
+            // 1. Restore previous stock deductions for old items of this voucher
+            foreach ($usage->items as $oldItem) {
+                $ws = WarehouseStock::where('product_id', $oldItem->product_id)
+                    ->where('warehouse_id', $usage->warehouse_id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $ws) {
+                    $ws = WarehouseStock::where('product_id', $oldItem->product_id)
+                        ->lockForUpdate()
+                        ->first();
+                }
+
+                if ($ws) {
+                    $ws->total_pieces = ((float) $ws->total_pieces) + (float) $oldItem->qty_used;
+                    $ws->quantity     = $ws->total_pieces;
+                    $ws->save();
+                }
+            }
+
+            // Remove existing stock movements for this usage voucher
+            DB::table('stock_movements')
+                ->where('ref_type', 'MATERIAL_USAGE')
+                ->where('ref_id', $usage->id)
+                ->delete();
+
+            // Delete old items
+            $usage->items()->delete();
+
+            // 2. Process and validate newly submitted items against the restored stock
+            $totalItems = 0;
+            $totalQty   = 0.0;
+            $totalCost  = 0.0;
+            $itemsData  = [];
+
+            foreach ($submittedItems as $row) {
+                $productId = $row['product_id'] ?? null;
+                $qtyUsed   = (float) ($row['qty_used'] ?? 0);
+
+                if ($qtyUsed <= 0) {
+                    continue;
+                }
+
+                $product = Product::with('unit')->findOrFail($productId);
+
+                if ($product->item_type !== 'raw_material' && $product->item_type !== 'both') {
+                    throw new \Exception("Product '{$product->item_name}' is not a raw material.");
+                }
+
+                // Lock warehouse stock for update
+                $warehouseStock = WarehouseStock::where('product_id', $productId)
+                    ->where('warehouse_id', $warehouseId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $warehouseStock) {
+                    $warehouseStock = WarehouseStock::where('product_id', $productId)
+                        ->lockForUpdate()
+                        ->first();
+                }
+
+                $availableStock = $warehouseStock ? (float) ($warehouseStock->total_pieces ?? $warehouseStock->quantity ?? 0) : 0.0;
+
+                if ($qtyUsed > $availableStock) {
+                    throw new \Exception("Insufficient stock for '{$product->item_name}'. Available: {$availableStock}, Requested: {$qtyUsed}.");
+                }
+
+                $unitCost = (float) ($product->purchase_price_per_piece ?? 0.0);
+                $lineCost = $qtyUsed * $unitCost;
+                $unitName = $product->unit ? ($product->unit->unit_name ?? $product->unit->name ?? 'Pcs') : 'Pcs';
+
+                $itemsData[] = [
+                    'product'                 => $product,
+                    'warehouse_stock'         => $warehouseStock,
+                    'available_stock_at_time' => $availableStock,
+                    'qty_used'                => $qtyUsed,
+                    'unit_name'               => $unitName,
+                    'unit_cost'               => $unitCost,
+                    'total_cost'              => $lineCost,
+                    'notes'                   => $row['notes'] ?? null,
+                ];
+
+                $totalItems++;
+                $totalQty  += $qtyUsed;
+                $totalCost += $lineCost;
+            }
+
+            if (count($itemsData) === 0) {
+                throw new \Exception("Please select at least one valid raw material with a quantity greater than zero.");
+            }
+
+            // 3. Update Master Material Usage Voucher
+            $usage->update([
+                'date'        => $request->date,
+                'warehouse_id'=> $warehouseId,
+                'purpose'     => $request->purpose ?: 'Production Consumption',
+                'remarks'     => $request->remarks,
+                'total_items' => $totalItems,
+                'total_qty'   => $totalQty,
+                'total_cost'  => $totalCost,
+            ]);
+
+            // 4. Save new line items, deduct warehouse stock, and log stock movements
+            foreach ($itemsData as $item) {
+                MaterialUsageItem::create([
+                    'material_usage_id'       => $usage->id,
+                    'product_id'              => $item['product']->id,
+                    'unit_name'               => $item['unit_name'],
+                    'available_stock_at_time' => $item['available_stock_at_time'],
+                    'qty_used'                => $item['qty_used'],
+                    'unit_cost'               => $item['unit_cost'],
+                    'total_cost'              => $item['total_cost'],
+                    'notes'                   => $item['notes'],
+                ]);
+
+                // Deduct warehouse stock
+                $ws = $item['warehouse_stock'];
+                $newPieces = max(0, ((float) $ws->total_pieces) - $item['qty_used']);
+                $ws->total_pieces = $newPieces;
+                $ws->quantity     = $newPieces;
+                $ws->remarks      = "Updated in Material Usage {$usage->usage_no}";
+                $ws->save();
+
+                // Log in stock_movements
+                DB::table('stock_movements')->insert([
+                    'product_id'   => $item['product']->id,
+                    'type'         => 'out',
+                    'qty'          => $item['qty_used'],
+                    'ref_type'     => 'MATERIAL_USAGE',
+                    'ref_id'       => $usage->id,
+                    'note'         => "Usage #{$usage->usage_no} (Edited) | Purpose: " . ($usage->purpose ?: 'Production Issue'),
+                    'created_at'   => now(),
+                    'updated_at'   => now(),
+                ]);
+            }
+
+            DB::commit();
+
+            return redirect()->route('material_usage.index')->with('success', "Material Usage Voucher {$usage->usage_no} updated successfully. Stock adjusted.");
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->withInput()->with('error', $e->getMessage());
+        }
     }
 
     /**

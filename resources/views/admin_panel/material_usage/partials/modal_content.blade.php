@@ -65,9 +65,14 @@
 
     <!-- Actions inside modal -->
     <div class="d-flex justify-content-between align-items-center">
-        <a href="{{ route('material_usage.show', $usage->id) }}" target="_blank" class="btn btn-outline-primary btn-sm font-weight-bold">
-            <i class="fas fa-print mr-1"></i> Print Official Slip
-        </a>
+        <div class="d-flex align-items-center" style="gap: 8px;">
+            <a href="{{ route('material_usage.show', $usage->id) }}" target="_blank" class="btn btn-outline-primary btn-sm font-weight-bold">
+                <i class="fas fa-print mr-1"></i> Print Official Slip
+            </a>
+            <a href="{{ route('material_usage.edit', $usage->id) }}" class="btn btn-outline-warning btn-sm font-weight-bold">
+                <i class="fas fa-edit mr-1"></i> Edit Voucher
+            </a>
+        </div>
         <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Close</button>
     </div>
 </div>

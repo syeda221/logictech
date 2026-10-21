@@ -428,6 +428,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/material-usage/store', [MaterialUsageController::class, 'store'])->middleware(['permission:material.usage.create'])->name('material_usage.store');
     Route::get('/material-usage/get-stock', [MaterialUsageController::class, 'getRawMaterialStock'])->middleware(['permission:material.usage.create'])->name('material_usage.get_stock');
     Route::get('/material-usage/{id}', [MaterialUsageController::class, 'show'])->middleware(['permission:material.usage.view'])->name('material_usage.show');
+    Route::get('/material-usage/{id}/edit', [MaterialUsageController::class, 'edit'])->name('material_usage.edit');
+    Route::post('/material-usage/{id}/update', [MaterialUsageController::class, 'update'])->name('material_usage.update');
     Route::delete('/material-usage/{id}', [MaterialUsageController::class, 'destroy'])->middleware(['permission:material.usage.delete'])->name('material_usage.destroy');
     Route::get('/reports/material-usage', [MaterialUsageController::class, 'report'])->middleware(['permission:material.usage.report.view'])->name('report.material_usage');
     // //////////
