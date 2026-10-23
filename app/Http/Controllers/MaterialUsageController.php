@@ -10,6 +10,7 @@ use App\Models\WarehouseStock;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class MaterialUsageController extends Controller
 {
@@ -148,16 +149,17 @@ class MaterialUsageController extends Controller
         // RAW MATERIALS & BOTH - Finished goods strictly excluded!
         $rawMaterials = Product::whereIn('item_type', ['raw_material', 'both'])
             ->with(['unit', 'category_relation', 'warehouseStocks'])
-            ->withSum('warehouseStocks', 'total_pieces')
             ->orderBy('item_name')
             ->get();
 
-        $rawMaterialsJson = $rawMaterials->map(function($rm) {
+        $realStocksMap = $this->calculateRealStocksMap($rawMaterials->pluck('id')->toArray());
+
+        $rawMaterialsJson = $rawMaterials->map(function($rm) use ($realStocksMap) {
             return [
                 'id'    => $rm->id,
                 'name'  => $rm->item_name,
                 'code'  => $rm->item_code ?? '-',
-                'stock' => (float)($rm->warehouse_stocks_sum_total_pieces ?? 0),
+                'stock' => (float)($realStocksMap[$rm->id] ?? 0),
                 'unit'  => $rm->unit->name ?? $rm->unit->unit_name ?? 'Pcs',
                 'cost'  => (float)($rm->purchase_price_per_piece ?? 0),
             ];
@@ -194,16 +196,8 @@ class MaterialUsageController extends Controller
             ], 422);
         }
 
-        $warehouseStock = WarehouseStock::where('product_id', $product->id)
-            ->where('warehouse_id', $warehouseId)
-            ->first();
-
-        // Fallback: If no stock record exists in this warehouse, check any warehouse
-        if (!$warehouseStock) {
-            $warehouseStock = WarehouseStock::where('product_id', $product->id)->first();
-        }
-
-        $availableStock = $warehouseStock ? (float) ($warehouseStock->total_pieces ?? $warehouseStock->quantity ?? 0) : 0.0;
+        $realStocks = $this->calculateRealStocksMap([$product->id], $warehouseId);
+        $availableStock = (float) ($realStocks[$product->id] ?? 0);
 
         // If editing an existing usage, add back whatever qty this usage voucher already consumed
         if ($request->filled('usage_id')) {
@@ -425,8 +419,10 @@ class MaterialUsageController extends Controller
             return $rows->sum('qty_used');
         });
 
-        $rawMaterialsJson = $rawMaterials->map(function ($rm) use ($usageItemQtyMap) {
-            $currentStock = (float) ($rm->warehouse_stocks_sum_total_pieces ?? 0);
+        $realStocksMap = $this->calculateRealStocksMap($rawMaterials->pluck('id')->toArray());
+
+        $rawMaterialsJson = $rawMaterials->map(function ($rm) use ($usageItemQtyMap, $realStocksMap) {
+            $currentStock = (float) ($realStocksMap[$rm->id] ?? 0);
             $alreadyIssuedInThisVoucher = (float) ($usageItemQtyMap[$rm->id] ?? 0);
             $effectiveStock = $currentStock + $alreadyIssuedInThisVoucher;
 
@@ -757,32 +753,25 @@ class MaterialUsageController extends Controller
             ->get();
 
         $allProductIds = $itemSummary->pluck('product_id')->toArray();
-        $stocksMap = DB::table('warehouse_stocks')
-            ->whereIn('product_id', $allProductIds)
-            ->groupBy('product_id')
-            ->select('product_id', DB::raw('COALESCE(SUM(total_pieces), 0) as total_stock'))
-            ->pluck('total_stock', 'product_id')
-            ->toArray();
+        $items = $query->orderByDesc('id')->paginate(50)->withQueryString();
+
+        $detailProductIds = $items->pluck('product_id')->unique()->toArray();
+        $uniqueProductIds = array_unique(array_merge($allProductIds, $detailProductIds));
+
+        $stocksMap = $this->calculateRealStocksMap($uniqueProductIds);
 
         foreach ($itemSummary as $row) {
             $row->current_stock = (float) ($stocksMap[$row->product_id] ?? 0);
         }
 
-        $items = $query->orderByDesc('id')->paginate(50)->withQueryString();
-
-        $detailProductIds = $items->pluck('product_id')->unique()->toArray();
-        $detailStocksMap = DB::table('warehouse_stocks')
-            ->whereIn('product_id', $detailProductIds)
-            ->groupBy('product_id')
-            ->select('product_id', DB::raw('COALESCE(SUM(total_pieces), 0) as total_stock'))
-            ->pluck('total_stock', 'product_id')
-            ->toArray();
-
         foreach ($items as $item) {
-            $item->current_stock = (float) ($detailStocksMap[$item->product_id] ?? 0);
+            $item->current_stock = (float) ($stocksMap[$item->product_id] ?? 0);
         }
 
-        $totalAvailableStock = array_sum($stocksMap);
+        $totalAvailableStock = 0;
+        foreach ($allProductIds as $pid) {
+            $totalAvailableStock += (float) ($stocksMap[$pid] ?? 0);
+        }
 
         $rawMaterials = Product::whereIn('item_type', ['raw_material', 'both'])->orderBy('item_name')->get();
 
@@ -795,5 +784,241 @@ class MaterialUsageController extends Controller
             'totalTransactions',
             'totalAvailableStock'
         ));
+    }
+
+    /**
+     * Calculate true current stock for products, taking into account variant stock calculations
+     * and ensuring 100% consistency with Item Stock Report.
+     */
+    private function calculateRealStocksMap(array $productIds, $warehouseId = null): array
+    {
+        if (empty($productIds)) {
+            return [];
+        }
+
+        $products = Product::with('warehouseStocks')
+            ->whereIn('id', $productIds)
+            ->get();
+
+        $stocksMap = [];
+
+        // Pre-fetch warehouse stocks map as baseline
+        $wsQuery = DB::table('warehouse_stocks')->whereIn('product_id', $productIds);
+        if ($warehouseId && $warehouseId !== 'all') {
+            $wsQuery->where('warehouse_id', $warehouseId);
+        }
+        $wsMap = $wsQuery->groupBy('product_id')
+            ->select('product_id', DB::raw('COALESCE(SUM(total_pieces), 0) as total_stock'))
+            ->pluck('total_stock', 'product_id')
+            ->toArray();
+
+        foreach ($products as $product) {
+            $parsedVariants = [];
+            if (!empty($product->color)) {
+                try {
+                    $decoded = is_string($product->color) ? json_decode($product->color, true) : $product->color;
+                    if (is_array($decoded) && count($decoded) > 0 && isset($decoded[0]['name'])) {
+                        $parsedVariants = $decoded;
+                    }
+                } catch (\Exception $e) {}
+            }
+
+            if (count($parsedVariants) > 0) {
+                // Product has variants - calculate dynamic ledger balance identical to ReportingController
+                $purchasesQuery = DB::table('purchase_items as pi')
+                    ->join('purchases as pur', 'pur.id', '=', 'pi.purchase_id')
+                    ->where('pi.product_id', $product->id)
+                    ->whereIn('pur.status_purchase', ['approved', 'posted', 'Returned', 'Partial']);
+                if ($warehouseId && $warehouseId !== 'all') {
+                    $purchasesQuery->where('pur.warehouse_id', $warehouseId);
+                }
+                $purchasesList = $purchasesQuery->select('pi.qty as total_pieces', 'pi.color')->get();
+
+                $pReturnsQuery = DB::table('purchase_return_items as pri')->where('pri.product_id', $product->id);
+                $purchaseReturnsList = $pReturnsQuery->select('pri.qty', 'pri.color')->get();
+
+                $salesQuery = DB::table('sale_items')->where('product_id', $product->id);
+                if ($warehouseId && $warehouseId !== 'all') {
+                    $salesQuery->where('warehouse_id', $warehouseId);
+                }
+                $salesList = $salesQuery->select('total_pieces', 'color')->get();
+
+                $returnsQuery = DB::table('sale_return_items as sri')
+                    ->join('sale_returns as sr', 'sr.id', '=', 'sri.sale_return_id')
+                    ->where('sri.product_id', $product->id);
+                if ($warehouseId && $warehouseId !== 'all') {
+                    $returnsQuery->where('sri.warehouse_id', $warehouseId);
+                }
+                $returnsList = $returnsQuery->select('sri.qty', 'sri.color', 'sr.sale_id')->get();
+
+                $adjQuery = DB::table('stock_movements')
+                    ->where('product_id', $product->id)
+                    ->where('type', 'adjustment')
+                    ->whereNotIn('ref_type', ['INIT', 'INITIAL_STOCK', 'init']);
+                if ($warehouseId && $warehouseId !== 'all') {
+                    $adjQuery->where('note', 'like', "%Warehouse #{$warehouseId}%");
+                }
+                $adjList = $adjQuery->select('qty', 'note')->get();
+
+                $usageQuery = DB::table('material_usage_items as mui')
+                    ->join('material_usages as mu', 'mu.id', '=', 'mui.material_usage_id')
+                    ->where('mui.product_id', $product->id);
+                if ($warehouseId && $warehouseId !== 'all') {
+                    $usageQuery->where('mu.warehouse_id', $warehouseId);
+                }
+                $usageList = $usageQuery->select('mui.qty_used', 'mui.notes')->get();
+
+                $variantCount = count($parsedVariants);
+                $productTotalBalance = 0;
+
+                foreach ($parsedVariants as $v) {
+                    $vRawStock = (string) ($v['stock'] ?? '0');
+                    $initial = (float) $vRawStock;
+
+                    $purchased = 0;
+                    foreach ($purchasesList as $pItem) {
+                        if ($this->matchVariant($pItem, $v, $variantCount)) {
+                            $purchased += (float) $pItem->total_pieces;
+                        }
+                    }
+
+                    $pReturned = 0;
+                    foreach ($purchaseReturnsList as $prItem) {
+                        if ($this->matchVariant($prItem, $v, $variantCount)) {
+                            $pReturned += (float) $prItem->qty;
+                        }
+                    }
+
+                    $sold = 0;
+                    foreach ($salesList as $sItem) {
+                        if ($this->matchVariant($sItem, $v, $variantCount)) {
+                            $sold += (float) $sItem->total_pieces;
+                        }
+                    }
+
+                    $returnedQty = 0;
+                    foreach ($returnsList as $rItem) {
+                        if ($this->matchVariant($rItem, $v, $variantCount)) {
+                            $returnedQty += (float) $rItem->qty;
+                        }
+                    }
+
+                    $adjustments = 0;
+                    foreach ($adjList as $adjItem) {
+                        if ($this->matchAdjVariant($adjItem, $v, $variantCount)) {
+                            $adjustments += (float) $adjItem->qty;
+                        }
+                    }
+
+                    $materialUsedQty = 0;
+                    foreach ($usageList as $uItem) {
+                        if ($this->matchVariant($uItem, $v, $variantCount)) {
+                            $materialUsedQty += (float) $uItem->qty_used;
+                        }
+                    }
+
+                    $balance = max(0, $initial + $purchased - $materialUsedQty - $sold + $returnedQty - $pReturned + $adjustments);
+                    $productTotalBalance += $balance;
+                }
+
+                $stocksMap[$product->id] = (float) $productTotalBalance;
+
+                // Sync warehouse_stocks table so it stays in sync
+                $currentWs = (float) ($wsMap[$product->id] ?? 0);
+                if (abs($currentWs - $productTotalBalance) > 0.0001) {
+                    $firstWs = WarehouseStock::where('product_id', $product->id)->first();
+                    if ($firstWs) {
+                        $firstWs->total_pieces = $productTotalBalance;
+                        $firstWs->quantity = $firstWs->total_pieces;
+                        $firstWs->save();
+                    }
+                }
+            } else {
+                $stocksMap[$product->id] = (float) ($wsMap[$product->id] ?? 0);
+            }
+        }
+
+        return $stocksMap;
+    }
+
+    private function matchVariant($item, $variant, $totalVariantsCount = 0): bool
+    {
+        if ($totalVariantsCount <= 1) {
+            return true;
+        }
+
+        $vColor = strtolower(trim($variant['color'] ?? '-'));
+        $vSize  = strtolower(trim($variant['size'] ?? '-'));
+        if ($vColor === '' || $vColor === 'none' || $vColor === 'null') $vColor = '-';
+        if ($vSize === '' || $vSize === 'none' || $vSize === 'null') $vSize = '-';
+
+        if (($vColor === '-' || $vColor === '') && ($vSize === '-' || $vSize === '')) {
+            return true;
+        }
+
+        $itemColor = $item->color ?? ($item->notes ?? ($item->note ?? ''));
+        if (empty($itemColor)) {
+            return $totalVariantsCount <= 1;
+        }
+
+        $itemVariant = [];
+        $b64Decoded = base64_decode($itemColor, true);
+        if ($b64Decoded !== false) {
+            $json = json_decode($b64Decoded, true);
+            if (is_array($json)) {
+                $itemVariant = $json;
+            }
+        }
+        if (empty($itemVariant)) {
+            $json = json_decode($itemColor, true);
+            if (is_array($json)) {
+                $itemVariant = $json;
+            }
+        }
+
+        if (empty($itemVariant)) {
+            $str = strtolower(trim($itemColor));
+            if ($str === $vColor || ($vColor !== '-' && str_contains($str, $vColor))) {
+                return true;
+            }
+            return $totalVariantsCount <= 1;
+        }
+
+        $itemVColor = strtolower(trim($itemVariant['color'] ?? ($itemVariant['color_val'] ?? '-')));
+        $itemVSize  = strtolower(trim($itemVariant['size'] ?? ($itemVariant['size_val'] ?? '-')));
+
+        if ($itemVColor === '') $itemVColor = '-';
+        if ($itemVSize === '')  $itemVSize  = '-';
+
+        return ($vColor === '-' || $vColor === $itemVColor) && ($vSize === '-' || $vSize === $itemVSize);
+    }
+
+    private function matchAdjVariant($adjItem, $variant, $totalVariantsCount = 0): bool
+    {
+        if ($totalVariantsCount <= 1) {
+            return true;
+        }
+
+        $note = strtolower($adjItem->note ?? '');
+        if (empty($note)) {
+            return $totalVariantsCount <= 1;
+        }
+
+        $vSize  = strtolower(trim($variant['size'] ?? '-'));
+        $vColor = strtolower(trim($variant['color'] ?? '-'));
+
+        $sizeMatch = true;
+        if ($vSize !== '-' && !empty($vSize)) {
+            $pattern = '/\b' . preg_quote($vSize, '/') . '\b/i';
+            $sizeMatch = preg_match($pattern, $note) === 1;
+        }
+
+        $colorMatch = true;
+        if ($vColor !== '-' && !empty($vColor)) {
+            $pattern = '/\b' . preg_quote($vColor, '/') . '\b/i';
+            $colorMatch = preg_match($pattern, $note) === 1;
+        }
+
+        return $sizeMatch && $colorMatch;
     }
 }

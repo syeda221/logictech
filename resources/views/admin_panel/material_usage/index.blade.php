@@ -535,7 +535,7 @@
                                     <th style="width: 130px;">M.BILL / REF</th>
                                     <th style="min-width: 220px;">PRODUCTS</th>
                                     <th class="text-center" style="width: 120px;">OPENING STOCK</th>
-                                    <th class="text-center" style="width: 90px;">QTY ISSUED</th>
+                                    <th class="text-center" style="width: 110px;">QTY ISSUED</th>
                                     <th class="text-center" style="width: 130px;">REMAINING STOCK</th>
                                     <th class="text-center" style="width: 80px;">DATE</th>
                                     <th class="text-center" style="width: 80px;">STATUS</th>
@@ -547,6 +547,10 @@
                                     @php
                                         $materialNames = $u->items->map(function($it) {
                                             return ($it->product->item_name ?? 'Item') . ' (' . number_format($it->qty_used, 1) . ' ' . $it->unit_name . ')';
+                                        })->implode(', ');
+
+                                        $issuedQuantities = $u->items->map(function($it) {
+                                            return number_format($it->qty_used, 2) . ' ' . $it->unit_name;
                                         })->implode(', ');
 
                                         $openingStocks = $u->items->map(function($it) {
@@ -615,8 +619,19 @@
                                         </td>
 
                                         {{-- Qty Issued --}}
-                                        <td class="text-center font-monospace fw-bold text-danger" style="font-size: 0.78rem;">
-                                            {{ number_format($u->total_qty, 2) }}
+                                        <td class="text-center font-monospace fw-bold text-danger" style="font-size: 0.78rem;" title="{{ $issuedQuantities ?? '' }} (Total: {{ number_format($u->total_qty, 2) }})" data-search="{{ $issuedQuantities ?? '' }} {{ $u->total_qty }}">
+                                            <div class="d-flex flex-column gap-1">
+                                                @foreach($u->items as $it)
+                                                    <div class="py-0.5 text-nowrap" style="font-size: 0.76rem; line-height: 1.35; border-bottom: 1px dashed transparent;">
+                                                        {{ number_format($it->qty_used, 2) }} {{ $it->unit_name }}
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                            @if(count($u->items) > 1)
+                                                <div class="border-top border-danger-subtle mt-1 pt-0.5 text-muted small" style="font-size: 0.68rem;" title="Total Quantity Issued">
+                                                    Total: <span class="text-danger fw-bold">{{ number_format($u->total_qty, 2) }}</span>
+                                                </div>
+                                            @endif
                                         </td>
 
                                         {{-- Remaining Stock --}}
