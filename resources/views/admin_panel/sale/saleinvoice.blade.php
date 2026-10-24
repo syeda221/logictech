@@ -721,14 +721,14 @@ body{
                 $net   = (float)$item['total'];
 
                 $specs=[];
-                if(!empty($item['technical_name']))    $specs[]=['Equipment Title',$item['technical_name']];
-                if(!empty($item['technical_specs']))   $specs[]=['Specifications & Parameters',$item['technical_specs']];
+                if(!empty($item['technical_name']) && strcasecmp(trim($item['technical_name']), trim($item['item_name'])) !== 0) $specs[]=['Equipment Title',$item['technical_name']];
+                // Specifications & Parameters excluded from invoice
                 if(!empty($item['brand']))             $specs[]=['Input Power / Brand',$item['brand']];
                 if(!empty($item['size_val']) &&$item['size_val']!=='-')  $specs[]=['Duty Cycle / Rating',$item['size_val']];
                 if(!empty($item['color_val'])&&$item['color_val']!=='-') $specs[]=['Cooling Type / Model',$item['color_val']];
                 if(!empty($item['model']) && (empty($item['color_val']) || $item['color_val']==='-')) $specs[]=['Cooling Type / Model',$item['model']];
-                if(!empty($item['serial_no']))         $specs[]=['Serial No',$item['serial_no']];
-                if(!empty($item['technical_remarks'])) $specs[]=['Remarks',$item['technical_remarks']];
+                // Serial No excluded from invoice
+                // Remarks excluded from invoice
                 $h2=(float)($item['height']??0);$w2=(float)($item['width']??0);
                 if($sm=='by_size'&&$h2>0&&$w2>0) $specs[]=['Dimensions',number_format($w2,0).'×'.number_format($h2,0).' mm'];
                 if($wg>0) $specs[]=['Weight',($wg==(int)$wg?(int)$wg:$wg).'g'];
