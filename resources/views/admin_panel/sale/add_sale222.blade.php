@@ -837,6 +837,27 @@
                         </div>
                     </div>
                     <div class="d-flex align-items-center gap-2">
+                        <!-- Invoice Title Field -->
+                        <div class="d-flex align-items-center gap-1">
+                            <span class="text-muted fw-bold text-uppercase" style="font-size:0.72rem; letter-spacing:0.03em; white-space:nowrap;">Inv Title:</span>
+                            <input type="text" 
+                                   name="invoice_title" 
+                                   id="inputInvoiceTitle" 
+                                   list="invoiceTitleSuggestions" 
+                                   class="form-control form-control-sm fw-bold" 
+                                   value="{{ old('invoice_title', 'Invoice') }}" 
+                                   placeholder="Invoice" 
+                                   style="height: 32px; font-size: 0.80rem; width: 145px; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; color: #1e3a8a;">
+                            <datalist id="invoiceTitleSuggestions">
+                                <option value="Invoice">
+                                <option value="Quotation">
+                                <option value="Sales Tax Invoice">
+                                <option value="Proforma Invoice">
+                                <option value="Commercial Invoice">
+                                <option value="Delivery Challan">
+                            </datalist>
+                        </div>
+
                         <!-- Invoice / Order No Pill Widget in Header -->
                         <div class="d-flex align-items-center gap-1">
                             <span class="text-muted fw-bold text-uppercase" style="font-size:0.72rem; letter-spacing:0.03em;">Invoice:</span>

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class Sale extends Model
 {
     protected $fillable = [
-        'customer_id', 'walkin_name', 'reference', 'total_amount_Words', 'total_bill_amount',
+        'customer_id', 'walkin_name', 'reference', 'invoice_title', 'total_amount_Words', 'total_bill_amount',
         'total_extradiscount', 'total_net', 'cash', 'card', 'change',
         'total_items', 'discount_type', 'sale_status', 'order_status', 'invoice_no', 'is_booking',
         'credit_days', 'due_date', 'estimated_delivery_date', 'delivery_date', 'payment_details',

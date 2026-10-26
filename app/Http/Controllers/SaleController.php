@@ -1112,6 +1112,11 @@ class SaleController extends Controller
             $sale->customer_id = $request->customer;
             $sale->walkin_name = $isWalkin ? $request->walkin_name : null;
             $sale->reference = $request->reference;
+            if ($request->filled('invoice_title')) {
+                $sale->invoice_title = trim($request->invoice_title);
+            } elseif (empty($sale->invoice_title)) {
+                $sale->invoice_title = 'Invoice';
+            }
             $sale->total_amount_Words = $request->total_amount_Words;
             $sale->terms_and_conditions = $request->terms_and_conditions;
 
