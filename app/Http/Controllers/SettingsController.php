@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
+use PDO;
 
 class SettingsController extends Controller
 {
@@ -320,5 +322,155 @@ class SettingsController extends Controller
             ]);
 
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * Download Full Database Backup (.sql)
+     */
+    public function downloadDbBackup()
+    {
+        $user = auth()->user();
+        if ($user && !$user->hasRole('Super Admin') && !$user->can('settings.view') && !$user->can('settings.edit') && !$user->can('settings.read')) {
+            abort(403, 'Unauthorized action. You do not have permission to download Database Backup.');
+        }
+
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(600);
+        }
+        @ini_set('memory_limit', '512M');
+        @ignore_user_abort(true);
+
+        $dbConnection = config('database.default', 'mysql');
+        $databaseName = config("database.connections.{$dbConnection}.database") ?: DB::connection()->getDatabaseName();
+        $dateStr = date('Y-m-d_H-i-s');
+        $filename = "logictech_db_backup_{$databaseName}_{$dateStr}.sql";
+
+        return response()->streamDownload(function () use ($databaseName) {
+            $pdo = DB::connection()->getPdo();
+
+            echo "-- ==========================================================\n";
+            echo "-- Logic Tech Engineering ERP - Database Backup\n";
+            echo "-- Database: {$databaseName}\n";
+            echo "-- Generation Date: " . date('Y-m-d H:i:s') . "\n";
+            echo "-- Server OS: " . PHP_OS . " | PHP Version: " . PHP_VERSION . "\n";
+            echo "-- ==========================================================\n\n";
+
+            echo "SET SQL_MODE = \"NO_AUTO_VALUE_ON_ZERO\";\n";
+            echo "SET AUTOCOMMIT = 0;\n";
+            echo "START TRANSACTION;\n";
+            echo "SET time_zone = \"+00:00\";\n";
+            echo "SET NAMES utf8mb4;\n";
+            echo "SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT;\n";
+            echo "SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS;\n";
+            echo "SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION;\n";
+            echo "SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;\n";
+            echo "SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0;\n\n";
+
+            // 1. DUMP BASE TABLES
+            $baseTables = $pdo->query("SHOW FULL TABLES WHERE Table_type = 'BASE TABLE'")->fetchAll(PDO::FETCH_NUM);
+
+            foreach ($baseTables as $tblRow) {
+                $tableName = $tblRow[0];
+
+                echo "-- ---------------------------------------------------------\n";
+                echo "-- Table structure for `{$tableName}`\n";
+                echo "-- ---------------------------------------------------------\n";
+                echo "DROP TABLE IF EXISTS `{$tableName}`;\n";
+
+                $createStmt = $pdo->query("SHOW CREATE TABLE `{$tableName}`")->fetch(PDO::FETCH_ASSOC);
+                if (isset($createStmt['Create Table'])) {
+                    echo $createStmt['Create Table'] . ";\n\n";
+                }
+
+                $offset = 0;
+                $limit = 250;
+                $hasHeader = false;
+
+                while (true) {
+                    $rows = $pdo->query("SELECT * FROM `{$tableName}` LIMIT {$limit} OFFSET {$offset}")->fetchAll(PDO::FETCH_ASSOC);
+                    if (empty($rows)) {
+                        break;
+                    }
+
+                    if (!$hasHeader) {
+                        echo "-- Dumping data for table `{$tableName}`\n";
+                        $hasHeader = true;
+                    }
+
+                    $columns = array_keys($rows[0]);
+                    $escapedColumns = array_map(function ($c) {
+                        return "`" . str_replace("`", "``", $c) . "`";
+                    }, $columns);
+                    $colSql = implode(", ", $escapedColumns);
+
+                    $valRows = [];
+                    foreach ($rows as $row) {
+                        $escapedVals = [];
+                        foreach ($row as $val) {
+                            if ($val === null) {
+                                $escapedVals[] = "NULL";
+                            } else {
+                                $escapedVals[] = $pdo->quote($val);
+                            }
+                        }
+                        $valRows[] = "(" . implode(", ", $escapedVals) . ")";
+                    }
+
+                    echo "INSERT INTO `{$tableName}` ({$colSql}) VALUES\n" . implode(",\n", $valRows) . ";\n";
+
+                    if (ob_get_level() > 0) {
+                        ob_flush();
+                    }
+                    flush();
+
+                    $offset += $limit;
+                }
+
+                if ($hasHeader) {
+                    echo "\n";
+                }
+            }
+
+            // 2. DUMP VIEWS
+            $views = $pdo->query("SHOW FULL TABLES WHERE Table_type = 'VIEW'")->fetchAll(PDO::FETCH_NUM);
+            if (!empty($views)) {
+                echo "-- ==========================================================\n";
+                echo "-- Views\n";
+                echo "-- ==========================================================\n\n";
+
+                foreach ($views as $viewRow) {
+                    $viewName = $viewRow[0];
+                    echo "-- ---------------------------------------------------------\n";
+                    echo "-- View structure for `{$viewName}`\n";
+                    echo "-- ---------------------------------------------------------\n";
+                    echo "DROP VIEW IF EXISTS `{$viewName}`;\n";
+
+                    $createViewStmt = $pdo->query("SHOW CREATE TABLE `{$viewName}`")->fetch(PDO::FETCH_ASSOC);
+                    $viewSql = $createViewStmt['Create View'] ?? ($createViewStmt['Create Table'] ?? null);
+                    if ($viewSql) {
+                        $viewSql = preg_replace('/DEFINER=[^\s]+\s+/', '', $viewSql);
+                        echo $viewSql . ";\n\n";
+                    }
+                }
+            }
+
+            echo "SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;\n";
+            echo "SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;\n";
+            echo "SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT;\n";
+            echo "SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS;\n";
+            echo "SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION;\n";
+            echo "COMMIT;\n";
+
+            if (ob_get_level() > 0) {
+                ob_flush();
+            }
+            flush();
+        }, $filename, [
+            'Content-Type' => 'application/sql; charset=utf-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0',
+        ]);
     }
 }

@@ -22,6 +22,12 @@
                                     class="btn btn-outline-info mr-2 mb-2 shadow-sm">
                                     <i class="fas fa-user-shield mr-2"></i> Return Approvers
                                 </a>
+                                <a href="{{ route('settings.db_backup') }}"
+                                    class="btn btn-success mr-2 mb-2 shadow-sm font-weight-bold"
+                                    id="btnTopDbBackup"
+                                    title="Export and download complete database SQL file">
+                                    <i class="fas fa-database mr-2"></i> Download Database Backup
+                                </a>
                                 <a href="#" class="btn btn-outline-dark mr-2 mb-2 shadow-sm">
                                     <i class="fas fa-exchange-alt mr-2"></i> Switch Account
                                 </a>
@@ -48,6 +54,11 @@
                             <li class="nav-item">
                                 <a class="nav-link" id="accounting-tab" data-toggle="tab" href="#accounting" role="tab">
                                     <i class="fas fa-calculator"></i> Accounting
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" id="backup-tab" data-toggle="tab" href="#backup" role="tab">
+                                    <i class="fas fa-database"></i> Database Backup
                                 </a>
                             </li>
                         </ul>
@@ -311,6 +322,54 @@
                                     @endif
                                 </div>
                             </div>
+
+                                <!-- Database Backup Tab -->
+                                <div class="tab-pane fade" id="backup" role="tabpanel">
+                                    <div class="card mb-4 border shadow-sm" style="background-color: #ffffff;">
+                                        <div class="card-header bg-white font-weight-bold d-flex align-items-center" style="border-bottom: 2px solid #e2e8f0;">
+                                            <i class="fas fa-database text-success mr-2"></i> Complete Database Export & Backup
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row align-items-center">
+                                                <div class="col-lg-8 mb-3 mb-lg-0">
+                                                    <h5 class="font-weight-bold text-dark mb-2">Export Full MySQL Database (.sql)</h5>
+                                                    <p class="text-muted mb-3" style="font-size: 0.92rem; line-height: 1.6;">
+                                                        Aapke pure ERP software ka database backup generate aur download karein. Is backup file mein tamam tables, views, stock ledger, sales, accounts, customers, aur system settings shamil hain.
+                                                    </p>
+                                                    <div class="alert alert-info py-2 px-3 mb-3 d-inline-block shadow-none border" style="font-size: 0.85rem;">
+                                                        <i class="fas fa-info-circle mr-1"></i> Format: <strong>.sql</strong> — Ready to restore directly via <strong>phpMyAdmin</strong> ya <strong>MySQL Workbench</strong> at any time.
+                                                    </div>
+                                                    <div class="mt-2">
+                                                        <a href="{{ route('settings.db_backup') }}" class="btn btn-success btn-lg px-4 shadow font-weight-bold" id="btnPaneDbBackup">
+                                                            <i class="fas fa-download mr-2"></i> Download Database Backup (.sql)
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                                <div class="col-lg-4">
+                                                    <div class="p-3 rounded border bg-light shadow-sm">
+                                                        <h6 class="font-weight-bold text-dark mb-2 pb-1 border-bottom"><i class="fas fa-server text-primary mr-1"></i> Database Status</h6>
+                                                        <div class="d-flex justify-content-between py-1 border-bottom" style="font-size: 0.85rem;">
+                                                            <span class="text-muted">Connection:</span>
+                                                            <span class="badge badge-success px-2 py-1"><i class="fas fa-check-circle mr-1"></i> Connected</span>
+                                                        </div>
+                                                        <div class="d-flex justify-content-between py-1 border-bottom" style="font-size: 0.85rem;">
+                                                            <span class="text-muted">Database Name:</span>
+                                                            <span class="font-weight-bold text-dark font-monospace">{{ config('database.connections.' . config('database.default', 'mysql') . '.database') }}</span>
+                                                        </div>
+                                                        <div class="d-flex justify-content-between py-1 border-bottom" style="font-size: 0.85rem;">
+                                                            <span class="text-muted">Backup Type:</span>
+                                                            <span class="font-weight-bold text-success">Full SQL Dump</span>
+                                                        </div>
+                                                        <div class="d-flex justify-content-between py-1" style="font-size: 0.85rem;">
+                                                            <span class="text-muted">Storage:</span>
+                                                            <span class="text-muted">Direct Browser Stream</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
 
                             <div class="mt-4">
                                 @if($canEditSettings)

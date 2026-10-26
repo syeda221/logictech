@@ -531,6 +531,7 @@ Route::middleware('auth')->group(function () {
     // Settings & Notifications
     Route::get('/settings', [App\Http\Controllers\SettingsController::class, 'index'])->middleware('permission:settings.view|settings.read')->name('settings.index');
     Route::post('/settings', [App\Http\Controllers\SettingsController::class, 'update'])->middleware('permission:settings.edit|settings.update')->name('settings.update');
+    Route::get('/settings/db-backup', [App\Http\Controllers\SettingsController::class, 'downloadDbBackup'])->middleware('permission:settings.view|settings.read|settings.edit')->name('settings.db_backup');
 
     // Website Settings
     Route::get('/website-settings', [App\Http\Controllers\WebsiteSettingsController::class, 'index'])->middleware('permission:website-settings.view')->name('website_settings.index');
