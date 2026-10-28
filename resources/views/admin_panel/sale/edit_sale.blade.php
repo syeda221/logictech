@@ -976,6 +976,19 @@
                                     </tfoot>
                                 </table>
                             </div>
+
+                            <!-- Terms & Conditions Card (Manual / Client Order) -->
+                            <div class="card-panel p-2.5 bg-white mt-2" style="border-radius:10px;">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label class="form-label mb-0 fw-bold text-dark" style="font-size: 0.78rem;">
+                                        <i class="fas fa-file-contract text-primary me-1"></i>Terms &amp; Conditions (Manual as per Client Order / Payments)
+                                    </label>
+                                    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none text-muted" id="btnResetTerms" style="font-size: 0.68rem;" title="Reset to default terms">
+                                        <i class="fas fa-undo me-1"></i>Default
+                                    </button>
+                                </div>
+                                <textarea class="form-control" name="terms_and_conditions" id="termsAndConditions" rows="2" style="font-size: 0.78rem; resize: vertical;" placeholder="Enter Terms & Conditions manually as per client order, payment terms, warranty, etc.">{{ old('terms_and_conditions', $sale->terms_and_conditions ?? '') }}</textarea>
+                            </div>
                         </div>
                     </div>
 
@@ -1363,6 +1376,12 @@
             });
             $('#btnDcThermal').on('click', function() {
                 ensureSaved().then(id => window.open('{{ url('sales') }}/' + id + '/dc-thermal', '_blank'));
+            });
+
+            // Reset Terms & Conditions to Default
+            $('#btnResetTerms').on('click', function(e) {
+                e.preventDefault();
+                $('#termsAndConditions').val("{{ \App\Models\Setting::get('invoice_terms', '1. Payment terms as agreed. 2. Warranty 1 year. 3. Goods once sold will not be returned without authorization.') }}");
             });
         });
     </script>

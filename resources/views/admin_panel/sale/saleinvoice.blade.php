@@ -852,11 +852,13 @@ body{
         {{-- Terms --}}
         <div class="terms">
             @php
-                $tc = !empty($sale->terms_and_conditions) ? $sale->terms_and_conditions : \App\Models\Setting::get('invoice_terms',"Payment due within 30 days.\nGoods once sold will not be returned without original invoice.\nWarranty covers manufacturing defects only.");
+                $tc = trim($sale->terms_and_conditions ?? '');
                 $tl = array_values(array_filter(array_map('trim',explode("\n",str_replace("\r","",$tc)))));
             @endphp
+            @if(!empty($tl))
             <div class="t-ttl">Terms &amp; Conditions</div>
             <ol>@foreach($tl as $t)<li>{{ $t }}</li>@endforeach</ol>
+            @endif
 
             <div class="ledger-box" style="margin-top:8px;">
                 <div style="font-weight:800;color:#1d4fa0;font-size:9.5px;margin-bottom:3px;text-transform:uppercase;">Payment Remarks</div>

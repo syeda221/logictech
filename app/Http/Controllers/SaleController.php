@@ -1118,7 +1118,9 @@ class SaleController extends Controller
                 $sale->invoice_title = 'Invoice';
             }
             $sale->total_amount_Words = $request->total_amount_Words;
-            $sale->terms_and_conditions = $request->terms_and_conditions;
+            if ($request->has('terms_and_conditions')) {
+                $sale->terms_and_conditions = $request->filled('terms_and_conditions') ? trim($request->terms_and_conditions) : null;
+            }
 
             // Product / Order Status (Condition: pending, ready, delivered, cancelled)
             if ($request->filled('order_status')) {
