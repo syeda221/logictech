@@ -96,6 +96,30 @@
         border-bottom: 2px solid #334155;
         white-space: nowrap;
     }
+    .btn-erp-ledger {
+        background-color: #0f172a;
+        border: 1px solid #0f172a;
+        color: #ffffff !important;
+        font-weight: 700;
+        font-size: 0.72rem;
+        border-radius: 50px;
+        padding: 0.22rem 0.75rem;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.2);
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        text-decoration: none;
+        letter-spacing: 0.3px;
+        white-space: nowrap;
+    }
+    .btn-erp-ledger:hover {
+        background-color: #1e293b;
+        border-color: #1e293b;
+        color: #ffffff !important;
+        transform: translateY(-1px);
+        box-shadow: 0 3px 6px rgba(15, 23, 42, 0.3);
+    }
 
     @media print {
         body { background: #ffffff !important; font-size: 11px; }
@@ -296,13 +320,14 @@
                         <thead>
                             <tr>
                                 <th class="text-center" style="width: 40px;">#</th>
-                                <th style="width: 100px;">CODE</th>
+                                <th style="width: 90px;">CODE</th>
                                 <th>PARTY / TITLE</th>
-                                <th class="text-center" style="width: 100px;">TYPE</th>
-                                <th style="width: 130px;">MOBILE</th>
-                                <th class="text-end col-receivable" style="width: 150px;">RECEIVABLE</th>
-                                <th class="text-end col-payable" style="width: 150px;">PAYABLE</th>
-                                <th style="width: 100px;">NOTES</th>
+                                <th class="text-center" style="width: 105px;">LEDGER</th>
+                                <th class="text-center" style="width: 95px;">TYPE</th>
+                                <th style="width: 125px;">MOBILE</th>
+                                <th class="text-end col-receivable" style="width: 140px;">RECEIVABLE</th>
+                                <th class="text-end col-payable" style="width: 140px;">PAYABLE</th>
+                                <th style="width: 90px;">NOTES</th>
                             </tr>
                         </thead>
                         <tbody id="tbodyRows"></tbody>
@@ -379,11 +404,18 @@
                             ? `<span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size:10px;">Vendor</span>`
                             : `<span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size:10px;">Customer</span>`;
 
+                        let ledgerBtn = `
+                            <a href="${row.ledger_url}" target="_blank" class="btn-erp-ledger" title="View ${isVendor ? 'Vendor' : 'Customer'} Ledger">
+                                <i class="fas fa-book-open" style="font-size: 9.5px;"></i> Ledger
+                            </a>
+                        `;
+
                         rowsHtml += `
                             <tr>
                                 <td class="text-center text-muted fw-bold">${row.sr}</td>
                                 <td class="fw-bold text-secondary" style="font-size: 11px;">${row.code}</td>
                                 <td class="fw-semibold text-dark">${row.title}</td>
+                                <td class="text-center">${ledgerBtn}</td>
                                 <td class="text-center">${typeBadge}</td>
                                 <td class="text-muted" style="font-size: 11.5px;">${row.mobile || '-'}</td>
                                 ${reportType !== 'PAYABLE' ? `<td class="text-end text-primary fw-semibold">${row.receivable != 0 ? fmt(row.receivable) : '-'}</td>` : ''}
@@ -399,7 +431,12 @@
                                         <span class="badge bg-light text-dark border" style="font-size: 10px;">${row.code}</span>
                                         <strong class="text-dark" style="font-size: 12.5px;">${row.title}</strong>
                                     </div>
-                                    ${typeBadge}
+                                    <div class="d-flex align-items-center gap-1">
+                                        <a href="${row.ledger_url}" target="_blank" class="btn-erp-ledger py-0.5 px-2" style="font-size: 10px;">
+                                            <i class="fas fa-book-open" style="font-size: 9px;"></i> Ledger
+                                        </a>
+                                        ${typeBadge}
+                                    </div>
                                 </div>
                                 <div class="border-top pt-2 mt-1">
                                     <div class="row g-1 align-items-center" style="font-size: 11px;">
@@ -425,7 +462,7 @@
                         let t = res.totals;
                         let totalsHtml = `
                             <tr>
-                                <td colspan="5" class="text-end text-dark">TOTAL:</td>
+                                <td colspan="6" class="text-end text-dark">TOTAL:</td>
                                 ${reportType !== 'PAYABLE' ? `<td class="text-end text-primary">${fmt(t.receivable)}</td>` : ''}
                                 ${reportType !== 'RECEIVABLE' ? `<td class="text-end text-danger">${fmt(t.payable)}</td>` : ''}
                                 <td></td>
@@ -448,7 +485,7 @@
                         }
                     }
                 } else {
-                    let colCount = reportType === 'BOTH' ? 8 : 7;
+                    let colCount = reportType === 'BOTH' ? 9 : 8;
                     $("#tbodyRows").html(`<tr><td colspan="${colCount}" class="text-center text-muted py-4">No data matching filters.</td></tr>`);
                     $("#mobPartiesContainer").html('<div class="card border-0 shadow-sm rounded-3 text-center py-4 bg-white"><div class="card-body py-4 text-muted"><i class="fas fa-folder-open fa-2x mb-2 text-secondary"></i><p class="small fw-bold mb-0">No Parties Balance Found</p></div></div>');
                     $("#tfootTotals").empty();
@@ -471,7 +508,7 @@
             let csv = [];
 
             // Header row
-            let headers = ['#', 'Code', 'Party / Title', 'Type', 'Mobile'];
+            let headers = ['#', 'Code', 'Party / Title', 'Ledger Link', 'Type', 'Mobile'];
             if (reportType !== 'PAYABLE') {
                 headers.push('Receivable');
             }
@@ -490,6 +527,7 @@
                     '"' + (row.sr || '') + '"',
                     '"' + (row.code || '').replace(/"/g, '""') + '"',
                     '"' + (row.title || '').replace(/"/g, '""') + '"',
+                    '"' + (row.ledger_url || '').replace(/"/g, '""') + '"',
                     '"' + typeStr + '"',
                     '"' + (row.mobile || '').replace(/"/g, '""') + '"'
                 ];
@@ -510,7 +548,7 @@
             // Totals row
             if (currentReportData.totals) {
                 let t = currentReportData.totals;
-                let totalsRow = ['"TOTAL"', '""', '""', '""', '""'];
+                let totalsRow = ['"TOTAL"', '""', '""', '""', '""', '""'];
                 if (reportType !== 'PAYABLE') {
                     totalsRow.push('"' + parseFloat(t.receivable || 0).toFixed(2) + '"');
                 }

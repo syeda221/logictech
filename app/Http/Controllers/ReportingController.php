@@ -2441,6 +2441,7 @@ class ReportingController extends Controller
                 
                 $balance = (float) ($custBalances[$c->id] ?? 0);
                 $parties[] = [
+                    'id' => $c->id,
                     'code' => sprintf("C%04d", $c->id),
                     'title' => $c->customer_name,
                     'mobile' => $c->mobile,
@@ -2466,6 +2467,7 @@ class ReportingController extends Controller
                 
                 $balance = (float) ($vendorBalances[$v->id] ?? 0);
                 $parties[] = [
+                    'id' => $v->id,
                     'code' => sprintf("V%04d", $v->id),
                     'title' => $v->name,
                     'mobile' => $v->phone,
@@ -2498,14 +2500,21 @@ class ReportingController extends Controller
             
             if (!$showZero && $receivable == 0 && $payable == 0) continue;
 
+            $ledgerUrl = ($p['type'] === 'vendor')
+                ? route('vendor.ledger', ['vendor' => $p['id'], 'start_date' => '2000-01-01', 'end_date' => date('Y-m-d')])
+                : route('customers.ledger', ['customer_id' => $p['id']]);
+
             $rows[] = [
                 'sr' => $sr++,
+                'id' => $p['id'] ?? null,
+                'type' => $p['type'] ?? 'customer',
                 'code' => $p['code'],
                 'title' => $p['title'],
                 'mobile' => $p['mobile'] ?? '-',
                 'receivable' => $receivable,
                 'payable' => $payable,
-                'notes' => ''
+                'notes' => '',
+                'ledger_url' => $ledgerUrl
             ];
 
             $totalReceivable += $receivable;
