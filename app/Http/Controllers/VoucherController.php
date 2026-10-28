@@ -404,12 +404,14 @@ class VoucherController extends Controller
      */
     public function getCustomerDueInvoices($id)
     {
+        $due = [];
+
+        // 1. Sales Invoices
         $sales = \App\Models\Sale::where('customer_id', $id)
             ->where('sale_status', 'posted')
             ->orderBy('created_at', 'asc') // oldest first (FIFO)
             ->get(['id', 'invoice_no', 'total_net', 'cash', 'created_at']);
 
-        $due = [];
         foreach ($sales as $sale) {
             $paid    = (float) $sale->cash;
             $net     = (float) $sale->total_net;
@@ -417,14 +419,53 @@ class VoucherController extends Controller
             if ($remaining > 0) {
                 $due[] = [
                     'id'          => $sale->id,
+                    'type'        => 'sale',
+                    'type_label'  => 'Order',
                     'invoice_no'  => $sale->invoice_no,
                     'total_net'   => $net,
                     'paid'        => $paid,
                     'remaining'   => $remaining,
                     'date'        => $sale->created_at ? $sale->created_at->format('d M Y') : '-',
+                    'raw_date'    => $sale->created_at ? $sale->created_at->toDateTimeString() : '1970-01-01',
                 ];
             }
         }
+
+        // 2. Repair Orders Invoices
+        if (\Illuminate\Support\Facades\Schema::hasTable('repair_orders')) {
+            $repairs = \App\Models\RepairOrder::where('customer_id', $id)
+                ->where('status', '!=', 'cancelled')
+                ->orderBy('received_date', 'asc')
+                ->get();
+
+            foreach ($repairs as $repair) {
+                $totalCharges = (float)$repair->total_charges > 0 ? (float)$repair->total_charges : (float)$repair->estimated_cost;
+                $paid = (float)$repair->advance_paid + (float)$repair->final_paid;
+                $remaining = round(max(0, $totalCharges - $paid), 2);
+
+                if ($remaining > 0) {
+                    $itemDesc = $repair->item_name ? " ({$repair->item_name})" : '';
+                    $date = $repair->received_date ? $repair->received_date->format('d M Y') : ($repair->created_at ? $repair->created_at->format('d M Y') : '-');
+                    $rawDate = $repair->received_date ? $repair->received_date->toDateTimeString() : ($repair->created_at ? $repair->created_at->toDateTimeString() : '1970-01-01');
+
+                    $due[] = [
+                        'id'          => $repair->id,
+                        'type'        => 'repair',
+                        'type_label'  => 'Repair',
+                        'invoice_no'  => $repair->repair_no . $itemDesc,
+                        'total_net'   => $totalCharges,
+                        'paid'        => $paid,
+                        'remaining'   => $remaining,
+                        'date'        => $date,
+                        'raw_date'    => $rawDate,
+                    ];
+                }
+            }
+        }
+
+        usort($due, function($a, $b) {
+            return strcmp($a['raw_date'] ?? '', $b['raw_date'] ?? '');
+        });
 
         return response()->json($due);
     }
@@ -501,55 +542,160 @@ class VoucherController extends Controller
             if (($vType === 'customer' || $vType === 'walkin') && $customerId > 0 && $totalAmt > 0) {
 
                 $linkedSaleIds     = array_filter((array)($request->input('linked_sale_ids', [])));
+                $linkedSaleTypes   = (array)($request->input('linked_sale_types', []));
                 $linkedSaleAmounts = (array)($request->input('linked_sale_amounts', []));
 
                 if (!empty($linkedSaleIds)) {
                     // ─── MODE A: User ne manually invoice select ki ───
                     $remaining = $totalAmt;
-                    foreach ($linkedSaleIds as $idx => $saleId) {
+                    foreach ($linkedSaleIds as $idx => $itemId) {
                         if ($remaining <= 0) break;
-                        $sale = \App\Models\Sale::find($saleId);
-                        if (!$sale || $sale->customer_id != $customerId || $sale->sale_status !== 'posted') continue;
+                        $itemType = $linkedSaleTypes[$idx] ?? 'sale';
 
-                        $invoiceDue = round((float)$sale->total_net - (float)$sale->cash, 2);
-                        if ($invoiceDue <= 0) continue;
+                        if ($itemType === 'repair') {
+                            $repair = \App\Models\RepairOrder::find($itemId);
+                            if (!$repair || $repair->customer_id != $customerId || $repair->status === 'cancelled') continue;
 
-                        // Use the amount user typed for this invoice (if provided), else auto-apply remaining
-                        $applyAmt = isset($linkedSaleAmounts[$idx]) && (float)$linkedSaleAmounts[$idx] > 0
-                            ? min((float)$linkedSaleAmounts[$idx], $invoiceDue, $remaining)
-                            : min($invoiceDue, $remaining);
+                            $totalCost = (float)$repair->total_charges > 0 ? (float)$repair->total_charges : (float)$repair->estimated_cost;
+                            $paid = (float)$repair->advance_paid + (float)$repair->final_paid;
+                            $invoiceDue = round(max(0, $totalCost - $paid), 2);
+                            if ($invoiceDue <= 0) continue;
 
-                        $sale->cash += $applyAmt;
-                        $sale->change = $sale->cash - $sale->total_net;
-                        $sale->save();
+                            $applyAmt = isset($linkedSaleAmounts[$idx]) && (float)$linkedSaleAmounts[$idx] > 0
+                                ? min((float)$linkedSaleAmounts[$idx], $invoiceDue, $remaining)
+                                : min($invoiceDue, $remaining);
 
-                        $remaining -= $applyAmt;
-                        $settledSaleIds[] = ['sale_id' => $sale->id, 'invoice_no' => $sale->invoice_no, 'amount_applied' => $applyAmt];
+                            $repair->final_paid = (float)$repair->final_paid + $applyAmt;
+                            $repair->due_amount = max(0, $totalCost - ($repair->advance_paid + $repair->final_paid));
+                            $repair->save();
+
+                            if (class_exists(\App\Models\RepairOrderLog::class)) {
+                                \App\Models\RepairOrderLog::create([
+                                    'repair_order_id' => $repair->id,
+                                    'user_id'         => auth()->id(),
+                                    'action'          => 'payment_received',
+                                    'amount'          => $applyAmt,
+                                    'notes'           => "Payment of Rs. " . number_format($applyAmt, 2) . " received via Receipt Voucher {$rvid}",
+                                ]);
+                            }
+
+                            $remaining -= $applyAmt;
+                            $settledSaleIds[] = [
+                                'type'           => 'repair',
+                                'sale_id'        => $repair->id,
+                                'invoice_no'     => $repair->repair_no,
+                                'amount_applied' => $applyAmt
+                            ];
+                        } else {
+                            $sale = \App\Models\Sale::find($itemId);
+                            if (!$sale || $sale->customer_id != $customerId || $sale->sale_status !== 'posted') continue;
+
+                            $invoiceDue = round((float)$sale->total_net - (float)$sale->cash, 2);
+                            if ($invoiceDue <= 0) continue;
+
+                            $applyAmt = isset($linkedSaleAmounts[$idx]) && (float)$linkedSaleAmounts[$idx] > 0
+                                ? min((float)$linkedSaleAmounts[$idx], $invoiceDue, $remaining)
+                                : min($invoiceDue, $remaining);
+
+                            $sale->cash += $applyAmt;
+                            $sale->change = $sale->cash - $sale->total_net;
+                            $sale->save();
+
+                            $remaining -= $applyAmt;
+                            $settledSaleIds[] = [
+                                'type'           => 'sale',
+                                'sale_id'        => $sale->id,
+                                'invoice_no'     => $sale->invoice_no,
+                                'amount_applied' => $applyAmt
+                            ];
+                        }
                     }
 
                 } else {
-                    // ─── MODE B: Koi invoice select nahi → FIFO auto-allocation ───
-                    // Sabse purani due invoice pehle settle karo
-                    $dueInvoices = \App\Models\Sale::where('customer_id', $customerId)
+                    // ─── MODE B: Koi invoice select nahi → FIFO auto-allocation across sales & repairs ───
+                    $allDue = [];
+
+                    $sales = \App\Models\Sale::where('customer_id', $customerId)
                         ->where('sale_status', 'posted')
-                        ->orderBy('created_at', 'asc')
-                        ->get(['id', 'invoice_no', 'total_net', 'cash']);
+                        ->get(['id', 'invoice_no', 'total_net', 'cash', 'created_at']);
+                    foreach ($sales as $s) {
+                        $due = round((float)$s->total_net - (float)$s->cash, 2);
+                        if ($due > 0) {
+                            $allDue[] = [
+                                'type'  => 'sale',
+                                'model' => $s,
+                                'due'   => $due,
+                                'date'  => $s->created_at ? $s->created_at->toDateTimeString() : '1970-01-01',
+                            ];
+                        }
+                    }
+
+                    if (\Illuminate\Support\Facades\Schema::hasTable('repair_orders')) {
+                        $repairs = \App\Models\RepairOrder::where('customer_id', $customerId)
+                            ->where('status', '!=', 'cancelled')
+                            ->get();
+                        foreach ($repairs as $r) {
+                            $tot = (float)$r->total_charges > 0 ? (float)$r->total_charges : (float)$r->estimated_cost;
+                            $paid = (float)$r->advance_paid + (float)$r->final_paid;
+                            $due = round(max(0, $tot - $paid), 2);
+                            if ($due > 0) {
+                                $allDue[] = [
+                                    'type'  => 'repair',
+                                    'model' => $r,
+                                    'due'   => $due,
+                                    'date'  => $r->received_date ? $r->received_date->toDateTimeString() : ($r->created_at ? $r->created_at->toDateTimeString() : '1970-01-01'),
+                                ];
+                            }
+                        }
+                    }
+
+                    usort($allDue, function($a, $b) {
+                        return strcmp($a['date'], $b['date']);
+                    });
 
                     $remaining = $totalAmt;
-                    foreach ($dueInvoices as $sale) {
+                    foreach ($allDue as $item) {
                         if ($remaining <= 0) break;
-                        $invoiceDue = round((float)$sale->total_net - (float)$sale->cash, 2);
-                        if ($invoiceDue <= 0) continue;
+                        $applyAmt = min($item['due'], $remaining);
 
-                        $applyAmt = min($invoiceDue, $remaining);
-                        $sale->cash += $applyAmt;
-                        $sale->change = $sale->cash - $sale->total_net;
-                        $sale->save();
+                        if ($item['type'] === 'repair') {
+                            $repair = $item['model'];
+                            $repair->final_paid = (float)$repair->final_paid + $applyAmt;
+                            $tot = (float)$repair->total_charges > 0 ? (float)$repair->total_charges : (float)$repair->estimated_cost;
+                            $repair->due_amount = max(0, $tot - ($repair->advance_paid + $repair->final_paid));
+                            $repair->save();
 
+                            if (class_exists(\App\Models\RepairOrderLog::class)) {
+                                \App\Models\RepairOrderLog::create([
+                                    'repair_order_id' => $repair->id,
+                                    'user_id'         => auth()->id(),
+                                    'action'          => 'payment_received',
+                                    'amount'          => $applyAmt,
+                                    'notes'           => "Payment of Rs. " . number_format($applyAmt, 2) . " received via Receipt Voucher {$rvid} (Auto-FIFO)",
+                                ]);
+                            }
+
+                            $settledSaleIds[] = [
+                                'type'           => 'repair',
+                                'sale_id'        => $repair->id,
+                                'invoice_no'     => $repair->repair_no,
+                                'amount_applied' => $applyAmt
+                            ];
+                        } else {
+                            $sale = $item['model'];
+                            $sale->cash += $applyAmt;
+                            $sale->change = $sale->cash - $sale->total_net;
+                            $sale->save();
+
+                            $settledSaleIds[] = [
+                                'type'           => 'sale',
+                                'sale_id'        => $sale->id,
+                                'invoice_no'     => $sale->invoice_no,
+                                'amount_applied' => $applyAmt
+                            ];
+                        }
                         $remaining -= $applyAmt;
-                        $settledSaleIds[] = ['sale_id' => $sale->id, 'invoice_no' => $sale->invoice_no, 'amount_applied' => $applyAmt];
                     }
-                    // ─── MODE C: Jo bacha woh customer ke ledger credit me jaata hai (already handled by ledger below) ───
                 }
 
                 $rec->update(['settled_invoices' => json_encode($settledSaleIds)]);
@@ -774,31 +920,44 @@ class VoucherController extends Controller
         $invoices = [];
         $appliedMap = [];
 
-        $prevSettled = json_decode($receiptVoucher->settled_invoices, true);
+        $prevSettled = json_decode($receiptVoucher->settled_invoices, true) ?: [];
         if (empty($prevSettled)) {
             $vmRemarks = VoucherMaster::where('remarks', 'LIKE', "%Ref: {$receiptVoucher->rvid}%")->value('remarks');
             if ($vmRemarks && preg_match('/Invoices:\s*([^\)]+)/', $vmRemarks, $m)) {
                 $invNos = array_map('trim', explode(',', $m[1]));
                 foreach ($invNos as $invNo) {
-                    $s = \App\Models\Sale::where('invoice_no', $invNo)->first();
-                    if ($s) {
-                        $prevSettled[] = [
-                            'sale_id' => $s->id,
-                            'invoice_no' => $s->invoice_no,
-                            'amount_applied' => min((float)$s->cash, (float)$receiptVoucher->total_amount)
-                        ];
+                    if (str_starts_with($invNo, 'REP')) {
+                        $r = \App\Models\RepairOrder::where('repair_no', $invNo)->first();
+                        if ($r) {
+                            $prevSettled[] = [
+                                'type'           => 'repair',
+                                'sale_id'        => $r->id,
+                                'invoice_no'     => $r->repair_no,
+                                'amount_applied' => min((float)$r->final_paid, (float)$receiptVoucher->total_amount)
+                            ];
+                        }
+                    } else {
+                        $s = \App\Models\Sale::where('invoice_no', $invNo)->first();
+                        if ($s) {
+                            $prevSettled[] = [
+                                'type'           => 'sale',
+                                'sale_id'        => $s->id,
+                                'invoice_no'     => $s->invoice_no,
+                                'amount_applied' => min((float)$s->cash, (float)$receiptVoucher->total_amount)
+                            ];
+                        }
                     }
                 }
             }
         }
 
-        if (!empty($prevSettled)) {
-            foreach ($prevSettled as $ps) {
-                $appliedMap[$ps['sale_id']] = (float)($ps['amount_applied'] ?? 0);
-            }
+        foreach ($prevSettled as $ps) {
+            $type = $ps['type'] ?? (str_starts_with($ps['invoice_no'] ?? '', 'REP') ? 'repair' : 'sale');
+            $appliedMap[$type . '_' . $ps['sale_id']] = (float)($ps['amount_applied'] ?? 0);
         }
 
         if ($partyType === 'customer' || $partyType === 'walkin') {
+            // 1. Sales Invoices
             $sales = \App\Models\Sale::where('customer_id', $partyId)
                 ->where('sale_status', 'posted')
                 ->orderBy('created_at', 'asc')
@@ -808,15 +967,18 @@ class VoucherController extends Controller
                 $totalNet = (float) $sale->total_net;
                 $currentCash = (float) $sale->cash;
                 
-                $thisVoucherApplied = $appliedMap[$sale->id] ?? 0;
+                $thisVoucherApplied = $appliedMap['sale_' . $sale->id] ?? 0;
                 $preVoucherPaid = max(0, $currentCash - $thisVoucherApplied);
                 $effectiveRemaining = round($totalNet - $preVoucherPaid, 2);
 
                 if ($effectiveRemaining > 0 || $thisVoucherApplied > 0) {
                     $invoices[] = [
                         'id'             => $sale->id,
+                        'type'           => 'sale',
+                        'type_label'     => 'Order',
                         'invoice_no'     => $sale->invoice_no,
                         'date'           => $sale->created_at ? $sale->created_at->format('d M Y') : '-',
+                        'raw_date'       => $sale->created_at ? $sale->created_at->toDateTimeString() : '1970-01-01',
                         'total_net'      => $totalNet,
                         'paid'           => $preVoucherPaid,
                         'remaining'      => $effectiveRemaining,
@@ -825,6 +987,47 @@ class VoucherController extends Controller
                     ];
                 }
             }
+
+            // 2. Repair Orders Invoices
+            if (\Illuminate\Support\Facades\Schema::hasTable('repair_orders')) {
+                $repairs = \App\Models\RepairOrder::where('customer_id', $partyId)
+                    ->where('status', '!=', 'cancelled')
+                    ->orderBy('received_date', 'asc')
+                    ->get();
+
+                foreach ($repairs as $repair) {
+                    $totalCharges = (float)$repair->total_charges > 0 ? (float)$repair->total_charges : (float)$repair->estimated_cost;
+                    $currentPaid = (float)$repair->advance_paid + (float)$repair->final_paid;
+
+                    $thisVoucherApplied = $appliedMap['repair_' . $repair->id] ?? 0;
+                    $preVoucherPaid = max(0, $currentPaid - $thisVoucherApplied);
+                    $effectiveRemaining = round(max(0, $totalCharges - $preVoucherPaid), 2);
+
+                    if ($effectiveRemaining > 0 || $thisVoucherApplied > 0) {
+                        $itemDesc = $repair->item_name ? " ({$repair->item_name})" : '';
+                        $date = $repair->received_date ? $repair->received_date->format('d M Y') : ($repair->created_at ? $repair->created_at->format('d M Y') : '-');
+                        $rawDate = $repair->received_date ? $repair->received_date->toDateTimeString() : ($repair->created_at ? $repair->created_at->toDateTimeString() : '1970-01-01');
+
+                        $invoices[] = [
+                            'id'             => $repair->id,
+                            'type'           => 'repair',
+                            'type_label'     => 'Repair',
+                            'invoice_no'     => $repair->repair_no . $itemDesc,
+                            'date'           => $date,
+                            'raw_date'       => $rawDate,
+                            'total_net'      => $totalCharges,
+                            'paid'           => $preVoucherPaid,
+                            'remaining'      => $effectiveRemaining,
+                            'is_selected'    => ($thisVoucherApplied > 0),
+                            'applied_amount' => $thisVoucherApplied,
+                        ];
+                    }
+                }
+            }
+
+            usort($invoices, function($a, $b) {
+                return strcmp($a['raw_date'] ?? '', $b['raw_date'] ?? '');
+            });
         }
 
         $nextRvid = $receiptVoucher->rvid;
@@ -909,19 +1112,32 @@ class VoucherController extends Controller
                 }
             }
 
-                        // Rollback previous invoice settlement
-            $prevSettled = json_decode($receiptVoucher->settled_invoices, true);
+                        // Rollback previous invoice settlement (both sale and repair)
+            $prevSettled = json_decode($receiptVoucher->settled_invoices, true) ?: [];
             if (empty($prevSettled) && $oldVoucherMaster) {
                 if (preg_match('/Invoices:\s*([^\)]+)/', $oldVoucherMaster->remarks, $m)) {
                     $invNos = array_map('trim', explode(',', $m[1]));
                     foreach ($invNos as $invNo) {
-                        $s = \App\Models\Sale::where('invoice_no', $invNo)->first();
-                        if ($s) {
-                            $prevSettled[] = [
-                                'sale_id' => $s->id,
-                                'invoice_no' => $s->invoice_no,
-                                'amount_applied' => min((float)$s->cash, $oldTotalAmt)
-                            ];
+                        if (str_starts_with($invNo, 'REP')) {
+                            $r = \App\Models\RepairOrder::where('repair_no', $invNo)->first();
+                            if ($r) {
+                                $prevSettled[] = [
+                                    'type'           => 'repair',
+                                    'sale_id'        => $r->id,
+                                    'invoice_no'     => $r->repair_no,
+                                    'amount_applied' => min((float)$r->final_paid, $oldTotalAmt)
+                                ];
+                            }
+                        } else {
+                            $s = \App\Models\Sale::where('invoice_no', $invNo)->first();
+                            if ($s) {
+                                $prevSettled[] = [
+                                    'type'           => 'sale',
+                                    'sale_id'        => $s->id,
+                                    'invoice_no'     => $s->invoice_no,
+                                    'amount_applied' => min((float)$s->cash, $oldTotalAmt)
+                                ];
+                            }
                         }
                     }
                 }
@@ -929,12 +1145,24 @@ class VoucherController extends Controller
 
             if (!empty($prevSettled)) {
                 foreach ($prevSettled as $ps) {
-                    $sale = \App\Models\Sale::find($ps['sale_id'] ?? null);
-                    if ($sale) {
-                        $applied = (float)($ps['amount_applied'] ?? 0);
-                        $sale->cash = max(0, (float)$sale->cash - $applied);
-                        $sale->change = (float)$sale->cash - (float)$sale->total_net;
-                        $sale->save();
+                    $type = $ps['type'] ?? (str_starts_with($ps['invoice_no'] ?? '', 'REP') ? 'repair' : 'sale');
+                    $applied = (float)($ps['amount_applied'] ?? 0);
+
+                    if ($type === 'repair') {
+                        $repair = \App\Models\RepairOrder::find($ps['sale_id'] ?? null);
+                        if ($repair) {
+                            $repair->final_paid = max(0, (float)$repair->final_paid - $applied);
+                            $tot = (float)$repair->total_charges > 0 ? (float)$repair->total_charges : (float)$repair->estimated_cost;
+                            $repair->due_amount = max(0, $tot - ($repair->advance_paid + $repair->final_paid));
+                            $repair->save();
+                        }
+                    } else {
+                        $sale = \App\Models\Sale::find($ps['sale_id'] ?? null);
+                        if ($sale) {
+                            $sale->cash = max(0, (float)$sale->cash - $applied);
+                            $sale->change = (float)$sale->cash - (float)$sale->total_net;
+                            $sale->save();
+                        }
                     }
                 }
             }
@@ -975,49 +1203,159 @@ class VoucherController extends Controller
                 'processed'        => true,
             ]);
 
-            // 5. Invoice settlement logic
-            $vType      = strtolower($request->vendor_type);
-            $customerId = (int) $request->vendor_id;
-            $totalAmt   = (float) $request->total_amount;
-            $settledSaleIds = [];
-
+            // 5. Invoice settlement logic (both sales and repairs)
             if (($vType === 'customer' || $vType === 'walkin') && $customerId > 0 && $totalAmt > 0) {
                 $linkedSaleIds     = array_filter((array)($request->input('linked_sale_ids', [])));
+                $linkedSaleTypes   = (array)($request->input('linked_sale_types', []));
                 $linkedSaleAmounts = (array)($request->input('linked_sale_amounts', []));
 
                 if (!empty($linkedSaleIds)) {
                     $remaining = $totalAmt;
-                    foreach ($linkedSaleIds as $idx => $saleId) {
+                    foreach ($linkedSaleIds as $idx => $itemId) {
                         if ($remaining <= 0) break;
-                        $sale = \App\Models\Sale::find($saleId);
-                        if (!$sale || $sale->customer_id != $customerId || $sale->sale_status !== 'posted') continue;
-                        $invoiceDue = round((float)$sale->total_net - (float)$sale->cash, 2);
-                        if ($invoiceDue <= 0) continue;
-                        $applyAmt = isset($linkedSaleAmounts[$idx]) && (float)$linkedSaleAmounts[$idx] > 0
-                            ? min((float)$linkedSaleAmounts[$idx], $invoiceDue, $remaining)
-                            : min($invoiceDue, $remaining);
-                        $sale->cash += $applyAmt;
-                        $sale->change = $sale->cash - $sale->total_net;
-                        $sale->save();
-                        $remaining -= $applyAmt;
-                        $settledSaleIds[] = ['sale_id' => $sale->id, 'invoice_no' => $sale->invoice_no, 'amount_applied' => $applyAmt];
+                        $itemType = $linkedSaleTypes[$idx] ?? 'sale';
+
+                        if ($itemType === 'repair') {
+                            $repair = \App\Models\RepairOrder::find($itemId);
+                            if (!$repair || $repair->customer_id != $customerId || $repair->status === 'cancelled') continue;
+
+                            $totalCost = (float)$repair->total_charges > 0 ? (float)$repair->total_charges : (float)$repair->estimated_cost;
+                            $paid = (float)$repair->advance_paid + (float)$repair->final_paid;
+                            $invoiceDue = round(max(0, $totalCost - $paid), 2);
+                            if ($invoiceDue <= 0) continue;
+
+                            $applyAmt = isset($linkedSaleAmounts[$idx]) && (float)$linkedSaleAmounts[$idx] > 0
+                                ? min((float)$linkedSaleAmounts[$idx], $invoiceDue, $remaining)
+                                : min($invoiceDue, $remaining);
+
+                            $repair->final_paid = (float)$repair->final_paid + $applyAmt;
+                            $repair->due_amount = max(0, $totalCost - ($repair->advance_paid + $repair->final_paid));
+                            $repair->save();
+
+                            if (class_exists(\App\Models\RepairOrderLog::class)) {
+                                \App\Models\RepairOrderLog::create([
+                                    'repair_order_id' => $repair->id,
+                                    'user_id'         => auth()->id(),
+                                    'action'          => 'payment_received',
+                                    'amount'          => $applyAmt,
+                                    'notes'           => "Payment of Rs. " . number_format($applyAmt, 2) . " received via Receipt Voucher {$rvid}",
+                                ]);
+                            }
+
+                            $remaining -= $applyAmt;
+                            $settledSaleIds[] = [
+                                'type'           => 'repair',
+                                'sale_id'        => $repair->id,
+                                'invoice_no'     => $repair->repair_no,
+                                'amount_applied' => $applyAmt
+                            ];
+                        } else {
+                            $sale = \App\Models\Sale::find($itemId);
+                            if (!$sale || $sale->customer_id != $customerId || $sale->sale_status !== 'posted') continue;
+
+                            $invoiceDue = round((float)$sale->total_net - (float)$sale->cash, 2);
+                            if ($invoiceDue <= 0) continue;
+
+                            $applyAmt = isset($linkedSaleAmounts[$idx]) && (float)$linkedSaleAmounts[$idx] > 0
+                                ? min((float)$linkedSaleAmounts[$idx], $invoiceDue, $remaining)
+                                : min($invoiceDue, $remaining);
+
+                            $sale->cash += $applyAmt;
+                            $sale->change = $sale->cash - $sale->total_net;
+                            $sale->save();
+
+                            $remaining -= $applyAmt;
+                            $settledSaleIds[] = [
+                                'type'           => 'sale',
+                                'sale_id'        => $sale->id,
+                                'invoice_no'     => $sale->invoice_no,
+                                'amount_applied' => $applyAmt
+                            ];
+                        }
                     }
                 } else {
-                    $dueInvoices = \App\Models\Sale::where('customer_id', $customerId)
+                    $allDue = [];
+
+                    $sales = \App\Models\Sale::where('customer_id', $customerId)
                         ->where('sale_status', 'posted')
-                        ->orderBy('created_at', 'asc')
-                        ->get(['id', 'invoice_no', 'total_net', 'cash']);
+                        ->get(['id', 'invoice_no', 'total_net', 'cash', 'created_at']);
+                    foreach ($sales as $s) {
+                        $due = round((float)$s->total_net - (float)$s->cash, 2);
+                        if ($due > 0) {
+                            $allDue[] = [
+                                'type'  => 'sale',
+                                'model' => $s,
+                                'due'   => $due,
+                                'date'  => $s->created_at ? $s->created_at->toDateTimeString() : '1970-01-01',
+                            ];
+                        }
+                    }
+
+                    if (\Illuminate\Support\Facades\Schema::hasTable('repair_orders')) {
+                        $repairs = \App\Models\RepairOrder::where('customer_id', $customerId)
+                            ->where('status', '!=', 'cancelled')
+                            ->get();
+                        foreach ($repairs as $r) {
+                            $tot = (float)$r->total_charges > 0 ? (float)$r->total_charges : (float)$r->estimated_cost;
+                            $paid = (float)$r->advance_paid + (float)$r->final_paid;
+                            $due = round(max(0, $tot - $paid), 2);
+                            if ($due > 0) {
+                                $allDue[] = [
+                                    'type'  => 'repair',
+                                    'model' => $r,
+                                    'due'   => $due,
+                                    'date'  => $r->received_date ? $r->received_date->toDateTimeString() : ($r->created_at ? $r->created_at->toDateTimeString() : '1970-01-01'),
+                                ];
+                            }
+                        }
+                    }
+
+                    usort($allDue, function($a, $b) {
+                        return strcmp($a['date'], $b['date']);
+                    });
+
                     $remaining = $totalAmt;
-                    foreach ($dueInvoices as $sale) {
+                    foreach ($allDue as $item) {
                         if ($remaining <= 0) break;
-                        $invoiceDue = round((float)$sale->total_net - (float)$sale->cash, 2);
-                        if ($invoiceDue <= 0) continue;
-                        $applyAmt = min($invoiceDue, $remaining);
-                        $sale->cash += $applyAmt;
-                        $sale->change = $sale->cash - $sale->total_net;
-                        $sale->save();
+                        $applyAmt = min($item['due'], $remaining);
+
+                        if ($item['type'] === 'repair') {
+                            $repair = $item['model'];
+                            $repair->final_paid = (float)$repair->final_paid + $applyAmt;
+                            $tot = (float)$repair->total_charges > 0 ? (float)$repair->total_charges : (float)$repair->estimated_cost;
+                            $repair->due_amount = max(0, $tot - ($repair->advance_paid + $repair->final_paid));
+                            $repair->save();
+
+                            if (class_exists(\App\Models\RepairOrderLog::class)) {
+                                \App\Models\RepairOrderLog::create([
+                                    'repair_order_id' => $repair->id,
+                                    'user_id'         => auth()->id(),
+                                    'action'          => 'payment_received',
+                                    'amount'          => $applyAmt,
+                                    'notes'           => "Payment of Rs. " . number_format($applyAmt, 2) . " received via Receipt Voucher {$rvid} (Auto-FIFO)",
+                                ]);
+                            }
+
+                            $settledSaleIds[] = [
+                                'type'           => 'repair',
+                                'sale_id'        => $repair->id,
+                                'invoice_no'     => $repair->repair_no,
+                                'amount_applied' => $applyAmt
+                            ];
+                        } else {
+                            $sale = $item['model'];
+                            $sale->cash += $applyAmt;
+                            $sale->change = $sale->cash - $sale->total_net;
+                            $sale->save();
+
+                            $settledSaleIds[] = [
+                                'type'           => 'sale',
+                                'sale_id'        => $sale->id,
+                                'invoice_no'     => $sale->invoice_no,
+                                'amount_applied' => $applyAmt
+                            ];
+                        }
                         $remaining -= $applyAmt;
-                        $settledSaleIds[] = ['sale_id' => $sale->id, 'invoice_no' => $sale->invoice_no, 'amount_applied' => $applyAmt];
                     }
                 }
             }

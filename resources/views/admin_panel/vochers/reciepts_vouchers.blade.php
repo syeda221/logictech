@@ -177,11 +177,18 @@
                           $selApplyTotal += $inv['applied_amount'];
                         }
                       @endphp
-                      <tr data-sale-id="{{ $inv['id'] }}" data-remaining="{{ $inv['remaining'] }}">
+                      <tr data-sale-id="{{ $inv['id'] }}" data-type="{{ $inv['type'] ?? 'sale' }}" data-remaining="{{ $inv['remaining'] }}">
                         <td style="text-align:center;">
-                          <input type="checkbox" class="invoiceCheck" data-idx="{{ $idx }}" data-sale-id="{{ $inv['id'] }}" data-remaining="{{ $inv['remaining'] }}" {{ !empty($inv['is_selected']) ? 'checked' : '' }} style="width:12px;height:12px;cursor:pointer;accent-color:#4f46e5;">
+                          <input type="checkbox" class="invoiceCheck" data-idx="{{ $idx }}" data-sale-id="{{ $inv['id'] }}" data-type="{{ $inv['type'] ?? 'sale' }}" data-remaining="{{ $inv['remaining'] }}" {{ !empty($inv['is_selected']) ? 'checked' : '' }} style="width:12px;height:12px;cursor:pointer;accent-color:#4f46e5;">
                         </td>
-                        <td><strong style="color:#1e293b;font-size:0.82rem;">{{ $inv['invoice_no'] }}</strong></td>
+                        <td>
+                          <strong style="color:#1e293b;font-size:0.82rem;">{{ $inv['invoice_no'] }}</strong>
+                          @if(($inv['type'] ?? 'sale') === 'repair')
+                            <span class="badge" style="background:#fef3c7;color:#b45309;border:1px solid #fcd34d;font-size:0.65rem;padding:2px 6px;margin-left:6px;border-radius:4px;font-weight:700;">REPAIR</span>
+                          @else
+                            <span class="badge" style="background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;font-size:0.65rem;padding:2px 6px;margin-left:6px;border-radius:4px;font-weight:700;">ORDER</span>
+                          @endif
+                        </td>
                         <td style="color:#64748b;font-size:0.76rem;">{{ $inv['date'] }}</td>
                         <td style="text-align:right;">Rs. {{ number_format($inv['total_net'], 2) }}</td>
                         <td style="text-align:right;color:#16a34a;">Rs. {{ number_format($inv['paid'], 2) }}</td>
@@ -211,6 +218,7 @@
                 @foreach($invoices as $inv)
                   @if(!empty($inv['is_selected']))
                     <input type="hidden" name="linked_sale_ids[]" value="{{ $inv['id'] }}">
+                    <input type="hidden" name="linked_sale_types[]" value="{{ $inv['type'] ?? 'sale' }}">
                     <input type="hidden" name="linked_sale_amounts[]" value="{{ $inv['applied_amount'] }}">
                   @endif
                 @endforeach
@@ -371,9 +379,15 @@ $(document).ready(function() {
             if (!inv.length) { $('#noInvoicesMsg').css('display','flex'); return; }
             let h='';
             inv.forEach((v,i) => {
-                h+=`<tr data-sale-id="${v.id}" data-remaining="${v.remaining}">
-                    <td style="text-align:center;"><input type="checkbox" class="invoiceCheck" data-idx="${i}" data-sale-id="${v.id}" data-remaining="${v.remaining}" style="width:12px;height:12px;cursor:pointer;accent-color:#4f46e5;"></td>
-                    <td><strong style="color:#1e293b;font-size:0.82rem;">${v.invoice_no}</strong></td>
+                let badge = v.type === 'repair' 
+                    ? `<span class="badge" style="background:#fef3c7;color:#b45309;border:1px solid #fcd34d;font-size:0.65rem;padding:2px 6px;margin-left:6px;border-radius:4px;font-weight:700;">REPAIR</span>`
+                    : `<span class="badge" style="background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;font-size:0.65rem;padding:2px 6px;margin-left:6px;border-radius:4px;font-weight:700;">ORDER</span>`;
+
+                h+=`<tr data-sale-id="${v.id}" data-type="${v.type||'sale'}" data-remaining="${v.remaining}">
+                    <td style="text-align:center;">
+                        <input type="checkbox" class="invoiceCheck" data-idx="${i}" data-sale-id="${v.id}" data-type="${v.type||'sale'}" data-remaining="${v.remaining}" style="width:12px;height:12px;cursor:pointer;accent-color:#4f46e5;">
+                    </td>
+                    <td><strong style="color:#1e293b;font-size:0.82rem;">${v.invoice_no}</strong> ${badge}</td>
                     <td style="color:#64748b;font-size:0.76rem;">${v.date}</td>
                     <td style="text-align:right;">Rs. ${fmt(v.total_net)}</td>
                     <td style="text-align:right;color:#16a34a;">Rs. ${fmt(v.paid)}</td>
@@ -408,8 +422,11 @@ $(document).ready(function() {
     function buildHidden() {
         $('#linkedSaleInputs').empty();
         $('.invoiceCheck:checked').each(function() {
-            let i=$(this).data('idx'), sid=$(this).data('sale-id'), a=parseFloat($(`.invoiceApplyAmt[data-idx="${i}"]`).val())||0;
-            $('#linkedSaleInputs').append(`<input type="hidden" name="linked_sale_ids[]" value="${sid}"><input type="hidden" name="linked_sale_amounts[]" value="${a}">`);
+            let i=$(this).data('idx'),
+                sid=$(this).data('sale-id'),
+                type=$(this).data('type') || 'sale',
+                a=parseFloat($(`.invoiceApplyAmt[data-idx="${i}"]`).val())||0;
+            $('#linkedSaleInputs').append(`<input type="hidden" name="linked_sale_ids[]" value="${sid}"><input type="hidden" name="linked_sale_types[]" value="${type}"><input type="hidden" name="linked_sale_amounts[]" value="${a}">`);
         });
     }
 
