@@ -814,17 +814,103 @@ class VoucherController extends Controller
      */
     public function edit_rec_vochers($id)
     {
-        // Smart finder: By ReceiptsVoucher ID, RVID, or VoucherMaster ID
-        $receiptVoucher = ReceiptsVoucher::find($id);
-        if (!$receiptVoucher) {
+        // Smart finder: By VoucherMaster ID (since all_recepit_vochers passes $item->id), ReceiptsVoucher ID, or RVID
+        $receiptVoucher = null;
+        $vm = null;
+
+        if (is_numeric($id)) {
             $vm = VoucherMaster::find($id);
-            if ($vm && preg_match('/Ref:\s*(RVID-[\w\-]+)/', $vm->remarks, $m)) {
+            if (!$vm) {
+                $receiptVoucher = ReceiptsVoucher::find($id);
+            }
+        } else {
+            $receiptVoucher = ReceiptsVoucher::where('rvid', $id)->first();
+            if (!$receiptVoucher) {
+                $vm = VoucherMaster::where('voucher_no', $id)->first();
+            }
+        }
+
+        if ($vm && !$receiptVoucher) {
+            if (preg_match('/Ref:\s*(RVID-[\w\-]+)/', $vm->remarks, $m)) {
                 $receiptVoucher = ReceiptsVoucher::where('rvid', $m[1])->first();
             }
-            if (!$receiptVoucher && $vm) {
+            if (!$receiptVoucher) {
                 $receiptVoucher = ReceiptsVoucher::where('rvid', $vm->voucher_no)->first();
             }
         }
+
+        // If still no ReceiptsVoucher, but VoucherMaster exists, auto-mirror / create ReceiptsVoucher so it can be edited smoothly
+        if (!$receiptVoucher && $vm) {
+            $partyType = 'customer';
+            if ($vm->party_type && (str_contains($vm->party_type, 'Vendor') || $vm->party_type === 'vendor')) {
+                $partyType = 'vendor';
+            } elseif ($vm->party_type && (str_contains($vm->party_type, 'Account') || is_numeric($vm->party_type))) {
+                $partyType = (string)$vm->party_id;
+            }
+
+            $rowHeads = [];
+            $rowAccs  = [];
+            $amounts  = [];
+
+            foreach ($vm->details as $d) {
+                if ((float)$d->debit > 0) {
+                    $acc = \App\Models\Account::find($d->account_id);
+                    $rowHeads[] = $acc ? (string)$acc->head_id : '1';
+                    $rowAccs[]  = (string)$d->account_id;
+                    $amounts[]  = (string)$d->debit;
+                }
+            }
+
+            if (empty($rowAccs)) {
+                $defaultAcc = \App\Models\Account::where('head_id', 1)->first() ?? \App\Models\Account::first();
+                $rowHeads[] = $defaultAcc ? (string)$defaultAcc->head_id : '1';
+                $rowAccs[]  = $defaultAcc ? (string)$defaultAcc->id : '1';
+                $amounts[]  = (string)$vm->total_amount;
+            }
+
+            // Parse settled invoices from remarks (e.g. "Advance Receipt for Sale Invoice #INV-0002" or "Invoices: INV-0002")
+            $settledInvoices = [];
+            if (preg_match('/(?:Sale Invoice|Invoice|Invoices)[:\s#]*([A-Za-z0-9\-_]+)/i', $vm->remarks, $invMatch)) {
+                $invNo = trim($invMatch[1]);
+                if (str_starts_with($invNo, 'REP')) {
+                    $rep = \App\Models\RepairOrder::where('repair_no', $invNo)->first();
+                    if ($rep) {
+                        $settledInvoices[] = [
+                            'type'           => 'repair',
+                            'sale_id'        => $rep->id,
+                            'invoice_no'     => $rep->repair_no,
+                            'amount_applied' => (float)$vm->total_amount,
+                        ];
+                    }
+                } else {
+                    $sale = \App\Models\Sale::where('invoice_no', $invNo)->first();
+                    if ($sale) {
+                        $settledInvoices[] = [
+                            'type'           => 'sale',
+                            'sale_id'        => $sale->id,
+                            'invoice_no'     => $sale->invoice_no,
+                            'amount_applied' => (float)$vm->total_amount,
+                        ];
+                    }
+                }
+            }
+
+            $receiptVoucher = ReceiptsVoucher::create([
+                'rvid'             => $vm->voucher_no,
+                'receipt_date'     => $vm->date ? $vm->date->format('Y-m-d') : now()->toDateString(),
+                'entry_date'       => $vm->created_at ? $vm->created_at->format('Y-m-d') : now()->toDateString(),
+                'type'             => $partyType,
+                'party_id'         => $vm->party_id,
+                'remarks'          => $vm->remarks,
+                'row_account_head' => json_encode($rowHeads),
+                'row_account_id'   => json_encode($rowAccs),
+                'amount'           => json_encode($amounts),
+                'total_amount'     => $vm->total_amount,
+                'settled_invoices' => json_encode($settledInvoices),
+                'processed'        => true,
+            ]);
+        }
+
         if (!$receiptVoucher) {
             $receiptVoucher = ReceiptsVoucher::where('rvid', $id)->firstOrFail();
         }
@@ -922,7 +1008,10 @@ class VoucherController extends Controller
 
         $prevSettled = json_decode($receiptVoucher->settled_invoices, true) ?: [];
         if (empty($prevSettled)) {
-            $vmRemarks = VoucherMaster::where('remarks', 'LIKE', "%Ref: {$receiptVoucher->rvid}%")->value('remarks');
+            $vm = VoucherMaster::where('voucher_no', $receiptVoucher->rvid)
+                ->orWhere('remarks', 'LIKE', "%Ref: {$receiptVoucher->rvid}%")
+                ->first();
+            $vmRemarks = $vm ? $vm->remarks : $receiptVoucher->remarks;
             if ($vmRemarks && preg_match('/Invoices:\s*([^\)]+)/', $vmRemarks, $m)) {
                 $invNos = array_map('trim', explode(',', $m[1]));
                 foreach ($invNos as $invNo) {
@@ -946,6 +1035,29 @@ class VoucherController extends Controller
                                 'amount_applied' => min((float)$s->cash, (float)$receiptVoucher->total_amount)
                             ];
                         }
+                    }
+                }
+            } elseif ($vmRemarks && preg_match('/(?:Sale Invoice|Invoice)[:\s#]*([A-Za-z0-9\-_]+)/i', $vmRemarks, $m)) {
+                $invNo = trim($m[1]);
+                if (str_starts_with($invNo, 'REP')) {
+                    $r = \App\Models\RepairOrder::where('repair_no', $invNo)->first();
+                    if ($r) {
+                        $prevSettled[] = [
+                            'type'           => 'repair',
+                            'sale_id'        => $r->id,
+                            'invoice_no'     => $r->repair_no,
+                            'amount_applied' => (float)$receiptVoucher->total_amount,
+                        ];
+                    }
+                } else {
+                    $s = \App\Models\Sale::where('invoice_no', $invNo)->first();
+                    if ($s) {
+                        $prevSettled[] = [
+                            'type'           => 'sale',
+                            'sale_id'        => $s->id,
+                            'invoice_no'     => $s->invoice_no,
+                            'amount_applied' => (float)$receiptVoucher->total_amount,
+                        ];
                     }
                 }
             }
@@ -1070,7 +1182,10 @@ class VoucherController extends Controller
             $rvid = $receiptVoucher->rvid;
 
             // 1. Rollback old V2 integration / journal entries
-            $oldVoucherMaster = VoucherMaster::where('remarks', 'LIKE', "%Ref: {$rvid}%")->first();
+            $oldVoucherMaster = VoucherMaster::where('remarks', 'LIKE', "%Ref: {$rvid}%")
+                ->orWhere('voucher_no', $rvid)
+                ->first();
+            $oldVoucherNo = $oldVoucherMaster ? $oldVoucherMaster->voucher_no : null;
             if ($oldVoucherMaster) {
                 app(\App\Services\JournalEntryService::class)->reverseEntriesForSource($oldVoucherMaster);
                 $oldVoucherMaster->details()->delete();
@@ -1414,6 +1529,7 @@ class VoucherController extends Controller
 
                     app(\App\Services\VoucherService::class)->createVoucher([
                         'voucher_type' => 'receipt',
+                        'voucher_no'   => $oldVoucherNo,
                         'date'         => $request->receipt_date,
                         'status'       => 'posted',
                         'party_type'   => $partyType,
@@ -1730,17 +1846,94 @@ class VoucherController extends Controller
      */
     public function edit_Pay_vochers($id)
     {
-        // Smart finder: By PaymentVoucher ID, PVID, or VoucherMaster ID
-        $paymentVoucher = PaymentVoucher::find($id);
-        if (!$paymentVoucher) {
+        // Smart finder: By VoucherMaster ID (since all_payment_vochers passes $item->id), PaymentVoucher ID, or PVID
+        $paymentVoucher = null;
+        $vm = null;
+
+        if (is_numeric($id)) {
             $vm = VoucherMaster::find($id);
-            if ($vm && preg_match('/Ref:\s*(PVID-[\w\-]+)/', $vm->remarks, $m)) {
+            if (!$vm) {
+                $paymentVoucher = PaymentVoucher::find($id);
+            }
+        } else {
+            $paymentVoucher = PaymentVoucher::where('pvid', $id)->first();
+            if (!$paymentVoucher) {
+                $vm = VoucherMaster::where('voucher_no', $id)->first();
+            }
+        }
+
+        if ($vm && !$paymentVoucher) {
+            if (preg_match('/Ref:\s*(PVID-[\w\-]+)/', $vm->remarks, $m)) {
                 $paymentVoucher = PaymentVoucher::where('pvid', $m[1])->first();
             }
-            if (!$paymentVoucher && $vm) {
+            if (!$paymentVoucher) {
                 $paymentVoucher = PaymentVoucher::where('pvid', $vm->voucher_no)->first();
             }
         }
+
+        // If still no PaymentVoucher, but VoucherMaster exists, auto-mirror / create PaymentVoucher
+        if (!$paymentVoucher && $vm) {
+            $types = [];
+            $partyIds = [];
+            $amounts = [];
+            $narrations = [];
+            $refNos = [];
+
+            $headerAcc = null;
+            foreach ($vm->details as $d) {
+                if ((float)$d->credit > 0 && !$headerAcc) {
+                    $headerAcc = \App\Models\Account::find($d->account_id);
+                }
+                if ((float)$d->debit > 0) {
+                    $pType = 'vendor';
+                    $pId = $d->party_id;
+                    if ($d->party_type && (str_contains($d->party_type, 'Customer') || $d->party_type === 'customer')) {
+                        $pType = 'customer';
+                    } elseif ($d->party_type && (str_contains($d->party_type, 'Account') || is_numeric($d->party_type))) {
+                        $pType = (string)$d->account_id;
+                        $pId = $d->account_id;
+                    }
+                    if (!$pId && $vm->party_id) {
+                        $pId = $vm->party_id;
+                        if ($vm->party_type && (str_contains($vm->party_type, 'Customer') || $vm->party_type === 'customer')) {
+                            $pType = 'customer';
+                        }
+                    }
+                    $types[] = $pType;
+                    $partyIds[] = (string)$pId;
+                    $amounts[] = (string)$d->debit;
+                    $narrations[] = $d->narration ?? '';
+                    $refNos[] = '';
+                }
+            }
+
+            if (empty($partyIds)) {
+                $types[] = 'vendor';
+                $partyIds[] = $vm->party_id ? (string)$vm->party_id : '1';
+                $amounts[] = (string)$vm->total_amount;
+                $narrations[] = '';
+                $refNos[] = '';
+            }
+
+            $defaultHead = $headerAcc ? $headerAcc->head_id : 1;
+            $defaultAccId = $headerAcc ? $headerAcc->id : 1;
+
+            $paymentVoucher = PaymentVoucher::create([
+                'pvid'             => $vm->voucher_no,
+                'receipt_date'     => $vm->date ? $vm->date->format('Y-m-d') : now()->toDateString(),
+                'entry_date'       => $vm->created_at ? $vm->created_at->format('Y-m-d') : now()->toDateString(),
+                'row_account_head' => $defaultHead,
+                'row_account_id'   => $defaultAccId,
+                'remarks'          => $vm->remarks,
+                'type'             => json_encode($types),
+                'party_id'         => json_encode($partyIds),
+                'amount'           => json_encode($amounts),
+                'narration_id'     => json_encode($narrations),
+                'reference_no'     => json_encode($refNos),
+                'total_amount'     => $vm->total_amount,
+            ]);
+        }
+
         if (!$paymentVoucher) {
             $paymentVoucher = PaymentVoucher::where('pvid', $id)->firstOrFail();
         }
@@ -1840,7 +2033,10 @@ class VoucherController extends Controller
             $pvid = $payment->pvid;
 
             // 1. Rollback old V2 integration / journal entries
-            $oldVoucherMaster = VoucherMaster::where('remarks', 'LIKE', "%Ref: {$pvid}%")->first();
+            $oldVoucherMaster = VoucherMaster::where('remarks', 'LIKE', "%Ref: {$pvid}%")
+                ->orWhere('voucher_no', $pvid)
+                ->first();
+            $oldVoucherNo = $oldVoucherMaster ? $oldVoucherMaster->voucher_no : null;
             if ($oldVoucherMaster) {
                 app(\App\Services\JournalEntryService::class)->reverseEntriesForSource($oldVoucherMaster);
                 $oldVoucherMaster->details()->delete();
@@ -1979,6 +2175,7 @@ class VoucherController extends Controller
 
                 app(\App\Services\VoucherService::class)->createVoucher([
                     'voucher_type' => 'payment',
+                    'voucher_no' => $oldVoucherNo,
                     'date' => $request->receipt_date,
                     'status' => 'posted',
                     'party_type' => $firstRowType,

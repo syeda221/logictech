@@ -26,7 +26,7 @@ class VoucherService
             // 1. Create Header
             $voucher = VoucherMaster::create([
                 'voucher_type' => $data['voucher_type'],
-                'voucher_no' => $this->generateVoucherNo($data['voucher_type']),
+                'voucher_no' => $data['voucher_no'] ?? $this->generateVoucherNo($data['voucher_type']),
                 'date' => $data['date'],
                 'status' => $data['status'] ?? VoucherMaster::STATUS_DRAFT,
                 'party_type' => $data['party_type'] ?? null,
