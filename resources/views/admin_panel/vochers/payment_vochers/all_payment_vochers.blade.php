@@ -68,10 +68,14 @@
                                             <td>{{ number_format((float) $item->total_amount, 2) }}</td>
                                             <td>{{ $item->created_at }}</td>
                                             <td>
-                                                <a href="{{ route('Paymentprint', $item->id) }}" target="_blank"
-                                                    class="btn btn-sm btn-danger">
-                                                    <i class="bi bi-printer"></i>
-                                                </a>
+                                                <div class="d-flex align-items-center gap-1">
+                                                    <a href="{{ route('edit_Pay_vochers', $item->id) }}" class="btn btn-sm btn-primary shadow-sm" title="Edit Voucher">
+                                                        <i class="bi bi-pencil-square"></i>
+                                                    </a>
+                                                    <a href="{{ route('Paymentprint', $item->id) }}" target="_blank" class="btn btn-sm btn-danger shadow-sm" title="Print Voucher">
+                                                        <i class="bi bi-printer"></i>
+                                                    </a>
+                                                </div>
                                             </td>
                                         </tr>
                                     @endforeach

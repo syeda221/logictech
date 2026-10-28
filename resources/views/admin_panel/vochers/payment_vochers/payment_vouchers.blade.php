@@ -187,22 +187,34 @@
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                 @endif
+                @if (session('error'))
+                    <div class="alert alert-danger alert-dismissible fade show" style="border-radius: 10px;">
+                        <i class="bi bi-exclamation-triangle me-1"></i> {{ session('error') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                @endif
 
-                <form action="{{ route('store_Pay_vochers') }}" method="POST" id="paymentForm">
+                @php
+                    $isEdit = isset($paymentVoucher);
+                    $formAction = $isEdit ? route('update_Pay_vochers', $paymentVoucher->id) : route('store_Pay_vochers');
+                @endphp
+
+                <form action="{{ $formAction }}" method="POST" id="paymentForm">
                     @csrf
 
                     <div class="pv-card">
                         <!-- Header -->
                         <div class="pv-header">
                             <div class="pv-title">
-                                <i class="bi bi-cash-stack"></i> Payment Voucher
+                                <i class="bi {{ $isEdit ? 'bi-pencil-square' : 'bi-cash-stack' }}"></i>
+                                {{ $isEdit ? 'Edit Payment Voucher #' . $paymentVoucher->pvid : 'Payment Voucher' }}
                             </div>
                             <div class="d-flex gap-2">
                                 <a href="{{ route('all_Payment_vochers') }}" class="btn btn-pv-secondary">
                                     <i class="bi bi-list-ul me-1"></i> All Vouchers
                                 </a>
                                 <button type="submit" class="btn btn-pv-primary">
-                                    <i class="bi bi-check-lg me-1"></i> Save Voucher
+                                    <i class="bi {{ $isEdit ? 'bi-save' : 'bi-check-lg' }} me-1"></i> {{ $isEdit ? 'Update Voucher' : 'Save Voucher' }}
                                 </button>
                             </div>
                         </div>
@@ -213,21 +225,23 @@
                             <div class="col-md-2">
                                 <label class="pv-label">PVID</label>
                                 <input type="text" class="pv-input" style="background: #f1f5f9;" name="pvid"
-                                    value="{{ $nextPVID }}" readonly>
+                                    value="{{ $isEdit ? $paymentVoucher->pvid : $nextPVID }}" readonly>
                             </div>
                             <div class="col-md-2">
                                 <label class="pv-label">Receipt Date</label>
                                 <input type="date" name="receipt_date" class="pv-input"
-                                    value="{{ now()->toDateString() }}">
+                                    value="{{ $isEdit ? $paymentVoucher->receipt_date : now()->toDateString() }}">
                             </div>
                             <div class="col-md-2">
                                 <label class="pv-label">Entry Date</label>
                                 <input type="date" name="entry_date" class="pv-input"
-                                    value="{{ now()->toDateString() }}">
+                                    value="{{ $isEdit ? $paymentVoucher->entry_date : now()->toDateString() }}">
                             </div>
                             <div class="col-md-6">
                                 <label class="pv-label">Remarks <small class="text-muted fw-normal">(Optional)</small></label>
-                                <input type="text" name="remarks" class="pv-input" id="remarks" placeholder="Auto-generated if left blank">
+                                <input type="text" name="remarks" class="pv-input" id="remarks"
+                                    value="{{ $isEdit ? $paymentVoucher->remarks : '' }}"
+                                    placeholder="Auto-generated if left blank">
                             </div>
                         </div>
 
@@ -236,26 +250,43 @@
                         <div class="row g-3 mb-4">
                             <div class="col-md-3">
                                 <label class="pv-label">Account Head</label>
-                                <select name="header_account_head" class="pv-input" id="payFromHead">
+                                <select name="header_account_head" class="pv-input" id="payFromHead" required>
                                     <option value="">Select Head</option>
                                     @foreach ($AccountHeads as $head)
-                                        <option value="{{ $head->id }}">{{ ucfirst(strtolower($head->name)) }}</option>
+                                        <option value="{{ $head->id }}" {{ ($isEdit && $paymentVoucher->row_account_head == $head->id) ? 'selected' : '' }}>
+                                            {{ ucfirst(strtolower($head->name)) }}
+                                        </option>
                                     @endforeach
                                 </select>
                             </div>
                             <div class="col-md-4">
                                 <label class="pv-label">Account (Cash / Bank)</label>
-                                <select name="header_account_id" class="pv-input" id="payFromAccount">
-                                    <option disabled selected>Select Account</option>
+                                <select name="header_account_id" class="pv-input" id="payFromAccount" required>
+                                    @if($isEdit && isset($sourceAccounts) && count($sourceAccounts) > 0)
+                                        <option disabled>Select Account</option>
+                                        @foreach ($sourceAccounts as $acc)
+                                            <option value="{{ $acc->id }}" data-code="{{ $acc->account_code || '' }}" data-bal="{{ $acc->current_balance || 0 }}" {{ ($paymentVoucher->row_account_id == $acc->id) ? 'selected' : '' }}>
+                                                {{ $acc->title }}
+                                            </option>
+                                        @endforeach
+                                    @else
+                                        <option disabled selected>Select Account</option>
+                                    @endif
                                 </select>
                             </div>
                             <div class="col-md-2">
                                 <label class="pv-label">Account Code</label>
-                                <input type="text" id="accountCode" class="pv-input" style="background: #f1f5f9;" readonly>
+                                <input type="text" id="accountCode" class="pv-input" style="background: #f1f5f9;"
+                                    value="{{ $isEdit && isset($sourceAccount) ? $sourceAccount->account_code : '' }}" readonly>
                             </div>
                             <div class="col-md-3">
                                 <label class="pv-label">Account Balance</label>
-                                <div id="sourceBalanceDisplay" class="balance-badge balance-cr p-2 text-center" style="width:100%;">0.00 <small>Cr</small></div>
+                                @php
+                                    $currBal = ($isEdit && isset($sourceAccount)) ? (float)$sourceAccount->current_balance : 0;
+                                @endphp
+                                <div id="sourceBalanceDisplay" class="balance-badge {{ $currBal >= 0 ? 'balance-cr' : 'balance-dr' }} p-2 text-center" style="width:100%;">
+                                    {{ number_format(abs($currBal), 2) }} <small>{{ $currBal >= 0 ? 'Cr' : 'Dr' }}</small>
+                                </div>
                             </div>
                         </div>
 
@@ -272,34 +303,68 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr>
-                                        <td>
-                                            <select name="vendor_type[]" class="pv-input rowType">
-                                                <option disabled selected>Select</option>
-                                                <option value="vendor">Vendor</option>
-                                                <option value="customer">Customer</option>
-                                                <option value="walkin">Walk-in</option>
-                                                @foreach ($AccountHeads as $head)
-                                                    <option value="{{ $head->id }}">{{ $head->name }}</option>
-                                                @endforeach
-                                            </select>
-                                        </td>
-                                        <td>
-                                            <select name="vendor_id[]" class="pv-input rowParty">
-                                                <option disabled selected>Select Party</option>
-                                            </select>
-                                        </td>
-                                        <td>
-                                            <input type="number" name="amount[]"
-                                                class="pv-input text-end fw-bold amount" placeholder="0.00"
-                                                style="font-size: 1rem;">
-                                        </td>
-                                        <td class="text-center">
-                                            <button type="button" class="btn btn-outline-danger btn-sm removeRow" title="Remove">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
+                                    @if($isEdit && isset($rows) && count($rows) > 0)
+                                        @foreach($rows as $r)
+                                            <tr>
+                                                <td>
+                                                    <select name="vendor_type[]" class="pv-input rowType" required>
+                                                        <option disabled>Select</option>
+                                                        <option value="vendor" {{ $r['type'] === 'vendor' ? 'selected' : '' }}>Vendor</option>
+                                                        <option value="customer" {{ $r['type'] === 'customer' ? 'selected' : '' }}>Customer</option>
+                                                        <option value="walkin" {{ $r['type'] === 'walkin' ? 'selected' : '' }}>Walk-in</option>
+                                                        @foreach ($AccountHeads as $head)
+                                                            <option value="{{ $head->id }}" {{ $r['type'] == $head->id ? 'selected' : '' }}>{{ $head->name }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </td>
+                                                <td>
+                                                    <select name="vendor_id[]" class="pv-input rowParty" required>
+                                                        <option value="{{ $r['party_id'] }}" selected>{{ $r['party_label'] }}</option>
+                                                    </select>
+                                                </td>
+                                                <td>
+                                                    <input type="number" step="0.01" name="amount[]"
+                                                        class="pv-input text-end fw-bold amount" placeholder="0.00"
+                                                        value="{{ $r['amount'] }}"
+                                                        style="font-size: 1rem;" required>
+                                                </td>
+                                                <td class="text-center">
+                                                    <button type="button" class="btn btn-outline-danger btn-sm removeRow" title="Remove">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    @else
+                                        <tr>
+                                            <td>
+                                                <select name="vendor_type[]" class="pv-input rowType" required>
+                                                    <option disabled selected>Select</option>
+                                                    <option value="vendor">Vendor</option>
+                                                    <option value="customer">Customer</option>
+                                                    <option value="walkin">Walk-in</option>
+                                                    @foreach ($AccountHeads as $head)
+                                                        <option value="{{ $head->id }}">{{ $head->name }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <select name="vendor_id[]" class="pv-input rowParty" required>
+                                                    <option disabled selected>Select Party</option>
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <input type="number" step="0.01" name="amount[]"
+                                                    class="pv-input text-end fw-bold amount" placeholder="0.00"
+                                                    style="font-size: 1rem;" required>
+                                            </td>
+                                            <td class="text-center">
+                                                <button type="button" class="btn btn-outline-danger btn-sm removeRow" title="Remove">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    @endif
                                 </tbody>
                                 <tfoot>
                                     <tr>
@@ -307,7 +372,7 @@
                                         <td>
                                             <input type="text" name="total_amount"
                                                 class="pv-input text-end fw-bold" id="totalAmount" readonly
-                                                value="0.00" style="background: #fef2f2; border-color: #fca5a5; font-size: 1.1rem; color: #dc2626;">
+                                                value="{{ $isEdit ? number_format((float)$paymentVoucher->total_amount, 2, '.', '') : '0.00' }}" style="background: #fef2f2; border-color: #fca5a5; font-size: 1.1rem; color: #dc2626;">
                                         </td>
                                         <td></td>
                                     </tr>
@@ -367,7 +432,7 @@
 
             $('#payFromAccount').on('change', function() {
                 let $opt = $(this).find(':selected');
-                $('#accountCode').val($opt.data('code'));
+                $('#accountCode').val($opt.data('code') || '');
                 let bal = parseFloat($opt.data('bal')) || 0;
                 updateSourceBalance(bal);
             });
@@ -443,7 +508,7 @@
                 let newRow = `
                 <tr>
                     <td>
-                        <select name="vendor_type[]" class="pv-input rowType">
+                        <select name="vendor_type[]" class="pv-input rowType" required>
                             <option disabled selected>Select</option>
                             <option value="vendor">Vendor</option>
                             <option value="customer">Customer</option>
@@ -454,12 +519,12 @@
                         </select>
                     </td>
                     <td>
-                        <select name="vendor_id[]" class="pv-input rowParty">
+                        <select name="vendor_id[]" class="pv-input rowParty" required>
                             <option disabled selected>Select Party</option>
                         </select>
                     </td>
                     <td>
-                        <input type="number" name="amount[]" class="pv-input text-end fw-bold amount" placeholder="0.00" style="font-size: 1rem;">
+                        <input type="number" step="0.01" name="amount[]" class="pv-input text-end fw-bold amount" placeholder="0.00" style="font-size: 1rem;" required>
                     </td>
                     <td class="text-center">
                         <button type="button" class="btn btn-outline-danger btn-sm removeRow"><i class="bi bi-trash"></i></button>

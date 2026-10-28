@@ -48,7 +48,7 @@
         <div class="rv-flash err mb-2"><i class="bi bi-x-circle-fill"></i> {{ session('error') }}</div>
       @endif
 
-      <form action="{{ route('store_rec_vochers') }}" method="POST" id="receiptForm">
+      <form action="{{ isset($receiptVoucher) ? route('update_rec_vochers', $receiptVoucher->id) : route('store_rec_vochers') }}" method="POST" id="receiptForm">
         @csrf
         <div class="rv-card">
 
@@ -56,11 +56,13 @@
           <div class="rv-page-header">
             <div class="rv-page-title">
               <div class="title-icon"><i class="bi bi-receipt-cutoff"></i></div>
-              Receipt Voucher
+              {{ isset($receiptVoucher) ? 'Edit Receipt Voucher #'.$receiptVoucher->rvid : 'Receipt Voucher' }}
             </div>
             <div class="d-flex gap-2">
               <a href="{{ route('all_recepit_vochers') }}" class="btn-rv-list"><i class="bi bi-list-ul"></i> All Vouchers</a>
-              <button type="submit" class="btn-rv-save"><i class="bi bi-check-lg"></i> Save Voucher</button>
+              <button type="submit" class="btn-rv-save">
+                <i class="bi bi-check-lg"></i> {{ isset($receiptVoucher) ? 'Update Voucher' : 'Save Voucher' }}
+              </button>
             </div>
           </div>
 
@@ -69,19 +71,19 @@
           <div class="row g-2 mb-1">
             <div class="col-md-2">
               <label class="rv-label">RVID</label>
-              <input type="text" class="rv-input" name="rvid" value="{{ $nextRvid }}" readonly>
+              <input type="text" class="rv-input" name="rvid" value="{{ isset($receiptVoucher) ? $receiptVoucher->rvid : $nextRvid }}" readonly>
             </div>
             <div class="col-md-2">
               <label class="rv-label">Receipt Date</label>
-              <input type="date" name="receipt_date" class="rv-input" value="{{ now()->toDateString() }}">
+              <input type="date" name="receipt_date" class="rv-input" value="{{ isset($receiptVoucher) ? $receiptVoucher->receipt_date : now()->toDateString() }}">
             </div>
             <div class="col-md-2">
               <label class="rv-label">Entry Date</label>
-              <input type="date" name="entry_date" class="rv-input" value="{{ now()->toDateString() }}">
+              <input type="date" name="entry_date" class="rv-input" value="{{ isset($receiptVoucher) ? $receiptVoucher->entry_date : now()->toDateString() }}">
             </div>
             <div class="col-md-6">
               <label class="rv-label">Remarks <span style="font-weight:400;text-transform:none;">(Optional)</span></label>
-              <input type="text" name="remarks" class="rv-input" id="remarks" placeholder="Auto-generated if left blank">
+              <input type="text" name="remarks" class="rv-input" id="remarks" value="{{ isset($receiptVoucher) ? $receiptVoucher->remarks : '' }}" placeholder="Auto-generated if left blank">
             </div>
           </div>
 
@@ -91,36 +93,50 @@
             <div class="col-md-2">
               <label class="rv-label">Type</label>
               <select name="vendor_type" class="rv-input" id="partyType">
-                <option value="customer" selected>Customer</option>
-                <option value="walkin">Walk-in</option>
-                <option value="vendor">Vendor</option>
+                <option value="customer" {{ (isset($receiptVoucher) && $receiptVoucher->type == 'customer') ? 'selected' : '' }}>Customer</option>
+                <option value="walkin" {{ (isset($receiptVoucher) && $receiptVoucher->type == 'walkin') ? 'selected' : '' }}>Walk-in</option>
+                <option value="vendor" {{ (isset($receiptVoucher) && $receiptVoucher->type == 'vendor') ? 'selected' : '' }}>Vendor</option>
                 @foreach ($AccountHeads as $head)
-                  <option value="{{ $head->id }}">{{ $head->name }}</option>
+                  <option value="{{ $head->id }}" {{ (isset($receiptVoucher) && $receiptVoucher->type == $head->id) ? 'selected' : '' }}>{{ $head->name }}</option>
                 @endforeach
               </select>
             </div>
             <div class="col-md-4">
               <label class="rv-label">Party / Account</label>
               <select name="vendor_id" class="rv-input" id="partyId">
-                <option disabled selected>Select Party</option>
+                @if(isset($partyList) && count($partyList) > 0)
+                  <option disabled>Select Party</option>
+                  @foreach($partyList as $p)
+                    <option value="{{ $p['id'] }}" data-phone="{{ $p['mobile'] }}" data-bal="{{ $p['closing_balance'] }}" {{ ($partyId == $p['id']) ? 'selected' : '' }}>
+                      {{ $p['text'] }}
+                    </option>
+                  @endforeach
+                @else
+                  <option disabled selected>Select Party</option>
+                @endif
               </select>
             </div>
             <div class="col-md-3">
               <label class="rv-label">Mobile</label>
-              <input type="text" name="tel" id="tel" class="rv-input" readonly>
+              <input type="text" name="tel" id="tel" class="rv-input" value="{{ isset($receiptVoucher) ? $receiptVoucher->tel : '' }}" readonly>
             </div>
             <div class="col-md-3">
               <label class="rv-label">Current Balance</label>
-              <div id="balanceDisplay" class="rv-balance dr">0.00 <small style="font-weight:500;margin-left:2px;">Dr</small></div>
+              <div id="balanceDisplay" class="rv-balance {{ (isset($partyBalance) && $partyBalance < 0) ? 'cr' : 'dr' }}">
+                {{ isset($partyBalance) ? number_format(abs($partyBalance), 2) : '0.00' }}
+                <small style="font-weight:500;margin-left:2px;">{{ (isset($partyBalance) && $partyBalance < 0) ? 'Cr' : 'Dr' }}</small>
+              </div>
               <input type="hidden" id="openingBal">
             </div>
           </div>
 
           {{-- OUTSTANDING INVOICES --}}
-          <div id="outstandingSection" style="display:none;">
+          <div id="outstandingSection" style="{{ (isset($invoices) && count($invoices) > 0) ? '' : 'display:none;' }}">
             <div class="rv-section-label">
               <i class="bi bi-receipt-cutoff"></i>Outstanding Invoices
-              <span id="dueInvoiceCount" style="font-size:0.66rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#b45309;background:#fef3c7;border:1px solid #fcd34d;padding:1px 7px;border-radius:5px;margin-left:3px;">0 Due</span>
+              <span id="dueInvoiceCount" style="font-size:0.66rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#b45309;background:#fef3c7;border:1px solid #fcd34d;padding:1px 7px;border-radius:5px;margin-left:3px;">
+                {{ (isset($invoices) && count($invoices) > 0) ? count($invoices).' Due' : '0 Due' }}
+              </span>
             </div>
             <div class="rv-info-bar">
               <i class="bi bi-info-circle-fill" style="flex-shrink:0;"></i>
@@ -130,12 +146,11 @@
               </span>
             </div>
 
-
             <div id="dueInvoicesLoading" class="text-center py-2" style="display:none;">
               <div class="spinner-border spinner-border-sm" style="color:var(--rv-primary);" role="status"></div>
               <span class="ms-2" style="color:var(--rv-muted);font-size:0.8rem;">Loading...</span>
             </div>
-            <div class="rv-table mb-2" id="dueInvoicesWrapper" style="display:none;">
+            <div class="rv-table mb-2" id="dueInvoicesWrapper" style="{{ (isset($invoices) && count($invoices) > 0) ? '' : 'display:none;' }}">
               <table class="table table-bordered align-middle mb-0" id="dueInvoicesTable">
                 <thead>
                   <tr>
@@ -149,23 +164,62 @@
                     <th style="width:130px;">Apply Amount</th>
                   </tr>
                 </thead>
-                <tbody id="dueInvoicesBody"></tbody>
+                <tbody id="dueInvoicesBody">
+                  @if(isset($invoices) && count($invoices) > 0)
+                    @php
+                      $selDueTotal = 0;
+                      $selApplyTotal = 0;
+                    @endphp
+                    @foreach($invoices as $idx => $inv)
+                      @php
+                        if (!empty($inv['is_selected'])) {
+                          $selDueTotal += $inv['remaining'];
+                          $selApplyTotal += $inv['applied_amount'];
+                        }
+                      @endphp
+                      <tr data-sale-id="{{ $inv['id'] }}" data-remaining="{{ $inv['remaining'] }}">
+                        <td style="text-align:center;">
+                          <input type="checkbox" class="invoiceCheck" data-idx="{{ $idx }}" data-sale-id="{{ $inv['id'] }}" data-remaining="{{ $inv['remaining'] }}" {{ !empty($inv['is_selected']) ? 'checked' : '' }} style="width:12px;height:12px;cursor:pointer;accent-color:#4f46e5;">
+                        </td>
+                        <td><strong style="color:#1e293b;font-size:0.82rem;">{{ $inv['invoice_no'] }}</strong></td>
+                        <td style="color:#64748b;font-size:0.76rem;">{{ $inv['date'] }}</td>
+                        <td style="text-align:right;">Rs. {{ number_format($inv['total_net'], 2) }}</td>
+                        <td style="text-align:right;color:#16a34a;">Rs. {{ number_format($inv['paid'], 2) }}</td>
+                        <td style="text-align:right;font-weight:700;color:#dc2626;">Rs. {{ number_format($inv['remaining'], 2) }}</td>
+                        <td>
+                          <input type="number" class="rv-input text-end invoiceApplyAmt" data-idx="{{ $idx }}" data-sale-id="{{ $inv['id'] }}"
+                            value="{{ !empty($inv['is_selected']) ? number_format((float)$inv['applied_amount'], 2, '.', '') : '' }}"
+                            placeholder="0.00" min="0" max="{{ $inv['remaining'] }}" step="0.01"
+                            {{ !empty($inv['is_selected']) ? '' : 'disabled' }}
+                            style="font-size:0.8rem;background:{{ !empty($inv['is_selected']) ? '#fff' : '#f8fafc' }};font-weight:600;color:#4f46e5;height:28px;">
+                        </td>
+                      </tr>
+                    @endforeach
+                  @endif
+                </tbody>
                 <tfoot>
                   <tr>
                     <td colspan="5" style="text-align:right;font-weight:700;color:var(--rv-text);">Total Selected:</td>
-                    <td style="text-align:right;font-weight:700;color:#dc2626;" id="selectedDueTotal">Rs. 0.00</td>
-                    <td style="text-align:right;font-weight:700;color:#4f46e5;" id="selectedApplyTotal">Rs. 0.00</td>
+                    <td style="text-align:right;font-weight:700;color:#dc2626;" id="selectedDueTotal">Rs. {{ isset($selDueTotal) ? number_format($selDueTotal, 2) : '0.00' }}</td>
+                    <td style="text-align:right;font-weight:700;color:#4f46e5;" id="selectedApplyTotal">Rs. {{ isset($selApplyTotal) ? number_format($selApplyTotal, 2) : '0.00' }}</td>
                   </tr>
                 </tfoot>
               </table>
             </div>
-            <div id="linkedSaleInputs"></div>
-            <div id="noInvoicesMsg" class="rv-all-paid">
+            <div id="linkedSaleInputs">
+              @if(isset($invoices) && count($invoices) > 0)
+                @foreach($invoices as $inv)
+                  @if(!empty($inv['is_selected']))
+                    <input type="hidden" name="linked_sale_ids[]" value="{{ $inv['id'] }}">
+                    <input type="hidden" name="linked_sale_amounts[]" value="{{ $inv['applied_amount'] }}">
+                  @endif
+                @endforeach
+              @endif
+            </div>
+            <div id="noInvoicesMsg" class="rv-all-paid" style="display:none;">
               <i class="bi bi-check-circle-fill"></i>
               All invoices for this customer are paid. This amount will be credited to the customer balance.
             </div>
-
-
           </div>
 
           {{-- PAYMENT DETAILS --}}
@@ -181,32 +235,63 @@
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>
-                    <select name="row_account_head[]" class="rv-input rowAccountHead">
-                      <option value="">Select Head</option>
-                      @foreach ($AccountHeads as $head)
-                        <option value="{{ $head->id }}">{{ ucfirst(strtolower($head->name)) }}</option>
-                      @endforeach
-                    </select>
-                  </td>
-                  <td>
-                    <select name="row_account_id[]" class="rv-input rowAccountSub">
-                      <option disabled selected>Select Account</option>
-                    </select>
-                  </td>
-                  <td><input type="number" name="amount[]" class="rv-input text-end amount" placeholder="0.00" style="font-weight:600;"></td>
-                  <td style="text-align:center;">
-                    <button type="button" class="btn btn-outline-danger btn-sm removeRow" style="padding:2px 7px;font-size:0.78rem;" title="Remove">
-                      <i class="bi bi-trash"></i>
-                    </button>
-                  </td>
-                </tr>
+                @if(isset($rows) && count($rows) > 0)
+                  @foreach($rows as $r)
+                    <tr>
+                      <td>
+                        <select name="row_account_head[]" class="rv-input rowAccountHead">
+                          <option value="">Select Head</option>
+                          @foreach ($AccountHeads as $head)
+                            <option value="{{ $head->id }}" {{ ($r['head_id'] == $head->id) ? 'selected' : '' }}>{{ ucfirst(strtolower($head->name)) }}</option>
+                          @endforeach
+                        </select>
+                      </td>
+                      <td>
+                        <select name="row_account_id[]" class="rv-input rowAccountSub">
+                          <option value="">Select Account</option>
+                          @if(!empty($r['accounts']))
+                            @foreach($r['accounts'] as $acc)
+                              <option value="{{ $acc->id }}" {{ ($r['account_id'] == $acc->id) ? 'selected' : '' }}>{{ $acc->title }}</option>
+                            @endforeach
+                          @endif
+                        </select>
+                      </td>
+                      <td><input type="number" step="0.01" name="amount[]" class="rv-input text-end amount" value="{{ $r['amount'] }}" placeholder="0.00" style="font-weight:600;"></td>
+                      <td style="text-align:center;">
+                        <button type="button" class="btn btn-outline-danger btn-sm removeRow" style="padding:2px 7px;font-size:0.78rem;" title="Remove">
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  @endforeach
+                @else
+                  <tr>
+                    <td>
+                      <select name="row_account_head[]" class="rv-input rowAccountHead">
+                        <option value="">Select Head</option>
+                        @foreach ($AccountHeads as $head)
+                          <option value="{{ $head->id }}">{{ ucfirst(strtolower($head->name)) }}</option>
+                        @endforeach
+                      </select>
+                    </td>
+                    <td>
+                      <select name="row_account_id[]" class="rv-input rowAccountSub">
+                        <option disabled selected>Select Account</option>
+                      </select>
+                    </td>
+                    <td><input type="number" step="0.01" name="amount[]" class="rv-input text-end amount" placeholder="0.00" style="font-weight:600;"></td>
+                    <td style="text-align:center;">
+                      <button type="button" class="btn btn-outline-danger btn-sm removeRow" style="padding:2px 7px;font-size:0.78rem;" title="Remove">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </td>
+                  </tr>
+                @endif
               </tbody>
               <tfoot>
                 <tr>
                   <td colspan="2" style="text-align:right;font-weight:700;font-size:0.86rem;color:var(--rv-text);">Total Amount:</td>
-                  <td><input type="text" name="total_amount" class="rv-input text-end" id="totalAmount" readonly value="0.00"
+                  <td><input type="text" name="total_amount" class="rv-input text-end" id="totalAmount" readonly value="{{ isset($receiptVoucher) ? number_format((float)$receiptVoucher->total_amount, 2, '.', '') : '0.00' }}"
                       style="background:#f0fdf4;border-color:#86efac;font-size:0.92rem;color:#16a34a;font-weight:700;"></td>
                   <td></td>
                 </tr>
@@ -235,7 +320,11 @@
 <script>
 $(document).ready(function() {
     const dueUrl = '{{ url("/customer") }}';
-    loadPartyList('customer');
+    const isEditMode = {{ isset($receiptVoucher) ? 'true' : 'false' }};
+
+    if (!isEditMode) {
+        loadPartyList('customer');
+    }
 
     $('#partyType').on('change', function() { loadPartyList($(this).val()); resetOutstanding(); });
 
@@ -354,8 +443,8 @@ $(document).ready(function() {
         $('#voucherTable tbody').append(`<tr>
           <td><select name="row_account_head[]" class="rv-input rowAccountHead"><option value="">Select Head</option>@foreach($AccountHeads as $head)<option value="{{ $head->id }}">{{ $head->name }}</option>@endforeach</select></td>
           <td><select name="row_account_id[]" class="rv-input rowAccountSub"><option disabled selected>Select Account</option></select></td>
-          <td><input type="number" name="amount[]" class="rv-input text-end amount" placeholder="0.00" style="font-weight:600;"></td>
-          <td style="text-align:center;"><button type="button" class="btn btn-outline-danger btn-sm removeRow" style="padding:2px 7px;font-size:0.78rem;"><i class="bi bi-trash"></i></button></td>
+          <td><input type="number" step="0.01" name="amount[]" class="rv-input text-end amount" placeholder="0.00" style="font-weight:600;"></td>
+          <td style="text-align:center;"><button type="button" class="btn btn-outline-danger btn-sm removeRow" style="padding:2px 7px;font-size:0.78rem;" title="Remove"><i class="bi bi-trash"></i></button></td>
         </tr>`);
     });
 

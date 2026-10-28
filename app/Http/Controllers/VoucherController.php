@@ -11,7 +11,9 @@ use App\Models\ExpenseVoucher;
 use App\Models\Narration;
 use App\Models\PaymentVoucher;
 use App\Models\ReceiptsVoucher;
+use App\Models\Vendor;
 use App\Models\VendorLedger;
+use App\Models\VoucherMaster;
 use App\Models\Voucher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -550,6 +552,7 @@ class VoucherController extends Controller
                     // ─── MODE C: Jo bacha woh customer ke ledger credit me jaata hai (already handled by ledger below) ───
                 }
 
+                $rec->update(['settled_invoices' => json_encode($settledSaleIds)]);
                 \Log::info('Invoice Settlement Done. Voucher: '.$rvid.', Settled: '.json_encode($settledSaleIds));
             }
             // ─────────────────────────────────────────────────────────────
@@ -657,6 +660,458 @@ class VoucherController extends Controller
             DB::rollBack();
 
             return back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Show form for editing a Receipt Voucher
+     */
+    public function edit_rec_vochers($id)
+    {
+        // Smart finder: By ReceiptsVoucher ID, RVID, or VoucherMaster ID
+        $receiptVoucher = ReceiptsVoucher::find($id);
+        if (!$receiptVoucher) {
+            $vm = VoucherMaster::find($id);
+            if ($vm && preg_match('/Ref:\s*(RVID-[\w\-]+)/', $vm->remarks, $m)) {
+                $receiptVoucher = ReceiptsVoucher::where('rvid', $m[1])->first();
+            }
+            if (!$receiptVoucher && $vm) {
+                $receiptVoucher = ReceiptsVoucher::where('rvid', $vm->voucher_no)->first();
+            }
+        }
+        if (!$receiptVoucher) {
+            $receiptVoucher = ReceiptsVoucher::where('rvid', $id)->firstOrFail();
+        }
+
+        $narrations = \App\Models\Narration::where('expense_head', 'Receipts Voucher')
+            ->pluck('narration', 'id');
+        $AccountHeads = AccountHead::whereRaw('LOWER(TRIM(name)) IN ("cash", "bank")')->get();
+
+        // Decode rows
+        $rowHeads = json_decode($receiptVoucher->row_account_head, true) ?: [];
+        $rowAccs  = json_decode($receiptVoucher->row_account_id, true) ?: [];
+        $amounts  = json_decode($receiptVoucher->amount, true) ?: [];
+        $narrIds  = json_decode($receiptVoucher->narration_id, true) ?: [];
+        $refNos   = json_decode($receiptVoucher->reference_no, true) ?: [];
+
+        $rows = [];
+        $max = max(count($rowHeads), count($rowAccs), count($amounts), 1);
+        for ($i = 0; $i < $max; $i++) {
+            $headId = $rowHeads[$i] ?? null;
+            $accId  = $rowAccs[$i] ?? null;
+            $amt    = $amounts[$i] ?? 0;
+
+            $accounts = [];
+            if ($headId) {
+                $accounts = DB::table('accounts')->where('head_id', $headId)->where(function($q) {
+                    $q->where('status', 1)->orWhereNull('status');
+                })->whereNotIn('account_code', ['AR', 'AP', 'SALES', 'PURCHASE'])->orderBy('title', 'asc')->get();
+            }
+
+            $rows[] = [
+                'head_id'      => $headId,
+                'account_id'   => $accId,
+                'accounts'     => $accounts,
+                'amount'       => $amt,
+                'narration_id' => $narrIds[$i] ?? '',
+                'reference_no' => $refNos[$i] ?? '',
+            ];
+        }
+
+        // Party details
+        $partyType = $receiptVoucher->type;
+        $partyId   = $receiptVoucher->party_id;
+        $partyBalance = 0;
+        $partyList = [];
+
+        if (in_array($partyType, ['vendor', 'customer', 'walkin'])) {
+            if ($partyType === 'customer' || $partyType === 'walkin') {
+                $parties = Customer::all();
+                foreach ($parties as $c) {
+                    $bal = \App\Models\CustomerLedger::where('customer_id', $c->id)->latest()->value('closing_balance') ?? ($c->opening_balance ?? 0);
+                    $partyList[] = [
+                        'id'              => $c->id,
+                        'text'            => $c->customer_name . " ({$bal})",
+                        'mobile'          => $c->mobile ?? '',
+                        'closing_balance' => $bal,
+                    ];
+                    if ($c->id == $partyId) {
+                        $partyBalance = $bal;
+                    }
+                }
+            } elseif ($partyType === 'vendor') {
+                $vendors = Vendor::all();
+                foreach ($vendors as $v) {
+                    $bal = \App\Models\VendorLedger::where('vendor_id', $v->id)->latest()->value('closing_balance') ?? ($v->opening_balance ?? 0);
+                    $partyList[] = [
+                        'id'              => $v->id,
+                        'text'            => $v->name . " ({$bal})",
+                        'mobile'          => $v->phone ?? '',
+                        'closing_balance' => $bal,
+                    ];
+                    if ($v->id == $partyId) {
+                        $partyBalance = $bal;
+                    }
+                }
+            }
+        } else {
+            // Account Head
+            $accs = DB::table('accounts')->where('head_id', $partyType)->get();
+            foreach ($accs as $a) {
+                $partyList[] = [
+                    'id'              => $a->id,
+                    'text'            => $a->title,
+                    'mobile'          => $a->account_code ?? '',
+                    'closing_balance' => $a->current_balance ?? 0,
+                ];
+                if ($a->id == $partyId) {
+                    $partyBalance = $a->current_balance ?? 0;
+                }
+            }
+        }
+
+                // Outstanding / Settled Invoices for Customer / Walkin
+        $invoices = [];
+        $appliedMap = [];
+
+        $prevSettled = json_decode($receiptVoucher->settled_invoices, true);
+        if (empty($prevSettled)) {
+            $vmRemarks = VoucherMaster::where('remarks', 'LIKE', "%Ref: {$receiptVoucher->rvid}%")->value('remarks');
+            if ($vmRemarks && preg_match('/Invoices:\s*([^\)]+)/', $vmRemarks, $m)) {
+                $invNos = array_map('trim', explode(',', $m[1]));
+                foreach ($invNos as $invNo) {
+                    $s = \App\Models\Sale::where('invoice_no', $invNo)->first();
+                    if ($s) {
+                        $prevSettled[] = [
+                            'sale_id' => $s->id,
+                            'invoice_no' => $s->invoice_no,
+                            'amount_applied' => min((float)$s->cash, (float)$receiptVoucher->total_amount)
+                        ];
+                    }
+                }
+            }
+        }
+
+        if (!empty($prevSettled)) {
+            foreach ($prevSettled as $ps) {
+                $appliedMap[$ps['sale_id']] = (float)($ps['amount_applied'] ?? 0);
+            }
+        }
+
+        if ($partyType === 'customer' || $partyType === 'walkin') {
+            $sales = \App\Models\Sale::where('customer_id', $partyId)
+                ->where('sale_status', 'posted')
+                ->orderBy('created_at', 'asc')
+                ->get(['id', 'invoice_no', 'total_net', 'cash', 'created_at']);
+
+            foreach ($sales as $sale) {
+                $totalNet = (float) $sale->total_net;
+                $currentCash = (float) $sale->cash;
+                
+                $thisVoucherApplied = $appliedMap[$sale->id] ?? 0;
+                $preVoucherPaid = max(0, $currentCash - $thisVoucherApplied);
+                $effectiveRemaining = round($totalNet - $preVoucherPaid, 2);
+
+                if ($effectiveRemaining > 0 || $thisVoucherApplied > 0) {
+                    $invoices[] = [
+                        'id'             => $sale->id,
+                        'invoice_no'     => $sale->invoice_no,
+                        'date'           => $sale->created_at ? $sale->created_at->format('d M Y') : '-',
+                        'total_net'      => $totalNet,
+                        'paid'           => $preVoucherPaid,
+                        'remaining'      => $effectiveRemaining,
+                        'is_selected'    => ($thisVoucherApplied > 0),
+                        'applied_amount' => $thisVoucherApplied,
+                    ];
+                }
+            }
+        }
+
+        $nextRvid = $receiptVoucher->rvid;
+
+        return view('admin_panel.vochers.reciepts_vouchers', compact(
+            'receiptVoucher',
+            'rows',
+            'narrations',
+            'AccountHeads',
+            'nextRvid',
+            'partyType',
+            'partyId',
+            'partyList',
+            'partyBalance',
+            'invoices'
+        ));
+    }
+
+    /**
+     * Update an existing Receipt Voucher
+     */
+    public function update_rec_vochers(Request $request, $id)
+    {
+        $receiptVoucher = ReceiptsVoucher::find($id);
+        if (!$receiptVoucher) {
+            $vm = VoucherMaster::find($id);
+            if ($vm && preg_match('/Ref:\s*(RVID-[\w\-]+)/', $vm->remarks, $m)) {
+                $receiptVoucher = ReceiptsVoucher::where('rvid', $m[1])->first();
+            }
+            if (!$receiptVoucher && $vm) {
+                $receiptVoucher = ReceiptsVoucher::where('rvid', $vm->voucher_no)->first();
+            }
+        }
+        if (!$receiptVoucher) {
+            $receiptVoucher = ReceiptsVoucher::where('rvid', $id)->firstOrFail();
+        }
+
+        DB::beginTransaction();
+        try {
+            $rvid = $receiptVoucher->rvid;
+
+            // 1. Rollback old V2 integration / journal entries
+            $oldVoucherMaster = VoucherMaster::where('remarks', 'LIKE', "%Ref: {$rvid}%")->first();
+            if ($oldVoucherMaster) {
+                app(\App\Services\JournalEntryService::class)->reverseEntriesForSource($oldVoucherMaster);
+                $oldVoucherMaster->details()->delete();
+                $oldVoucherMaster->delete();
+            }
+
+            // 2. Rollback old legacy ledger impact
+            $oldType     = strtolower($receiptVoucher->type);
+            $oldPartyId  = (int)$receiptVoucher->party_id;
+            $oldTotalAmt = (float)$receiptVoucher->total_amount;
+
+            if (($oldType === 'customer' || $oldType === 'walkin') && $oldTotalAmt > 0) {
+                $latestLedger = CustomerLedger::where('customer_id', $oldPartyId)->latest()->first();
+                $bal = $latestLedger ? $latestLedger->closing_balance : 0;
+                CustomerLedger::create([
+                    'customer_id'      => $oldPartyId,
+                    'admin_or_user_id' => auth()->id(),
+                    'previous_balance' => $bal,
+                    'opening_balance'  => 0,
+                    'closing_balance'  => $bal + $oldTotalAmt,
+                    'description'      => "Adjustment: Receipt Voucher Edit #{$rvid} (Rollback)",
+                ]);
+            } elseif ($oldType === 'vendor' && $oldTotalAmt > 0) {
+                $latestLedger = VendorLedger::where('vendor_id', $oldPartyId)->latest()->first();
+                $bal = $latestLedger ? $latestLedger->closing_balance : 0;
+                VendorLedger::create([
+                    'vendor_id'        => $oldPartyId,
+                    'admin_or_user_id' => auth()->id(),
+                    'previous_balance' => $bal,
+                    'opening_balance'  => 0,
+                    'closing_balance'  => $bal - $oldTotalAmt,
+                    'description'      => "Adjustment: Receipt Voucher Edit #{$rvid} (Rollback)",
+                ]);
+            } elseif (is_numeric($oldType)) {
+                $acc = Account::find($oldPartyId);
+                if ($acc) {
+                    $acc->current_balance = $acc->current_balance - $oldTotalAmt;
+                    $acc->save();
+                }
+            }
+
+                        // Rollback previous invoice settlement
+            $prevSettled = json_decode($receiptVoucher->settled_invoices, true);
+            if (empty($prevSettled) && $oldVoucherMaster) {
+                if (preg_match('/Invoices:\s*([^\)]+)/', $oldVoucherMaster->remarks, $m)) {
+                    $invNos = array_map('trim', explode(',', $m[1]));
+                    foreach ($invNos as $invNo) {
+                        $s = \App\Models\Sale::where('invoice_no', $invNo)->first();
+                        if ($s) {
+                            $prevSettled[] = [
+                                'sale_id' => $s->id,
+                                'invoice_no' => $s->invoice_no,
+                                'amount_applied' => min((float)$s->cash, $oldTotalAmt)
+                            ];
+                        }
+                    }
+                }
+            }
+
+            if (!empty($prevSettled)) {
+                foreach ($prevSettled as $ps) {
+                    $sale = \App\Models\Sale::find($ps['sale_id'] ?? null);
+                    if ($sale) {
+                        $applied = (float)($ps['amount_applied'] ?? 0);
+                        $sale->cash = max(0, (float)$sale->cash - $applied);
+                        $sale->change = (float)$sale->cash - (float)$sale->total_net;
+                        $sale->save();
+                    }
+                }
+            }
+
+            // 3. Process Narrations
+            $narrationIds = [];
+            if ($request->narration_id) {
+                foreach ($request->narration_id as $index => $narrId) {
+                    $manualText = $request->narration_text[$index] ?? null;
+                    if (empty($narrId) && !empty($manualText)) {
+                        $new = \App\Models\Narration::create([
+                            'expense_head' => 'Receipts Voucher',
+                            'narration'    => $manualText,
+                        ]);
+                        $narrationIds[] = (string) $new->id;
+                    } else {
+                        $narrationIds[] = (string) $narrId;
+                    }
+                }
+            }
+
+            // 4. Update ReceiptsVoucher record
+            $receiptVoucher->update([
+                'receipt_date'     => $request->receipt_date,
+                'entry_date'       => $request->entry_date,
+                'type'             => $request->vendor_type,
+                'party_id'         => $request->vendor_id,
+                'tel'              => $request->tel,
+                'remarks'          => $request->remarks,
+                'narration_id'     => json_encode($narrationIds),
+                'reference_no'     => json_encode($request->reference_no),
+                'row_account_head' => json_encode($request->row_account_head),
+                'row_account_id'   => json_encode($request->row_account_id),
+                'discount_value'   => json_encode($request->discount_value ?? []),
+                'rate'             => json_encode($request->rate ?? []),
+                'amount'           => json_encode($request->amount),
+                'total_amount'     => $request->total_amount,
+                'processed'        => true,
+            ]);
+
+            // 5. Invoice settlement logic
+            $vType      = strtolower($request->vendor_type);
+            $customerId = (int) $request->vendor_id;
+            $totalAmt   = (float) $request->total_amount;
+            $settledSaleIds = [];
+
+            if (($vType === 'customer' || $vType === 'walkin') && $customerId > 0 && $totalAmt > 0) {
+                $linkedSaleIds     = array_filter((array)($request->input('linked_sale_ids', [])));
+                $linkedSaleAmounts = (array)($request->input('linked_sale_amounts', []));
+
+                if (!empty($linkedSaleIds)) {
+                    $remaining = $totalAmt;
+                    foreach ($linkedSaleIds as $idx => $saleId) {
+                        if ($remaining <= 0) break;
+                        $sale = \App\Models\Sale::find($saleId);
+                        if (!$sale || $sale->customer_id != $customerId || $sale->sale_status !== 'posted') continue;
+                        $invoiceDue = round((float)$sale->total_net - (float)$sale->cash, 2);
+                        if ($invoiceDue <= 0) continue;
+                        $applyAmt = isset($linkedSaleAmounts[$idx]) && (float)$linkedSaleAmounts[$idx] > 0
+                            ? min((float)$linkedSaleAmounts[$idx], $invoiceDue, $remaining)
+                            : min($invoiceDue, $remaining);
+                        $sale->cash += $applyAmt;
+                        $sale->change = $sale->cash - $sale->total_net;
+                        $sale->save();
+                        $remaining -= $applyAmt;
+                        $settledSaleIds[] = ['sale_id' => $sale->id, 'invoice_no' => $sale->invoice_no, 'amount_applied' => $applyAmt];
+                    }
+                } else {
+                    $dueInvoices = \App\Models\Sale::where('customer_id', $customerId)
+                        ->where('sale_status', 'posted')
+                        ->orderBy('created_at', 'asc')
+                        ->get(['id', 'invoice_no', 'total_net', 'cash']);
+                    $remaining = $totalAmt;
+                    foreach ($dueInvoices as $sale) {
+                        if ($remaining <= 0) break;
+                        $invoiceDue = round((float)$sale->total_net - (float)$sale->cash, 2);
+                        if ($invoiceDue <= 0) continue;
+                        $applyAmt = min($invoiceDue, $remaining);
+                        $sale->cash += $applyAmt;
+                        $sale->change = $sale->cash - $sale->total_net;
+                        $sale->save();
+                        $remaining -= $applyAmt;
+                        $settledSaleIds[] = ['sale_id' => $sale->id, 'invoice_no' => $sale->invoice_no, 'amount_applied' => $applyAmt];
+                    }
+                }
+            }
+
+            // 6. V2 Integration
+            $partyType       = null;
+            $creditAccountId = null;
+            $balanceService  = app(\App\Services\BalanceService::class);
+
+            if ($vType == 'customer' || $vType == 'walkin') {
+                $partyType       = \App\Models\Customer::class;
+                $creditAccountId = $balanceService->getAccountsReceivableId();
+            } elseif ($vType == 'vendor') {
+                $partyType       = \App\Models\Vendor::class;
+                $creditAccountId = $balanceService->getAccountsPayableId();
+            } else {
+                $partyType       = \App\Models\Account::class;
+                $creditAccountId = $request->vendor_id;
+            }
+
+            if ($creditAccountId) {
+                $v2Lines = [];
+                // DEBIT SIDE (Cash/Bank)
+                if ($request->row_account_id && $request->amount) {
+                    foreach ($request->row_account_id as $idx => $accId) {
+                        $amt = (float) ($request->amount[$idx] ?? 0);
+                        if ($amt > 0) {
+                            $v2Lines[] = [
+                                'account_id' => $accId,
+                                'debit'      => $amt,
+                                'credit'     => 0,
+                                'narration'  => $request->narration_text[$idx] ?? 'Receipt',
+                            ];
+                        }
+                    }
+                }
+
+                // CREDIT SIDE (AR/Party)
+                if ($totalAmt > 0) {
+                    $v2Lines[] = [
+                        'account_id' => $creditAccountId,
+                        'debit'      => 0,
+                        'credit'     => $totalAmt,
+                        'party_type' => $partyType,
+                        'party_id'   => $request->vendor_id,
+                        'narration'  => 'Receipt from '.$request->vendor_type,
+                    ];
+                }
+
+                if (!empty($v2Lines)) {
+                    $remarksNote = $request->remarks . " (Ref: $rvid)";
+                    if (!empty($settledSaleIds)) {
+                        $invoiceNos = implode(', ', array_column($settledSaleIds, 'invoice_no'));
+                        $remarksNote .= " | Invoices: $invoiceNos";
+                    }
+
+                    app(\App\Services\VoucherService::class)->createVoucher([
+                        'voucher_type' => 'receipt',
+                        'date'         => $request->receipt_date,
+                        'status'       => 'posted',
+                        'party_type'   => $partyType,
+                        'party_id'     => $request->vendor_id,
+                        'remarks'      => $remarksNote,
+                    ], $v2Lines, auth()->id());
+
+                    // Legacy customer ledger update
+                    if (($vType == 'customer' || $vType == 'walkin') && $totalAmt > 0) {
+                        $latestLedger = CustomerLedger::where('customer_id', $request->vendor_id)->latest()->first();
+                        $prevBal = $latestLedger ? $latestLedger->closing_balance : (
+                            \App\Models\Customer::find($request->vendor_id)->opening_balance ?? 0
+                        );
+                        $ledgerDesc = 'Receipt Voucher ' . $rvid;
+                        if (!empty($settledSaleIds)) {
+                            $invoiceNos = implode(', ', array_column($settledSaleIds, 'invoice_no'));
+                            $ledgerDesc .= ' | ' . $invoiceNos;
+                        }
+                        CustomerLedger::create([
+                            'customer_id'      => $request->vendor_id,
+                            'admin_or_user_id' => auth()->id(),
+                            'previous_balance' => $prevBal,
+                            'opening_balance'  => 0,
+                            'closing_balance'  => $prevBal - $totalAmt,
+                            'description'      => $ledgerDesc,
+                        ]);
+                    }
+                }
+            }
+
+            DB::commit();
+            return redirect()->route('all_recepit_vochers')->with('success', "Receipt Voucher #{$rvid} updated successfully and ledgers synchronized!");
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Update Receipt Voucher Error: ' . $e->getMessage());
+            return back()->with('error', 'Failed to update voucher: ' . $e->getMessage())->withInput();
         }
     }
 
@@ -776,11 +1231,27 @@ class VoucherController extends Controller
                             $controlAccountId = $partyId;
                         }
 
+                        $linePartyType = null;
+                        $linePartyId = null;
+
+                        if ($type == 'vendor') {
+                            $linePartyType = \App\Models\Vendor::class;
+                            $linePartyId = $partyId;
+                        } elseif ($type == 'customer' || $type == 'walkin') {
+                            $linePartyType = \App\Models\Customer::class;
+                            $linePartyId = $partyId;
+                        } else {
+                            $linePartyType = \App\Models\Account::class;
+                            $linePartyId = $partyId;
+                        }
+
                         if ($controlAccountId) {
                             $v2Lines[] = [
                                 'account_id' => $controlAccountId,
                                 'debit' => $amt,
                                 'credit' => 0,
+                                'party_type' => $linePartyType,
+                                'party_id' => $linePartyId,
                                 'narration' => $request->narration_text[$idx] ?? "Payment to " . $type,
                             ];
                         }
@@ -913,6 +1384,316 @@ class VoucherController extends Controller
         }
 
         return view('admin_panel.vochers.payment_vochers.all_payment_vochers', compact('receipts'));
+    }
+
+
+    /**
+     * Show form for editing a Payment Voucher
+     */
+    public function edit_Pay_vochers($id)
+    {
+        // Smart finder: By PaymentVoucher ID, PVID, or VoucherMaster ID
+        $paymentVoucher = PaymentVoucher::find($id);
+        if (!$paymentVoucher) {
+            $vm = VoucherMaster::find($id);
+            if ($vm && preg_match('/Ref:\s*(PVID-[\w\-]+)/', $vm->remarks, $m)) {
+                $paymentVoucher = PaymentVoucher::where('pvid', $m[1])->first();
+            }
+            if (!$paymentVoucher && $vm) {
+                $paymentVoucher = PaymentVoucher::where('pvid', $vm->voucher_no)->first();
+            }
+        }
+        if (!$paymentVoucher) {
+            $paymentVoucher = PaymentVoucher::where('pvid', $id)->firstOrFail();
+        }
+
+        $narrations = \App\Models\Narration::where('expense_head', 'Payment voucher')
+            ->pluck('narration', 'id');
+        $AccountHeads = AccountHead::whereRaw('LOWER(TRIM(name)) IN ("cash", "bank")')->get();
+
+        // Decode JSON rows
+        $types = json_decode($paymentVoucher->type, true);
+        if (!is_array($types)) $types = [$paymentVoucher->type];
+
+        $partyIds = json_decode($paymentVoucher->party_id, true);
+        if (!is_array($partyIds)) $partyIds = [$paymentVoucher->party_id];
+
+        $amounts = json_decode($paymentVoucher->amount, true);
+        if (!is_array($amounts)) $amounts = [$paymentVoucher->amount];
+
+        $narrIds = json_decode($paymentVoucher->narration_id, true);
+        if (!is_array($narrIds)) $narrIds = [];
+
+        $refNos = json_decode($paymentVoucher->reference_no, true);
+        if (!is_array($refNos)) $refNos = [];
+
+        $rows = [];
+        $balanceService = app(\App\Services\BalanceService::class);
+
+        foreach ($partyIds as $idx => $pId) {
+            $type = $types[$idx] ?? 'vendor';
+            $amount = $amounts[$idx] ?? 0;
+            $partyLabel = 'Select Party';
+
+            if ($type === 'vendor') {
+                $v = \App\Models\Vendor::find($pId);
+                if ($v) {
+                    $bal = $balanceService->getVendorBalance($v->id);
+                    $drCr = $bal >= 0 ? 'Cr' : 'Dr';
+                    $partyLabel = $v->name . ' (Bal: ' . number_format(abs($bal), 2) . ' ' . $drCr . ')';
+                }
+            } elseif ($type === 'customer' || $type === 'walkin') {
+                $c = \App\Models\Customer::find($pId);
+                if ($c) {
+                    $bal = $balanceService->getCustomerBalance($c->id);
+                    $drCr = $bal >= 0 ? 'Dr' : 'Cr';
+                    $partyLabel = $c->customer_name . ' (Bal: ' . number_format(abs($bal), 2) . ' ' . $drCr . ')';
+                }
+            } else {
+                $acc = \App\Models\Account::find($pId);
+                if ($acc) {
+                    $partyLabel = $acc->title . ' (Bal: ' . number_format(abs($acc->current_balance), 2) . ')';
+                }
+            }
+
+            $rows[] = [
+                'type' => $type,
+                'party_id' => $pId,
+                'party_label' => $partyLabel,
+                'amount' => $amount,
+                'narration_id' => $narrIds[$idx] ?? '',
+                'reference_no' => $refNos[$idx] ?? '',
+            ];
+        }
+
+        $sourceAccount = \App\Models\Account::find($paymentVoucher->row_account_id);
+        $sourceAccounts = $paymentVoucher->row_account_head 
+            ? \App\Models\Account::where('head_id', $paymentVoucher->row_account_head)->get()
+            : collect();
+
+        return view('admin_panel.vochers.payment_vochers.payment_vouchers', compact(
+            'paymentVoucher',
+            'rows',
+            'narrations',
+            'AccountHeads',
+            'sourceAccount',
+            'sourceAccounts'
+        ));
+    }
+
+    /**
+     * Update an existing Payment Voucher
+     */
+    public function update_Pay_vochers(Request $request, $id)
+    {
+        $payment = PaymentVoucher::find($id);
+        if (!$payment) {
+            $vm = VoucherMaster::find($id);
+            if ($vm && preg_match('/Ref:\s*(PVID-[\w\-]+)/', $vm->remarks, $m)) {
+                $payment = PaymentVoucher::where('pvid', $m[1])->first();
+            }
+        }
+        if (!$payment) {
+            $payment = PaymentVoucher::where('pvid', $id)->firstOrFail();
+        }
+
+        DB::beginTransaction();
+        try {
+            $pvid = $payment->pvid;
+
+            // 1. Rollback old V2 integration / journal entries
+            $oldVoucherMaster = VoucherMaster::where('remarks', 'LIKE', "%Ref: {$pvid}%")->first();
+            if ($oldVoucherMaster) {
+                app(\App\Services\JournalEntryService::class)->reverseEntriesForSource($oldVoucherMaster);
+                $oldVoucherMaster->details()->delete();
+                $oldVoucherMaster->delete();
+            }
+
+            // 2. Rollback old legacy ledger impacts
+            $oldTypes = json_decode($payment->type, true) ?: [$payment->type];
+            $oldPartyIds = json_decode($payment->party_id, true) ?: [$payment->party_id];
+            $oldAmounts = json_decode($payment->amount, true) ?: [$payment->amount];
+
+            foreach ($oldPartyIds as $idx => $oldPartyId) {
+                $oldType = $oldTypes[$idx] ?? null;
+                $oldAmt = (float)($oldAmounts[$idx] ?? 0);
+                if ($oldAmt <= 0) continue;
+
+                if ($oldType === 'vendor') {
+                    $ledger = VendorLedger::where('vendor_id', $oldPartyId)->latest()->first();
+                    $bal = $ledger ? $ledger->closing_balance : 0;
+                    VendorLedger::create([
+                        'vendor_id'         => $oldPartyId,
+                        'admin_or_user_id'  => auth()->id(),
+                        'opening_balance'   => 0,
+                        'previous_balance'  => $bal,
+                        'closing_balance'   => $bal + $oldAmt,
+                    ]);
+                } elseif ($oldType === 'customer' || $oldType === 'walkin') {
+                    $ledger = CustomerLedger::where('customer_id', $oldPartyId)->latest()->first();
+                    $bal = $ledger ? $ledger->closing_balance : 0;
+                    CustomerLedger::create([
+                        'customer_id'      => $oldPartyId,
+                        'admin_or_user_id' => auth()->id(),
+                        'previous_balance' => $bal,
+                        'opening_balance'  => 0,
+                        'closing_balance'  => $bal - $oldAmt,
+                    ]);
+                } elseif ($oldType) {
+                    $acc = Account::find($oldPartyId);
+                    if ($acc) {
+                        $acc->current_balance = $acc->current_balance - $oldAmt;
+                        $acc->save();
+                    }
+                }
+            }
+
+            // 3. Update PaymentVoucher record
+            $narrationIds = [];
+            if ($request->narration_id) {
+                foreach ($request->narration_id as $index => $narrId) {
+                    $manualText = $request->narration_text[$index] ?? null;
+                    if (empty($narrId) && !empty($manualText)) {
+                        $new = \App\Models\Narration::create([
+                            'expense_head' => 'Payment voucher',
+                            'narration' => $manualText,
+                        ]);
+                        $narrationIds[] = (string) $new->id;
+                    } else {
+                        $narrationIds[] = (string) $narrId;
+                    }
+                }
+            }
+
+            $payment->update([
+                'receipt_date' => $request->receipt_date,
+                'entry_date' => $request->entry_date,
+                'row_account_head' => $request->header_account_head,
+                'row_account_id' => $request->header_account_id,
+                'remarks' => $request->remarks,
+                'type' => json_encode($request->vendor_type),
+                'party_id' => json_encode($request->vendor_id),
+                'narration_id' => json_encode($narrationIds),
+                'reference_no' => json_encode($request->reference_no),
+                'discount_value' => json_encode($request->discount_value),
+                'rate' => json_encode($request->rate),
+                'amount' => json_encode($request->amount),
+                'total_amount' => $request->total_amount,
+            ]);
+
+            $totalAmount = (float) $request->total_amount;
+
+            // 4. Create new V2 Voucher & Journal Entries with line-level party tracking
+            $balanceService = app(\App\Services\BalanceService::class);
+            $v2Lines = [];
+
+            if ($request->vendor_id && $request->amount) {
+                foreach ($request->vendor_id as $idx => $partyId) {
+                    $type = $request->vendor_type[$idx] ?? null;
+                    $amt = (float) ($request->amount[$idx] ?? 0);
+                    if ($amt <= 0) continue;
+
+                    $controlAccountId = null;
+                    $linePartyType = null;
+                    $linePartyId = null;
+
+                    if ($type == 'vendor') {
+                        $controlAccountId = $balanceService->getAccountsPayableId();
+                        $linePartyType = \App\Models\Vendor::class;
+                        $linePartyId = $partyId;
+                    } elseif ($type == 'customer' || $type == 'walkin') {
+                        $controlAccountId = $balanceService->getAccountsReceivableId();
+                        $linePartyType = \App\Models\Customer::class;
+                        $linePartyId = $partyId;
+                    } else {
+                        $controlAccountId = $partyId;
+                        $linePartyType = \App\Models\Account::class;
+                        $linePartyId = $partyId;
+                    }
+
+                    if ($controlAccountId) {
+                        $v2Lines[] = [
+                            'account_id' => $controlAccountId,
+                            'debit' => $amt,
+                            'credit' => 0,
+                            'party_type' => $linePartyType,
+                            'party_id' => $linePartyId,
+                            'narration' => $request->narration_text[$idx] ?? "Payment to " . $type,
+                        ];
+                    }
+                }
+            }
+
+            if ($totalAmount > 0 && $request->header_account_id) {
+                $v2Lines[] = [
+                    'account_id' => $request->header_account_id,
+                    'debit' => 0,
+                    'credit' => $totalAmount,
+                    'party_type' => null,
+                    'party_id' => null,
+                    'narration' => $request->remarks ?: "Payment from Cash/Bank",
+                ];
+            }
+
+            if (!empty($v2Lines)) {
+                $firstRowType = $v2Lines[0]['party_type'] ?? null;
+                $firstRowId = $v2Lines[0]['party_id'] ?? null;
+
+                app(\App\Services\VoucherService::class)->createVoucher([
+                    'voucher_type' => 'payment',
+                    'date' => $request->receipt_date,
+                    'status' => 'posted',
+                    'party_type' => $firstRowType,
+                    'party_id' => $firstRowId,
+                    'remarks' => $request->remarks . " (Ref: $pvid)",
+                ], $v2Lines, auth()->id());
+            }
+
+            // 5. Update legacy ledger impacts for each individual party
+            if ($request->vendor_id && $request->amount) {
+                foreach ($request->vendor_id as $index => $partyId) {
+                    $type = $request->vendor_type[$index] ?? null;
+                    $rowAmount = isset($request->amount[$index]) ? (float) $request->amount[$index] : 0;
+                    if ($rowAmount <= 0) continue;
+
+                    if ($type === 'vendor') {
+                        $ledger = VendorLedger::where('vendor_id', $partyId)->latest()->first();
+                        $bal = $ledger ? $ledger->closing_balance : 0;
+                        VendorLedger::create([
+                            'vendor_id'         => $partyId,
+                            'admin_or_user_id'  => auth()->id(),
+                            'opening_balance'   => 0,
+                            'previous_balance'  => $bal,
+                            'closing_balance'   => $bal - $rowAmount,
+                        ]);
+                    } elseif ($type === 'customer' || $type === 'walkin') {
+                        $ledger = CustomerLedger::where('customer_id', $partyId)->latest()->first();
+                        $bal = $ledger ? $ledger->closing_balance : 0;
+                        CustomerLedger::create([
+                            'customer_id'      => $partyId,
+                            'admin_or_user_id' => auth()->id(),
+                            'previous_balance' => $bal,
+                            'opening_balance'  => 0,
+                            'closing_balance'  => $bal + $rowAmount,
+                        ]);
+                    } elseif ($type) {
+                        $acc = Account::find($partyId);
+                        if ($acc) {
+                            $acc->current_balance = $acc->current_balance + $rowAmount;
+                            $acc->save();
+                        }
+                    }
+                }
+            }
+
+            DB::commit();
+
+            return redirect()->route('all_Payment_vochers')->with('success', "Payment Voucher #{$pvid} updated successfully and ledgers synchronized!");
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Update Payment Voucher Error: ' . $e->getMessage());
+            return back()->with('error', 'Failed to update voucher: ' . $e->getMessage())->withInput();
+        }
     }
 
     public function Paymentprint($id)

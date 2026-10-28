@@ -450,11 +450,15 @@ Route::middleware('auth')->group(function () {
     Route::get('/recepit_vochers', [VoucherController::class, 'recepit_vochers'])->name('recepit_vochers');
     Route::post('/store_rec_vochers', [VoucherController::class, 'store_rec_vochers'])->name('store_rec_vochers');
     Route::get('/print/{id}', [VoucherController::class, 'print'])->name('print');
+    Route::get('/recepit_vochers/edit/{id}', [VoucherController::class, 'edit_rec_vochers'])->name('edit_rec_vochers');
+    Route::post('/recepit_vochers/update/{id}', [VoucherController::class, 'update_rec_vochers'])->name('update_rec_vochers');
 
     Route::get('/all_Payment_vochers', [VoucherController::class, 'all_Payment_vochers'])->name('all_Payment_vochers');
     Route::get('/Payment_vochers', [VoucherController::class, 'Payment_vochers'])->name('Payment_vochers');
     Route::post('/store_Pay_vochers', [VoucherController::class, 'store_Pay_vochers'])->name('store_Pay_vochers');
     Route::get('/Paymentprint/{id}', [VoucherController::class, 'Paymentprint'])->name('Paymentprint');
+    Route::get('/Payment_vochers/edit/{id}', [VoucherController::class, 'edit_Pay_vochers'])->name('edit_Pay_vochers');
+    Route::post('/Payment_vochers/update/{id}', [VoucherController::class, 'update_Pay_vochers'])->name('update_Pay_vochers');
 
     Route::get('/all_expense_vochers', [VoucherController::class, 'all_expense_vochers'])->name('all_expense_vochers');
     Route::get('/expense_vochers', [VoucherController::class, 'expense_vochers'])->name('expense_vochers');

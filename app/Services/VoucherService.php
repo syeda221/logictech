@@ -56,6 +56,8 @@ class VoucherService
                     'debit' => $debit,
                     'credit' => $credit,
                     'narration' => $line['narration'] ?? null,
+                    'party_type' => $line['party_type'] ?? null,
+                    'party_id' => $line['party_id'] ?? null,
                 ]);
             }
 
@@ -136,6 +138,16 @@ class VoucherService
                 }
             }
 
+            $party = null;
+            if ($includeParty) {
+                if ($detail->party_type && $detail->party_id) {
+                    $partyClass = $detail->party_type;
+                    $party = class_exists($partyClass) ? $partyClass::find($detail->party_id) : null;
+                } else {
+                    $party = $voucher->party;
+                }
+            }
+
             $this->journalService->recordEntry(
                 $voucher,
                 $detail->account_id,
@@ -143,7 +155,7 @@ class VoucherService
                 $detail->credit,
                 $detail->narration ?? $voucher->remarks,
                 $voucher->date->format('Y-m-d'),
-                $includeParty ? $voucher->party : null
+                $party
             );
         }
     }

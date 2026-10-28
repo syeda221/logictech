@@ -348,6 +348,29 @@
         font-weight: 600;
     }
 
+    /* Edit Action Button */
+    .btn-erp-edit {
+        background-color: #ffffff;
+        border: 1.5px solid #bfdbfe;
+        color: #2563eb !important;
+        font-weight: 600;
+        font-size: 0.72rem;
+        border-radius: 6px;
+        padding: 0.3rem 0.65rem;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        text-decoration: none;
+    }
+    .btn-erp-edit:hover {
+        background-color: #eff6ff;
+        border-color: #60a5fa;
+        color: #1d4ed8 !important;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(37, 99, 235, 0.15);
+    }
+
     /* Print Action Button */
     .btn-erp-print {
         background-color: #ffffff;
@@ -570,7 +593,7 @@
                                     <th style="min-width: 220px;">REMARKS</th>
                                     <th class="text-end" style="min-width: 120px;">AMOUNT (RS)</th>
                                     <th class="text-center" style="width: 90px;">STATUS</th>
-                                    <th class="text-center" style="width: 80px;">ACTION</th>
+                                    <th class="text-center" style="width: 150px;">ACTION</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -659,10 +682,16 @@
 
                                         {{-- Action --}}
                                         <td class="text-center">
-                                            <a href="{{ route('print', $item->id) }}" target="_blank"
-                                                class="btn-erp-print" title="Print Receipt Voucher">
-                                                <i class="fas fa-print"></i> Print
-                                            </a>
+                                            <div class="d-inline-flex align-items-center justify-content-center gap-1">
+                                                <a href="{{ route('edit_rec_vochers', $item->id) }}"
+                                                    class="btn-erp-edit" title="Edit Receipt Voucher">
+                                                    <i class="fas fa-edit"></i> Edit
+                                                </a>
+                                                <a href="{{ route('print', $item->id) }}" target="_blank"
+                                                    class="btn-erp-print" title="Print Receipt Voucher">
+                                                    <i class="fas fa-print"></i> Print
+                                                </a>
+                                            </div>
                                         </td>
                                     </tr>
                                 @empty
