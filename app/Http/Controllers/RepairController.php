@@ -65,6 +65,26 @@ class RepairController extends Controller
             $query->where('customer_id', $request->customer_id);
         }
 
+        // Filter by Payment Status (Due / Received)
+        if ($request->filled('payment_status') && $request->payment_status !== 'all') {
+            if ($request->payment_status === 'due') {
+                $query->where(function ($q) {
+                    $q->where('due_amount', '>', 0.05)
+                      ->orWhereRaw('(GREATEST(COALESCE(total_charges, 0), COALESCE(estimated_cost, 0)) - (COALESCE(advance_paid, 0) + COALESCE(final_paid, 0))) > 0.05');
+                });
+            } elseif (in_array($request->payment_status, ['received', 'paid', 'nil'])) {
+                $query->where(function ($q) {
+                    $q->where(function ($sq) {
+                        $sq->where('due_amount', '<=', 0.05)
+                           ->whereRaw('(COALESCE(advance_paid, 0) + COALESCE(final_paid, 0)) > 0');
+                    })->orWhere(function ($sq) {
+                        $sq->whereRaw('(GREATEST(COALESCE(total_charges, 0), COALESCE(estimated_cost, 0)) - (COALESCE(advance_paid, 0) + COALESCE(final_paid, 0))) <= 0.05')
+                           ->whereRaw('(COALESCE(advance_paid, 0) + COALESCE(final_paid, 0)) > 0');
+                    });
+                });
+            }
+        }
+
         // Filter by Date
         if ($request->filled('from_date')) {
             $query->whereDate('received_date', '>=', $request->from_date);

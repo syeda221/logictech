@@ -497,11 +497,20 @@
                                 </select>
                             </div>
 
+                            <div class="erp-filter-box" style="width: 175px;">
+                                <i class="fas fa-money-bill-wave"></i>
+                                <select name="payment_status">
+                                    <option value="">All Payments</option>
+                                    <option value="due" {{ request('payment_status') == 'due' ? 'selected' : '' }}>⚠️ Payment Due</option>
+                                    <option value="received" {{ request('payment_status') == 'received' ? 'selected' : '' }}>✅ Received / Cleared</option>
+                                </select>
+                            </div>
+
                             <button type="submit" class="btn btn-sm btn-primary px-3 fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm" style="border-radius: 7px; height: 32px; font-size: 0.76rem; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); border: none;">
                                 <i class="fas fa-filter"></i> Filter
                             </button>
 
-                            @if(request('ticket_no') || request('customer_id') || request('search') || (request('status') && request('status') !== 'all'))
+                            @if(request('ticket_no') || request('customer_id') || request('payment_status') || request('search') || (request('status') && request('status') !== 'all'))
                                 <a href="{{ route('repair.index', request()->only('status')) }}" class="btn btn-sm btn-outline-secondary px-2.5 d-inline-flex align-items-center gap-1" style="border-radius: 7px; height: 32px; font-size: 0.75rem; background-color: #f8fafc;" title="Reset Filters">
                                     <i class="fas fa-undo"></i> Reset
                                 </a>
@@ -522,7 +531,7 @@
                                         <th class="text-center" style="min-width: 95px;">RECV. DATE</th>
                                         <th class="text-center" style="min-width: 105px;">DELIVERY DATE</th>
                                         <th class="text-end" style="min-width: 100px;">Bill Amount</th>
-                                        <th class="text-end text-success" style="min-width: 100px;">Advance</th>
+                                        <th class="text-end text-success" style="min-width: 105px;">Paid Amount</th>
                                         <th class="text-end text-danger" style="min-width: 105px;">Balance Amount</th>
                                         <th class="text-center" style="min-width: 110px;">Status</th>
                                         <th class="text-center" style="width: 110px;">Actions</th>
@@ -621,29 +630,46 @@
                                             {{-- Bill Amount --}}
                                             <td class="text-end font-monospace text-dark fw-semibold">
                                                 @php
-                                                    $billAmt = ($repair->total_charges > 0) ? $repair->total_charges : $repair->estimated_cost;
+                                                    $billAmt = ($repair->total_charges > 0) ? (float)$repair->total_charges : (float)$repair->estimated_cost;
+                                                    $totalPaid = (float)$repair->advance_paid + (float)$repair->final_paid;
+                                                    $calcDue = max(0, $billAmt - $totalPaid);
+                                                    $due = ($calcDue <= 0.01) ? 0 : max((float)$repair->due_amount, $calcDue);
                                                 @endphp
                                                 {{ number_format($billAmt, 2) }}
                                             </td>
 
-                                            {{-- Advance Paid --}}
-                                            <td class="text-end font-monospace text-success fw-bold">
-                                                {{ number_format($repair->advance_paid, 2) }}
-                                                @if($repair->advanceAccount)
+                                            {{-- Paid Amount --}}
+                                            <td class="text-end font-monospace text-success fw-bold" data-order="{{ $totalPaid }}">
+                                                {{ number_format($totalPaid, 2) }}
+                                                @if($repair->advance_paid > 0 && $repair->final_paid > 0)
+                                                    <div class="text-muted small" style="font-size: 0.62rem;" title="Adv: {{ number_format($repair->advance_paid, 2) }} | Recv: {{ number_format($repair->final_paid, 2) }}">
+                                                        <span class="text-secondary">Adv: {{ number_format($repair->advance_paid) }}</span> + <span>Rec: {{ number_format($repair->final_paid) }}</span>
+                                                    </div>
+                                                @elseif($repair->advanceAccount)
                                                     <div class="text-muted small" style="font-size: 0.62rem;" title="Account: {{ $repair->advanceAccount->title }}">
                                                         <i class="fas fa-wallet text-secondary me-1"></i>{{ Str::limit($repair->advanceAccount->title, 10) }}
+                                                    </div>
+                                                @elseif($repair->finalAccount)
+                                                    <div class="text-muted small" style="font-size: 0.62rem;" title="Account: {{ $repair->finalAccount->title }}">
+                                                        <i class="fas fa-wallet text-secondary me-1"></i>{{ Str::limit($repair->finalAccount->title, 10) }}
                                                     </div>
                                                 @endif
                                             </td>
 
                                             {{-- Balance Amount --}}
-                                            <td class="text-end font-monospace" data-order="{{ $repair->due_amount }}">
-                                                @if($repair->due_amount > 0)
+                                            <td class="text-end font-monospace" data-order="{{ $due }}">
+                                                @if($due > 0.01)
                                                     <span class="badge text-white px-2 py-1 font-monospace" style="background-color: #ef4444 !important; font-size: 0.78rem; font-weight: 700; border-radius: 4px; display: inline-block; box-shadow: 0 1px 3px rgba(239, 68, 68, 0.3);">
-                                                        {{ number_format($repair->due_amount, 2) }}
+                                                        {{ number_format($due, 2) }}
+                                                    </span>
+                                                @elseif($totalPaid > 0)
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 fw-bold" style="font-size: 0.74rem; border-radius: 4px; display: inline-block;">
+                                                        <i class="fas fa-check-circle me-1"></i>Received
                                                     </span>
                                                 @else
-                                                    <span class="text-muted small" style="font-size: 0.78rem;">0.00</span>
+                                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-0.5 fw-semibold" style="font-size: 0.72rem; border-radius: 4px; display: inline-block;">
+                                                        Nil
+                                                    </span>
                                                 @endif
                                             </td>
 
@@ -819,9 +845,12 @@
                                          <div class="alert alert-success border-success-subtle py-2 px-3 mb-3 rounded-3 small" style="background-color: #ecfdf5; font-size: 0.75rem;">
                                              <div class="fw-bold text-success mb-0.5"><i class="fas fa-check-circle me-1"></i>{{ $repair->item_name }}</div>
                                              <div class="text-secondary"><strong>Customer:</strong> {{ $repair->customer_display_name }} ({{ $repair->customer_display_phone }})</div>
-                                             @if(($repair->advance_paid ?? 0) > 0)
+                                             @php
+                                                 $mPaid = (float)($repair->advance_paid ?? 0) + (float)($repair->final_paid ?? 0);
+                                             @endphp
+                                             @if($mPaid > 0)
                                                  <div class="text-dark font-monospace fw-bold mt-1">
-                                                     Advance Paid: <span class="text-success">Rs. {{ number_format($repair->advance_paid, 2) }}</span>
+                                                     Paid Amount: <span class="text-success">Rs. {{ number_format($mPaid, 2) }}</span>
                                                  </div>
                                              @endif
                                          </div>

@@ -422,10 +422,18 @@
                                             Rs. {{ number_format($repair->total_charges > 0 ? $repair->total_charges : $repair->estimated_cost, 2) }}
                                         </span>
                                     </div>
+                                    @if(($repair->advance_paid ?? 0) > 0)
                                     <div class="doc-total-row text-success">
                                         <span>Less: Advance Paid:</span>
                                         <span class="font-monospace fw-bold">-Rs. {{ number_format($repair->advance_paid, 2) }}</span>
                                     </div>
+                                    @endif
+                                    @if(($repair->final_paid ?? 0) > 0)
+                                    <div class="doc-total-row text-success">
+                                        <span>Less: Payment Received:</span>
+                                        <span class="font-monospace fw-bold">-Rs. {{ number_format($repair->final_paid, 2) }}</span>
+                                    </div>
+                                    @endif
                                     <hr class="my-1.5">
                                     <div class="doc-total-row fw-bold" style="font-size: 0.95rem;">
                                         <span class="{{ $repair->due_amount > 0 ? 'text-danger' : 'text-success' }}">Net Balance Due:</span>
