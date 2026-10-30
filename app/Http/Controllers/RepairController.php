@@ -65,7 +65,7 @@ class RepairController extends Controller
             $query->where('customer_id', $request->customer_id);
         }
 
-        // Filter by Payment Status (Due / Received)
+        // Filter by Payment Status (Due / Received / Bill Pending)
         if ($request->filled('payment_status') && $request->payment_status !== 'all') {
             if ($request->payment_status === 'due') {
                 $query->where(function ($q) {
@@ -80,6 +80,14 @@ class RepairController extends Controller
                     })->orWhere(function ($sq) {
                         $sq->whereRaw('(GREATEST(COALESCE(total_charges, 0), COALESCE(estimated_cost, 0)) - (COALESCE(advance_paid, 0) + COALESCE(final_paid, 0))) <= 0.05')
                            ->whereRaw('(COALESCE(advance_paid, 0) + COALESCE(final_paid, 0)) > 0');
+                    });
+                });
+            } elseif ($request->payment_status === 'bill_pending') {
+                $query->where(function ($q) {
+                    $q->where(function ($sq) {
+                        $sq->whereNull('total_charges')->orWhere('total_charges', '<=', 0);
+                    })->where(function ($sq) {
+                        $sq->whereNull('estimated_cost')->orWhere('estimated_cost', '<=', 0);
                     });
                 });
             }

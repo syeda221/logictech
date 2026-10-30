@@ -601,7 +601,9 @@
             <form id="saleForm" autocomplete="off">
                 @csrf
                 <input type="hidden" name="booking_id" id="booking_id" value="{{ $sale->id ?? '' }}">
-                <input type="hidden" name="action" id="action" value="booking">
+                <input type="hidden" name="action" id="action" value="{{ ($sale->sale_status ?? '') === 'posted' ? 'sale' : 'booking' }}">
+                <input type="hidden" name="sale_status" id="sale_status" value="{{ $sale->sale_status ?? 'booked' }}">
+                <input type="hidden" name="is_booking" id="is_booking" value="{{ $sale->is_booking ? 1 : 0 }}">
 
                 {{-- TOP HEADER BAR --}}
                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 erp-page-header">
@@ -611,7 +613,7 @@
                         </a>
                         <div>
                             <h4 class="erp-title">
-                                <i class="fas fa-edit text-primary"></i> <span id="pageMainHeading">Edit Order / Booking #{{ $sale->invoice_no }}</span>
+                                <i class="fas fa-edit text-primary"></i> <span id="pageMainHeading">{{ ($sale->sale_status ?? '') === 'posted' ? 'Edit Confirmed Order #' . $sale->invoice_no : 'Edit Order / Booking #' . $sale->invoice_no }}</span>
                             </h4>
                             <p class="erp-subtitle">Executive order generation, instant booking ledger, and multi-format dispatch invoicing</p>
                         </div>
@@ -940,13 +942,13 @@
                                                                     <label class="form-label mb-1 fw-bold text-dark text-uppercase" style="font-size: 0.68rem; letter-spacing: 0.02em;">
                                                                         <i class="fas fa-tag me-1 text-primary"></i>Equipment / Technical Title
                                                                     </label>
-                                                                    <input type="text" class="form-control form-control-sm item-tech-name" name="technical_name[]" value="{{ $item->technical_name ?? '' }}" placeholder="e.g. Induction Heater 60 KW Forging Machine" style="border: 1px solid #cbd5e1 !important; border-radius: 5px !important; background-color: #ffffff !important; font-size: 0.76rem !important; height: 32px !important; text-align: left !important; padding: 4px 10px !important;">
+                                                                    <textarea class="form-control form-control-sm item-tech-name" name="technical_name[]" rows="2" placeholder="e.g. Induction Heater 60 KW Forging Machine" style="border: 1px solid #cbd5e1 !important; border-radius: 5px !important; background-color: #ffffff !important; font-size: 0.76rem !important; line-height: 1.4 !important; text-align: left !important; padding: 4px 8px !important; resize: vertical; min-height: 38px;">{{ $item->technical_name ?? '' }}</textarea>
                                                                 </div>
                                                                 <div class="col-md-7">
                                                                     <label class="form-label mb-1 fw-bold text-dark text-uppercase" style="font-size: 0.68rem; letter-spacing: 0.02em;">
                                                                         <i class="fas fa-list-check me-1 text-primary"></i>Technical Specifications &amp; Parameters
                                                                     </label>
-                                                                    <input type="text" class="form-control form-control-sm item-tech-specs" name="technical_specs[]" value="{{ $item->technical_specs ?? '' }}" placeholder="e.g. Power: 60KW, Frequency: 10-30kHz, Coil Size: 150mm..." style="border: 1px solid #cbd5e1 !important; border-radius: 5px !important; background-color: #ffffff !important; font-size: 0.76rem !important; height: 32px !important; text-align: left !important; padding: 4px 10px !important;">
+                                                                    <textarea class="form-control form-control-sm item-tech-specs" name="technical_specs[]" rows="2" placeholder="e.g. ID 40MM AND ID 50MM&#10;Power: 60KW, Frequency: 10-30kHz..." style="border: 1px solid #cbd5e1 !important; border-radius: 5px !important; background-color: #ffffff !important; font-size: 0.76rem !important; line-height: 1.4 !important; text-align: left !important; padding: 4px 8px !important; resize: vertical; min-height: 38px;">{{ $item->technical_specs ?? '' }}</textarea>
                                                                     <input type="hidden" class="item-tech-remarks" name="technical_remarks[]" value="{{ $item->technical_remarks ?? '' }}">
                                                                 </div>
                                                             </div>
@@ -1101,7 +1103,7 @@
                                 </div>
 
                                 <button type="button" class="btn btn-save-complete w-100 mt-auto py-2" id="btnSaveAndComplete">
-                                    <i class="fas fa-bookmark me-2"></i>Book Order (F9)
+                                    <i class="fas fa-bookmark me-2"></i>{{ ($sale->sale_status ?? '') === 'posted' ? 'Save Order (F9)' : 'Book Order (F9)' }}
                                 </button>
                             </div>
                         </div>
@@ -1149,7 +1151,7 @@
                     </div>
 
                     <button type="button" class="btn btn-save-complete px-4 py-2" id="btnSaveAndComplete2">
-                        <i class="fas fa-bookmark me-1.5"></i>Book Order (F9)
+                        <i class="fas fa-bookmark me-1.5"></i>{{ ($sale->sale_status ?? '') === 'posted' ? 'Save Order (F9)' : 'Book Order (F9)' }}
                     </button>
                 </div>
 

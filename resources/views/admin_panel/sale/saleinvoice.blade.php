@@ -721,20 +721,39 @@ body{
                 $net   = (float)$item['total'];
 
                 $specs=[];
-                if(!empty($item['technical_name']) && strcasecmp(trim($item['technical_name']), trim($item['item_name'])) !== 0) $specs[]=['Equipment Title',$item['technical_name']];
-                // Specifications & Parameters excluded from invoice
-                if(!empty($item['brand']))             $specs[]=['Input Power / Brand',$item['brand']];
-                if(!empty($item['size_val']) &&$item['size_val']!=='-')  $specs[]=['Duty Cycle / Rating',$item['size_val']];
-                if(!empty($item['color_val'])&&$item['color_val']!=='-') $specs[]=['Cooling Type / Model',$item['color_val']];
-                if(!empty($item['model']) && (empty($item['color_val']) || $item['color_val']==='-')) $specs[]=['Cooling Type / Model',$item['model']];
-                // Serial No excluded from invoice
-                // Remarks excluded from invoice
+
+                // 1. Equipment / Technical Title (multiline row-wise with bullets)
+                if(!empty($item['technical_name'])) {
+                    $tLines = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', (string)$item['technical_name'])), 'strlen'));
+                    foreach($tLines as $tIdx => $tLine) {
+                        $cleanT = ltrim($tLine, "•-* \t");
+                        if($cleanT !== '') {
+                            $specs[] = [$tIdx === 0 ? 'Equipment Title' : '', $cleanT, false, $tIdx > 0];
+                        }
+                    }
+                }
+
+                // 2. Technical Specifications & Parameters (multiline row-wise with bullets)
+                if(!empty($item['technical_specs'])) {
+                    $sLines = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', (string)$item['technical_specs'])), 'strlen'));
+                    foreach($sLines as $sIdx => $sLine) {
+                        $cleanS = ltrim($sLine, "•-* \t");
+                        if($cleanS !== '') {
+                            $specs[] = [$sIdx === 0 ? 'Specifications' : '', $cleanS, false, $sIdx > 0];
+                        }
+                    }
+                }
+
+                if(!empty($item['brand']))             $specs[]=['Input Power / Brand',$item['brand'], false, false];
+                if(!empty($item['size_val']) &&$item['size_val']!=='-')  $specs[]=['Duty Cycle / Rating',$item['size_val'], false, false];
+                if(!empty($item['color_val'])&&$item['color_val']!=='-') $specs[]=['Cooling Type / Model',$item['color_val'], false, false];
+                if(!empty($item['model']) && (empty($item['color_val']) || $item['color_val']==='-')) $specs[]=['Cooling Type / Model',$item['model'], false, false];
                 $h2=(float)($item['height']??0);$w2=(float)($item['width']??0);
-                if($sm=='by_size'&&$h2>0&&$w2>0) $specs[]=['Dimensions',number_format($w2,0).'×'.number_format($h2,0).' mm'];
-                if($wg>0) $specs[]=['Weight',($wg==(int)$wg?(int)$wg:$wg).'g'];
+                if($sm=='by_size'&&$h2>0&&$w2>0) $specs[]=['Dimensions',number_format($w2,0).'×'.number_format($h2,0).' mm', false, false];
+                if($wg>0) $specs[]=['Weight',($wg==(int)$wg?(int)$wg:$wg).'g', false, false];
                 if($disc > 0) {
                     $discLabel = 'Discount' . ($discP > 0 ? ' (' . (float)$discP . '%)' : '');
-                    $specs[] = [$discLabel, '', true];
+                    $specs[] = [$discLabel, '', true, false];
                 }
 
                 $globalTaxPct = (float)($sale->tax_percent ?? 0);
@@ -776,12 +795,18 @@ body{
                                     $l = $sp[0];
                                     $v = $sp[1];
                                     $isRed = $sp[2] ?? false;
+                                    $isSubLine = $sp[3] ?? false;
                                 @endphp
-                                <li style="margin-bottom: 1.5px; padding-left: 0;">
-                                    <strong style="color: {{ $isRed ? '#c62828' : '#1e3a8a' }}; font-weight: 700;">{{ $l }}{{ $v !== '' ? ':' : '' }}</strong> 
-                                    @if($v !== '')
-                                        <span style="color: {{ $isRed ? '#c62828' : '#1e293b' }}; font-weight: {{ $isRed ? '700' : '400' }};">{{ $v }}</span>
-                                    @endif
+                                <li style="margin-bottom: 2px; padding-left: {{ $isSubLine ? '10px' : '0' }}; list-style: none; display: flex; align-items: baseline;">
+                                    <span style="color: {{ $isSubLine ? '#64748b' : '#2563eb' }}; font-size: {{ $isSubLine ? '7.5px' : '9px' }}; margin-right: 4px; flex-shrink: 0;">{{ $isSubLine ? '▪' : '•' }}</span>
+                                    <div>
+                                        @if(!empty($l))
+                                            <strong style="color: {{ $isRed ? '#c62828' : '#1e3a8a' }}; font-weight: 700;">{{ $l }}{{ $v !== '' ? ':' : '' }}</strong> 
+                                        @endif
+                                        @if($v !== '')
+                                            <span style="color: {{ $isRed ? '#c62828' : '#1e293b' }}; font-weight: {{ $isRed ? '700' : '400' }};">{{ $v }}</span>
+                                        @endif
+                                    </div>
                                 </li>
                             @endforeach
                         </ul>

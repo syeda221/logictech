@@ -20,6 +20,17 @@ class SaleController extends Controller
 {
     public function index(Request $request)
     {
+        // Auto-heal: Ensure any delivered orders that were stuck in 'booked' status are confirmed and posted
+        Sale::where('order_status', 'delivered')
+            ->where('sale_status', 'booked')
+            ->each(function ($delivSale) {
+                try {
+                    $this->executeConfirmBooking($delivSale);
+                } catch (\Exception $e) {
+                    \Log::error('Auto-confirm delivered order #' . $delivSale->invoice_no . ' error: ' . $e->getMessage());
+                }
+            });
+
         $query = Sale::with(['customer_relation', 'items.product', 'returns'])
             ->whereIn('sale_status', ['draft', 'booked', 'posted', 'returned']);
 
@@ -1098,31 +1109,45 @@ class SaleController extends Controller
         // Determine whether this sale is an Order / Booking vs Direct Sale
         $isOrder = false;
         if ($sale->exists) {
-            $isOrder = (bool) $sale->is_booking;
-            if ($request->filled('is_booking')) {
-                $isOrder = (bool) $request->is_booking;
-            } elseif ($request->action === 'booking') {
-                $isOrder = true;
-            } elseif (in_array($request->action, ['sale', 'post'])) {
-                $isOrder = false;
-            }
+            // Preserve existing order/booking identity unless explicitly altered
+            $isOrder = $request->filled('is_booking') ? (bool) $request->is_booking : (bool) $sale->is_booking;
         } else {
             $isOrder = ($request->action === 'booking' || ($request->filled('is_booking') && $request->is_booking));
         }
 
         // Determine Financial Status (posted, booked, draft, returned)
-        if ($request->filled('sale_status') && in_array($request->sale_status, ['draft', 'booked', 'posted', 'returned'])) {
-            $status = $request->sale_status;
-        } elseif ($request->action === 'booking') {
-            $status = 'booked';
-        } elseif (in_array($request->action, ['sale', 'post'])) {
-            $status = 'posted';
-        } elseif ($sale->exists) {
-            // IMPORTANT: If existing sale is already posted (Confirmed Order or Direct Sale), it MUST remain posted!
-            // If it was booked (unconfirmed order), it remains booked unless explicitly confirmed/posted.
-            $status = $sale->sale_status ?: ($isOrder ? 'booked' : 'posted');
+        if ($sale->exists) {
+            // CRITICAL: An existing sale's confirmed/posted status must NEVER be demoted back to 'booked' by generic save actions.
+            if ($request->filled('sale_status') && in_array($request->sale_status, ['draft', 'booked', 'posted', 'returned'])) {
+                if ($sale->sale_status === 'posted') {
+                    $status = ($request->sale_status === 'returned') ? 'returned' : 'posted';
+                } else {
+                    $status = $request->sale_status;
+                }
+            } elseif ($sale->sale_status === 'posted') {
+                // Previously confirmed order or direct sale MUST remain posted!
+                $status = 'posted';
+            } elseif ($sale->order_status === 'delivered' || $request->order_status === 'delivered') {
+                // Any delivered order must always be confirmed / posted!
+                $status = 'posted';
+            } elseif (in_array($request->action, ['sale', 'post'])) {
+                $status = 'posted';
+            } elseif ($request->action === 'booking') {
+                $status = 'booked';
+            } else {
+                $status = $sale->sale_status ?: ($isOrder ? 'booked' : 'posted');
+            }
         } else {
-            $status = $isOrder ? 'booked' : 'posted';
+            // New sale
+            if ($request->filled('sale_status') && in_array($request->sale_status, ['draft', 'booked', 'posted', 'returned'])) {
+                $status = $request->sale_status;
+            } elseif ($request->action === 'booking') {
+                $status = 'booked';
+            } elseif (in_array($request->action, ['sale', 'post'])) {
+                $status = 'posted';
+            } else {
+                $status = $isOrder ? 'booked' : 'posted';
+            }
         }
 
         $isBookingAction = ($status === 'booked');
@@ -2246,16 +2271,16 @@ class SaleController extends Controller
         }
     }
 
-    public function confirmBooking($id)
+    /**
+     * Core confirmation logic: updates status to posted, syncs stock, ledger & vouchers
+     */
+    public function executeConfirmBooking(Sale $sale)
     {
-        $sale = Sale::findOrFail($id);
-
-        if ($sale->sale_status !== 'booked') {
-            return redirect()->back()->with('error', 'Only booked sales can be confirmed.');
-        }
-
         DB::beginTransaction();
         try {
+            // First rollback any previous partial/posted impacts to avoid duplicate vouchers
+            $this->rollbackPostedSale($sale);
+
             // Update status to posted (which is the system-wide confirmed status)
             $sale->sale_status = 'posted';
             $sale->save();
@@ -2267,9 +2292,7 @@ class SaleController extends Controller
             $this->updateLedger($sale);
 
             // 3. PROFESSIONAL LEDGER POSTING (ENTRY 1: THE INVOICE)
-            $journalService = app(\App\Services\JournalEntryService::class);
             $balanceService = app(\App\Services\BalanceService::class);
-
             $custForVoucher = $sale->customer_relation ?? \App\Models\Customer::find($sale->customer_id);
 
             if ($custForVoucher) {
@@ -2308,11 +2331,25 @@ class SaleController extends Controller
             }
 
             DB::commit();
-
-            return redirect()->back()->with('success', 'Booking confirmed and converted to sale successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Booking Confirmation Error: '.$e->getMessage());
+            \Log::error('Booking Confirmation Error for Sale #' . $sale->invoice_no . ': ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    public function confirmBooking($id)
+    {
+        $sale = Sale::findOrFail($id);
+
+        if ($sale->sale_status !== 'booked') {
+            return redirect()->back()->with('error', 'Only booked sales can be confirmed.');
+        }
+
+        try {
+            $this->executeConfirmBooking($sale);
+            return redirect()->back()->with('success', 'Booking confirmed and converted to sale successfully.');
+        } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Failed to confirm booking: '.$e->getMessage());
         }
     }
@@ -2390,6 +2427,15 @@ class SaleController extends Controller
         $sale = Sale::findOrFail($id);
         $sale->order_status = strtolower($request->order_status);
         $sale->save();
+
+        if ($sale->order_status === 'delivered' && $sale->sale_status === 'booked') {
+            try {
+                $this->executeConfirmBooking($sale);
+                $sale->refresh();
+            } catch (\Exception $e) {
+                \Log::error('Auto-confirm in updateOrderStatus failed: ' . $e->getMessage());
+            }
+        }
 
         $badgeHtml = match ($sale->order_status) {
             'ready' => '<span class="erp-badge state-ready"><i class="fas fa-box me-1"></i>Ready</span>',
@@ -2516,6 +2562,15 @@ class SaleController extends Controller
 
         $sale->order_status = 'delivered';
         $sale->save();
+
+        if ($sale->sale_status === 'booked') {
+            try {
+                $this->executeConfirmBooking($sale);
+                $sale->refresh();
+            } catch (\Exception $e) {
+                \Log::error('Auto-confirm in saveDeliveryDetails failed: ' . $e->getMessage());
+            }
+        }
 
         $badgeHtml = '<span class="erp-badge state-delivered"><i class="fas fa-truck me-1"></i>Delivered</span>';
 

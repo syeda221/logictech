@@ -497,12 +497,13 @@
                                 </select>
                             </div>
 
-                            <div class="erp-filter-box" style="width: 175px;">
+                            <div class="erp-filter-box" style="width: 185px;">
                                 <i class="fas fa-money-bill-wave"></i>
                                 <select name="payment_status">
                                     <option value="">All Payments</option>
                                     <option value="due" {{ request('payment_status') == 'due' ? 'selected' : '' }}>⚠️ Payment Due</option>
                                     <option value="received" {{ request('payment_status') == 'received' ? 'selected' : '' }}>✅ Received / Cleared</option>
+                                    <option value="bill_pending" {{ request('payment_status') == 'bill_pending' ? 'selected' : '' }}>⏳ Bill Pending</option>
                                 </select>
                             </div>
 
@@ -657,18 +658,18 @@
                                             </td>
 
                                             {{-- Balance Amount --}}
-                                            <td class="text-end font-monospace" data-order="{{ $due }}">
-                                                @if($due > 0.01)
+                                            <td class="text-end font-monospace" data-order="{{ $billAmt <= 0 ? -1 : $due }}">
+                                                @if($billAmt <= 0)
+                                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-0.5 fw-semibold" style="font-size: 0.72rem; border-radius: 4px; display: inline-block;">
+                                                        <i class="fas fa-clock me-1 text-warning"></i>Bill Pending
+                                                    </span>
+                                                @elseif($due > 0.01)
                                                     <span class="badge text-white px-2 py-1 font-monospace" style="background-color: #ef4444 !important; font-size: 0.78rem; font-weight: 700; border-radius: 4px; display: inline-block; box-shadow: 0 1px 3px rgba(239, 68, 68, 0.3);">
                                                         {{ number_format($due, 2) }}
                                                     </span>
-                                                @elseif($totalPaid > 0)
+                                                @else
                                                     <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 fw-bold" style="font-size: 0.74rem; border-radius: 4px; display: inline-block;">
                                                         <i class="fas fa-check-circle me-1"></i>Received
-                                                    </span>
-                                                @else
-                                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-0.5 fw-semibold" style="font-size: 0.72rem; border-radius: 4px; display: inline-block;">
-                                                        Nil
                                                     </span>
                                                 @endif
                                             </td>

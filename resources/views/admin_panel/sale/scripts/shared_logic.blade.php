@@ -299,13 +299,13 @@
             <label class="form-label mb-1 fw-bold text-dark text-uppercase" style="font-size: 0.68rem; letter-spacing: 0.02em;">
               <i class="fas fa-tag me-1 text-primary"></i>Equipment / Technical Title
             </label>
-            <input type="text" class="form-control form-control-sm item-tech-name" name="technical_name[]" placeholder="e.g. Induction Heater 60 KW Forging Machine" style="border: 1px solid #cbd5e1 !important; border-radius: 5px !important; background-color: #ffffff !important; font-size: 0.76rem !important; height: 32px !important; text-align: left !important; padding: 4px 10px !important;">
+            <textarea class="form-control form-control-sm item-tech-name" name="technical_name[]" rows="2" placeholder="e.g. Induction Heater 60 KW Forging Machine" style="border: 1px solid #cbd5e1 !important; border-radius: 5px !important; background-color: #ffffff !important; font-size: 0.76rem !important; line-height: 1.4 !important; text-align: left !important; padding: 4px 8px !important; resize: vertical; min-height: 38px;"></textarea>
           </div>
           <div class="col-md-7">
             <label class="form-label mb-1 fw-bold text-dark text-uppercase" style="font-size: 0.68rem; letter-spacing: 0.02em;">
               <i class="fas fa-list-check me-1 text-primary"></i>Technical Specifications &amp; Parameters
             </label>
-            <input type="text" class="form-control form-control-sm item-tech-specs" name="technical_specs[]" placeholder="e.g. Power: 60KW, Frequency: 10-30kHz, Coil Size: 150mm..." style="border: 1px solid #cbd5e1 !important; border-radius: 5px !important; background-color: #ffffff !important; font-size: 0.76rem !important; height: 32px !important; text-align: left !important; padding: 4px 10px !important;">
+            <textarea class="form-control form-control-sm item-tech-specs" name="technical_specs[]" rows="2" placeholder="e.g. ID 40MM AND ID 50MM&#10;Power: 60KW, Frequency: 10-30kHz..." style="border: 1px solid #cbd5e1 !important; border-radius: 5px !important; background-color: #ffffff !important; font-size: 0.76rem !important; line-height: 1.4 !important; text-align: left !important; padding: 4px 8px !important; resize: vertical; min-height: 38px;"></textarea>
             <input type="hidden" class="item-tech-remarks" name="technical_remarks[]" value="">
           </div>
         </div>
@@ -1500,6 +1500,13 @@
         });
 
         // Toggle badge when specs fields have content
+        // Allow natural newline in specs textareas without triggering add-row or submit
+        $(document).on('keydown', '.item-tech-name, .item-tech-specs', function(e) {
+            if (e.key === 'Enter' || e.keyCode === 13) {
+                e.stopPropagation();
+            }
+        });
+
         $(document).on('input', '.item-tech-name, .item-tech-specs, .item-tech-remarks', function() {
             const $subrow = $(this).closest('.specs-subrow');
             const $tr = $subrow.prev('tr');
@@ -1721,7 +1728,11 @@
                 }
             }
 
-            $('#action').val('booking');
+            if ($('#sale_status').val() === 'posted') {
+                $('#action').val('sale');
+            } else {
+                $('#action').val('booking');
+            }
             ensureSaved(true);
         });
 

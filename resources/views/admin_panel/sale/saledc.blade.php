@@ -362,6 +362,27 @@
                                     PACKTEST: {{ $piecesPerBox }} pcs | {{ number_format($m2PerBox, 4) }} m²
                                 </span>
                             </div>
+
+                            @if(!empty($item['technical_name']) || !empty($item['technical_specs']))
+                                <div style="margin-top: 3px; font-size: 10px; color: #334155; line-height: 1.35;">
+                                    @if(!empty($item['technical_name']))
+                                        @php
+                                            $tLinesDc = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', (string)$item['technical_name'])), 'strlen'));
+                                        @endphp
+                                        @foreach($tLinesDc as $tIdx => $tLine)
+                                            <div><span style="color: #2563eb;">•</span> <strong>{{ $tIdx === 0 ? 'Equipment Title: ' : '' }}</strong>{{ ltrim($tLine, "•-* \t") }}</div>
+                                        @endforeach
+                                    @endif
+                                    @if(!empty($item['technical_specs']))
+                                        @php
+                                            $sLinesDc = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', (string)$item['technical_specs'])), 'strlen'));
+                                        @endphp
+                                        @foreach($sLinesDc as $sIdx => $sLine)
+                                            <div><span style="color: #2563eb;">•</span> <strong>{{ $sIdx === 0 ? 'Specifications: ' : '' }}</strong>{{ ltrim($sLine, "•-* \t") }}</div>
+                                        @endforeach
+                                    @endif
+                                </div>
+                            @endif
                         </td>
 
                         <td class="text-center" style="vertical-align: middle;">
