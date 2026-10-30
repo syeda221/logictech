@@ -1567,7 +1567,7 @@ class ProductController extends Controller
             'product_name' => 'required|string|max:255',
             'category_id' => 'required',
             'sub_category_id' => 'nullable',
-            'brand_id' => 'required',
+            'brand_id' => 'nullable',
             'unit' => 'nullable',
             'model' => 'nullable', // Made nullable
             'item_type' => 'nullable|in:raw_material,finish_goods,both',

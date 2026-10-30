@@ -238,7 +238,7 @@
                                         <div class="col-md-3 col-sm-6">
                                             <label class="cpm-label" id="cpmBrandLabel">BRAND</label>
                                             <div class="d-flex gap-1">
-                                                <select class="cpm-select form-select" id="cpm_brand_id" name="brand_id" required>
+                                                <select class="cpm-select form-select" id="cpm_brand_id" name="brand_id">
                                                     <option value="">Select...</option>
                                                     @foreach ($brands as $brand)
                                                         <option value="{{ $brand->id }}">{{ $brand->name }}</option>

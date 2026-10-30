@@ -314,7 +314,7 @@
                                         <div class="col-md-4">
                                             <label class="form-label-pro">Brand</label>
                                             <div class="d-flex gap-1">
-                                                <select class="form-select form-control-pro form-select-pro" name="brand_id" required>
+                                                <select class="form-select form-control-pro form-select-pro" name="brand_id">
                                                     <option value="">Select...</option>
                                                     @foreach ($brands as $brand)
                                                         <option value="{{ $brand->id }}" {{ $product->brand_id == $brand->id ? 'selected' : '' }}>{{ $brand->name }}</option>
