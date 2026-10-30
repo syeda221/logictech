@@ -84,16 +84,29 @@
 </style>
 <div class="container-fluid">
     <div class="card shadow-sm border-0 mt-3">
-        <div class="card-header bg-light text-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Sale Edit</h5>
+        <div class="card-header bg-light d-flex justify-content-between align-items-center py-2 px-3">
+            <div class="d-flex align-items-center gap-2">
+                <h5 class="mb-0 fw-bold text-dark"><i class="fas fa-edit text-primary me-2"></i>Sale / Order Edit</h5>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">#{{ $sale->invoice_no }}</span>
+                @if($sale->is_booking)
+                    @if($sale->sale_status === 'posted')
+                        <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="fas fa-check-circle me-1"></i>Confirmed Order</span>
+                    @else
+                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle"><i class="fas fa-bookmark me-1"></i>Order (Booked)</span>
+                    @endif
+                @else
+                    <span class="badge bg-info-subtle text-info border border-info-subtle">Direct Sale</span>
+                @endif
+            </div>
             <div>
-                <a href="" class="btn btn-primary"> DC</a>
+                <a href="{{ route('sales.dc', $sale->id) }}" target="_blank" class="btn btn-sm btn-outline-primary fw-bold"><i class="fas fa-truck me-1"></i> Delivery Challan</a>
             </div>
         </div>
        <form action="{{ route('sales.update', $sale->id) }}" method="POST">
         @csrf
         @method('PUT')
             <input type="hidden" name="sale_id" value="{{ $sale->id }}">
+            <input type="hidden" name="is_booking" value="{{ $sale->is_booking ? 1 : 0 }}">
             @if (session('success'))
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 {{ session('success') }}
@@ -107,7 +120,7 @@
             </div>
             @endif
             <div class="row mb-3">
-                <div class="col-md-6">
+                <div class="col-md-5">
                     <label class="form-label fw-bold">Customer:</label>
                     <select name="customer" class="form-control form-control-sm">
                         @foreach ($Customer as $c)
@@ -118,10 +131,33 @@
                     </select>
                 </div>
 
-                <div class="col-md-6">
+                <div class="col-md-3">
                     <label class="form-label fw-bold">Reference #</label>
                     <input type="text" name="reference" class="form-control form-control-sm"
                         value="{{ $sale->reference }}">
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label fw-bold text-dark">
+                        <i class="fas fa-clipboard-check text-primary me-1"></i> Order / Sale Status:
+                    </label>
+                    <select name="sale_status" class="form-control form-control-sm fw-bold">
+                        @if($sale->is_booking)
+                            <option value="posted" {{ $sale->sale_status === 'posted' ? 'selected' : '' }}>
+                                ✅ Confirmed Order (Posted)
+                            </option>
+                            <option value="booked" {{ $sale->sale_status === 'booked' ? 'selected' : '' }}>
+                                📌 Unconfirmed Order (Booked)
+                            </option>
+                        @else
+                            <option value="posted" {{ $sale->sale_status === 'posted' ? 'selected' : '' }}>
+                                ✅ Posted Sale
+                            </option>
+                            <option value="draft" {{ $sale->sale_status === 'draft' ? 'selected' : '' }}>
+                                📝 Draft
+                            </option>
+                        @endif
+                    </select>
                 </div>
             </div>
 
@@ -192,21 +228,21 @@
                 </tr>
                 <tr>
                     <td><input type="text" name="total_amount_Words" class="form-control form-control-sm"
-                            id="amountInWords" readonly></td>
+                            id="amountInWords" value="{{ $sale->total_amount_Words }}" readonly></td>
                     <td><input type="text" name="total_subtotal" class="form-control form-control-sm text-center"
-                            id="billAmount" readonly></td>
+                            id="billAmount" value="{{ (float)($sale->total_bill_amount ?: $sale->per_total) }}" readonly></td>
                     <td><input type="text" name="total_discount" class="form-control form-control-sm text-center"
-                            id="itemDiscount" readonly></td>
+                            id="itemDiscount" value="{{ (float)($sale->total_discount ?? 0) }}" readonly></td>
                     <td><input type="number" name="total_extra_cost" class="form-control form-control-sm text-center"
-                            id="extraDiscount" value="0"></td>
+                            id="extraDiscount" value="{{ (float)($sale->total_extradiscount ?? 0) }}"></td>
                     <td><input type="text" name="total_net" class="form-control form-control-sm text-center"
-                            id="netAmount" readonly></td>
+                            id="netAmount" value="{{ (float)($sale->total_net ?? 0) }}" readonly></td>
                     <td><input type="number" name="cash" class="form-control form-control-sm text-center"
-                            id="cash" value="0"></td>
+                            id="cash" value="{{ (float)($sale->cash ?? 0) }}"></td>
                     <td><input type="number" name="card" class="form-control form-control-sm text-center"
-                            id="card" value="0"></td>
+                            id="card" value="{{ (float)($sale->card ?? 0) }}"></td>
                     <td><input type="text" name="change" class="form-control form-control-sm text-center"
-                            id="change" readonly></td>
+                            id="change" value="{{ (float)($sale->change ?? 0) }}" readonly></td>
                 </tr>
             </table>
 

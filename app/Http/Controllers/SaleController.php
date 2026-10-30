@@ -1095,12 +1095,41 @@ class SaleController extends Controller
         //     throw \Illuminate\Validation\ValidationException::withMessages(['product_id' => 'Duplicate products are not allowed in a single sale. Please merge quantities.']);
         // }
 
-        $isBookingAction = ($request->action === 'booking' || ($request->filled('is_booking') && $request->is_booking) || ($sale->exists && $sale->is_booking && $request->action !== 'sale' && $request->action !== 'post'));
-        $status = $isBookingAction ? 'booked' : 'posted';
+        // Determine whether this sale is an Order / Booking vs Direct Sale
+        $isOrder = false;
+        if ($sale->exists) {
+            $isOrder = (bool) $sale->is_booking;
+            if ($request->filled('is_booking')) {
+                $isOrder = (bool) $request->is_booking;
+            } elseif ($request->action === 'booking') {
+                $isOrder = true;
+            } elseif (in_array($request->action, ['sale', 'post'])) {
+                $isOrder = false;
+            }
+        } else {
+            $isOrder = ($request->action === 'booking' || ($request->filled('is_booking') && $request->is_booking));
+        }
+
+        // Determine Financial Status (posted, booked, draft, returned)
+        if ($request->filled('sale_status') && in_array($request->sale_status, ['draft', 'booked', 'posted', 'returned'])) {
+            $status = $request->sale_status;
+        } elseif ($request->action === 'booking') {
+            $status = 'booked';
+        } elseif (in_array($request->action, ['sale', 'post'])) {
+            $status = 'posted';
+        } elseif ($sale->exists) {
+            // IMPORTANT: If existing sale is already posted (Confirmed Order or Direct Sale), it MUST remain posted!
+            // If it was booked (unconfirmed order), it remains booked unless explicitly confirmed/posted.
+            $status = $sale->sale_status ?: ($isOrder ? 'booked' : 'posted');
+        } else {
+            $status = $isOrder ? 'booked' : 'posted';
+        }
+
+        $isBookingAction = ($status === 'booked');
 
         // Concurrency Safe Transaction
         try {
-            return DB::transaction(function () use ($request, $sale, $status, $isBookingAction, $isWalkin) {
+            return DB::transaction(function () use ($request, $sale, $status, $isBookingAction, $isOrder, $isWalkin) {
 
                 // If this is an update to a previously posted sale, rollback its impact first
                 if ($sale->exists && $sale->sale_status === 'posted') {
@@ -1130,11 +1159,7 @@ class SaleController extends Controller
             }
 
             // Sale Status (Financial workflow: draft, booked, posted, returned)
-            if ($request->filled('sale_status') && in_array($request->sale_status, ['draft', 'booked', 'posted', 'returned'])) {
-                $sale->sale_status = $request->sale_status;
-            } else {
-                $sale->sale_status = $status;
-            }
+            $sale->sale_status = $status;
 
             // Estimated Delivery Date & Delivery Date
             if ($request->filled('estimated_delivery_date')) {
@@ -1184,18 +1209,9 @@ class SaleController extends Controller
             $total_bill = 0;
             $total_items = 0;
 
-            // Determine if this is a booking transaction
-            if ($isBookingAction) {
-                $sale->is_booking = 1;
-                if ($sale->sale_status !== 'posted') {
-                    $sale->sale_status = 'booked';
-                }
-            } else {
-                $sale->is_booking = 0;
-                if ($sale->sale_status !== 'draft' && $sale->sale_status !== 'returned') {
-                    $sale->sale_status = 'posted';
-                }
-            }
+            // Preserve/set is_booking flag and financial status
+            $sale->is_booking = $isOrder ? 1 : 0;
+            $sale->sale_status = $status;
 
             if ($request->filled('sale_date')) {
                 $sale->created_at = \Carbon\Carbon::parse($request->sale_date)->format('Y-m-d H:i:s');
