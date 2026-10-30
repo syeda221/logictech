@@ -395,18 +395,39 @@
 
                     if (is_array($itemsData) && count($itemsData) > 0) {
                         foreach($itemsData as $idx => $it) {
-                            if (isset($it['desc'])) {
-                                // Saved directly from A4 screen
-                                $qty = isset($it['qty']) && $it['qty'] !== '' ? (float)$it['qty'] : 1;
-                                $rate = (float)($it['rate'] ?? 0);
-                                $gross = (float)($it['gross'] ?? ($qty * $rate));
-                                $gst_pct = (float)($it['gst_pct'] ?? 0);
-                                $gst_amt = (float)($it['gst_amt'] ?? 0);
-                                $total = (float)($it['total'] ?? ($gross + $gst_amt));
+                            // Extract description from desc, item_name, or problem_description
+                            $desc = trim($it['desc'] ?? ($it['item_name'] ?? ''));
+                            if (empty($desc) && !empty($it['problem_description']) && !is_array($it['problem_description'])) {
+                                $desc = trim($it['problem_description']);
+                            }
+                            if (empty($desc)) {
+                                $desc = $repair->item_name;
+                            }
 
+                            // If problem_description has fault details different from item name, append it
+                            $reportedFault = trim($it['problem_description'] ?? '');
+                            if (!empty($reportedFault) && $reportedFault !== '—' && $reportedFault !== $desc && !str_contains($desc, $reportedFault)) {
+                                $desc .= ' (' . $reportedFault . ')';
+                            }
+
+                            $qty = isset($it['qty']) && $it['qty'] !== '' ? (float)$it['qty'] : 1;
+                            $rate = (float)($it['rate'] ?? ($it['estimated_cost'] ?? 0));
+                            if ($rate <= 0 && count($itemsData) === 1 && $totalBill > 0) {
+                                $rate = $totalBill;
+                            }
+                            $gross = (float)($it['gross'] ?? ($qty * $rate));
+                            $gst_pct = (float)($it['gst_pct'] ?? 0);
+                            $gst_amt = (float)($it['gst_amt'] ?? round($gross * ($gst_pct / 100), 2));
+                            $total = (float)($it['total'] ?? ($gross + $gst_amt));
+                            if ($total <= 0 && count($itemsData) === 1 && $totalBill > 0) {
+                                $total = $totalBill;
+                                $gross = $totalBill;
+                            }
+
+                            if (!empty($desc) || $total > 0) {
                                 $rows[] = [
                                     'no' => $it['sn'] ?? ($idx + 1),
-                                    'desc' => $it['desc'],
+                                    'desc' => $desc,
                                     'qty' => $qty,
                                     'rate' => $rate,
                                     'gross' => $gross,
@@ -417,10 +438,28 @@
                             }
                         }
                     }
-                    // Note: If opening fresh (not saved from A4 screen), $rows remains empty [], leaving 1st row empty.
 
-                    // Total initial rows in pad grid: 10 rows
-                    $totalRowsToFill = 10;
+                    // Fallback: If no rows extracted, automatically populate from repair details & total bill so invoice is NEVER empty
+                    if (empty($rows)) {
+                        $primaryDesc = $repair->item_name;
+                        $reportedDefect = $repair->reported_defect;
+                        if (!empty($reportedDefect) && $reportedDefect !== '—' && $reportedDefect !== $primaryDesc) {
+                            $primaryDesc .= ' (' . $reportedDefect . ')';
+                        }
+                        $rows[] = [
+                            'no' => 1,
+                            'desc' => $primaryDesc ?: 'Repair & Service Charges',
+                            'qty' => 1,
+                            'rate' => $totalBill,
+                            'gross' => $totalBill,
+                            'gst_pct' => 0,
+                            'gst_amt' => 0,
+                            'total' => $totalBill,
+                        ];
+                    }
+
+                    // Total initial rows in pad grid: at least 10 rows
+                    $totalRowsToFill = max(10, count($rows));
                     $actualCount = count($rows);
                 @endphp
 
@@ -641,26 +680,29 @@
         sumGst        = round2(sumGst);
         sumGrandTotal = round2(sumGrandTotal);
 
-        if (document.getElementById('totalGrossVal')) {
-            document.getElementById('totalGrossVal').innerText = formatRs(sumGross);
-        }
-        if (document.getElementById('totalGstVal')) {
-            document.getElementById('totalGstVal').innerText = formatRs(sumGst);
-        }
-        if (document.getElementById('grandTotalVal')) {
-            document.getElementById('grandTotalVal').innerText = formatRs(sumGrandTotal);
-        }
+        // Only update UI if we have active calculated rows or existing rows in table
+        if (sumGrandTotal > 0 || rows.some(r => r.querySelector('.row-desc-cell')?.innerText?.trim())) {
+            if (document.getElementById('totalGrossVal')) {
+                document.getElementById('totalGrossVal').innerText = formatRs(sumGross);
+            }
+            if (document.getElementById('totalGstVal')) {
+                document.getElementById('totalGstVal').innerText = formatRs(sumGst);
+            }
+            if (document.getElementById('grandTotalVal')) {
+                document.getElementById('grandTotalVal').innerText = formatRs(sumGrandTotal);
+            }
 
-        if (document.getElementById('amountInWordsVal')) {
-            document.getElementById('amountInWordsVal').innerText = numberToWords(sumGrandTotal);
-        }
+            if (document.getElementById('amountInWordsVal')) {
+                document.getElementById('amountInWordsVal').innerText = numberToWords(sumGrandTotal);
+            }
 
-        const advanceCell = document.getElementById('advanceVal');
-        const advanceText = advanceCell ? (advanceCell.innerText || advanceCell.textContent || '0') : '0';
-        const advance = round2(parseNum(advanceText));
-        const balance = round2(Math.max(0, sumGrandTotal - advance));
-        if (document.getElementById('balanceVal')) {
-            document.getElementById('balanceVal').innerText = formatRs(balance);
+            const advanceCell = document.getElementById('advanceVal');
+            const advanceText = advanceCell ? (advanceCell.innerText || advanceCell.textContent || '0') : '0';
+            const advance = round2(parseNum(advanceText));
+            const balance = round2(Math.max(0, sumGrandTotal - advance));
+            if (document.getElementById('balanceVal')) {
+                document.getElementById('balanceVal').innerText = formatRs(balance);
+            }
         }
     }
 

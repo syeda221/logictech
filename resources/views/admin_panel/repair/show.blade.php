@@ -317,13 +317,13 @@
                                             <tr>
                                                 <td class="text-center font-monospace fw-bold text-muted">{{ $it['sn'] ?? ($idx + 1) }}</td>
                                                 <td class="fw-bold text-dark" style="font-size: 0.84rem;">
-                                                    <i class="fas fa-tools text-primary me-1"></i> {{ $it['item_name'] ?? $repair->item_name }}
+                                                    <i class="fas fa-tools text-primary me-1"></i> {{ $it['desc'] ?? ($it['item_name'] ?? $repair->item_name) }}
                                                 </td>
                                                 <td>{{ $it['brand_model'] ?? '—' }}</td>
                                                 <td class="font-monospace fw-bold">{{ $it['serial_no'] ?? 'No Serial' }}</td>
                                                 <td>{{ $it['problem_description'] ?? '—' }}</td>
                                                 <td class="text-end font-monospace fw-bold text-dark">
-                                                    Rs. {{ number_format((float)($it['estimated_cost'] ?? 0), 2) }}
+                                                    Rs. {{ number_format((float)($it['total'] ?? ($it['estimated_cost'] ?? 0)), 2) }}
                                                 </td>
                                             </tr>
                                         @endforeach

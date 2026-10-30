@@ -217,10 +217,17 @@ class RepairController extends Controller
 
             $itemsData[] = [
                 'sn' => count($itemsData) + 1,
+                'desc' => $name,
                 'item_name' => $name,
                 'brand_model' => $brand,
                 'serial_no' => $serial,
                 'problem_description' => $fault,
+                'qty' => 1,
+                'rate' => $cost,
+                'gross' => $cost,
+                'gst_pct' => 0,
+                'gst_amt' => 0,
+                'total' => $cost,
                 'estimated_cost' => $cost,
             ];
         }
@@ -402,18 +409,47 @@ class RepairController extends Controller
             return back()->withInput()->with('error', 'Please select an account for the advance payment.');
         }
 
-        // Format problem_description as JSON payload matching store structure
-        $itemsData = [
-            [
-                'sn' => 1,
-                'item_name' => $validated['item_name'],
-                'brand_model' => $validated['brand_model'] ?? '',
-                'serial_no' => $validated['serial_no'] ?? '',
-                'problem_description' => $validated['problem_description'],
-                'estimated_cost' => $estimatedCost,
-            ]
-        ];
-        $problemPayload = json_encode($itemsData);
+        // Format problem_description preserving detailed invoice rows if present
+        $existingItems = json_decode($repair->problem_description, true);
+        if (is_array($existingItems) && count($existingItems) > 0 && isset($existingItems[0]['desc'])) {
+            if (count($existingItems) === 1) {
+                $existingItems[0]['item_name'] = $validated['item_name'];
+                $existingItems[0]['desc'] = $validated['item_name'];
+                $existingItems[0]['brand_model'] = $validated['brand_model'] ?? '';
+                $existingItems[0]['serial_no'] = $validated['serial_no'] ?? '';
+                $existingItems[0]['problem_description'] = $validated['problem_description'];
+                $costForRate = (float)$repair->total_charges > 0 ? (float)$repair->total_charges : $estimatedCost;
+                if ($costForRate > 0) {
+                    $existingItems[0]['rate'] = $costForRate;
+                    $existingItems[0]['gross'] = $costForRate;
+                    $existingItems[0]['total'] = $costForRate;
+                }
+                $existingItems[0]['estimated_cost'] = $estimatedCost;
+                $problemPayload = json_encode($existingItems);
+            } else {
+                $problemPayload = $repair->problem_description;
+            }
+        } else {
+            $costForRate = (float)$repair->total_charges > 0 ? (float)$repair->total_charges : $estimatedCost;
+            $itemsData = [
+                [
+                    'sn' => 1,
+                    'desc' => $validated['item_name'],
+                    'item_name' => $validated['item_name'],
+                    'brand_model' => $validated['brand_model'] ?? '',
+                    'serial_no' => $validated['serial_no'] ?? '',
+                    'problem_description' => $validated['problem_description'],
+                    'qty' => 1,
+                    'rate' => $costForRate,
+                    'gross' => $costForRate,
+                    'gst_pct' => 0,
+                    'gst_amt' => 0,
+                    'total' => $costForRate,
+                    'estimated_cost' => $estimatedCost,
+                ]
+            ];
+            $problemPayload = json_encode($itemsData);
+        }
 
         try {
             DB::beginTransaction();
@@ -564,10 +600,24 @@ class RepairController extends Controller
 
             $prevStatus = $repair->status;
 
+            // Update single item rate/total in problem_description to match final totalCharges
+            $currentItems = json_decode($repair->problem_description, true);
+            $newProblemDesc = $repair->problem_description;
+            if (is_array($currentItems) && count($currentItems) === 1) {
+                $currentItems[0]['rate'] = $totalCharges;
+                $currentItems[0]['gross'] = $totalCharges;
+                $currentItems[0]['total'] = $totalCharges;
+                if (empty($currentItems[0]['desc'])) {
+                    $currentItems[0]['desc'] = $currentItems[0]['item_name'] ?? $repair->item_name;
+                }
+                $newProblemDesc = json_encode($currentItems);
+            }
+
             $repair->update([
                 'service_charges' => $serviceCharges,
                 'parts_charges' => $partsCharges,
                 'total_charges' => $totalCharges,
+                'problem_description' => $newProblemDesc,
                 'final_paid' => $finalPaid,
                 'final_account_id' => $finalPaid > 0 ? $finalAccountId : null,
                 'due_amount' => $dueAmount,
@@ -755,9 +805,34 @@ class RepairController extends Controller
             }
 
             if (isset($validated['items']) && is_array($validated['items'])) {
-                $repair->problem_description = json_encode($validated['items']);
-                
-                $firstRow = $validated['items'][0] ?? null;
+                $formattedItems = [];
+                foreach ($validated['items'] as $it) {
+                    $desc = trim($it['desc'] ?? '');
+                    if ($desc === '' && empty($it['total'])) continue;
+                    $qty = isset($it['qty']) ? (float)$it['qty'] : 1;
+                    $rate = isset($it['rate']) ? (float)$it['rate'] : 0;
+                    $gross = isset($it['gross']) ? (float)$it['gross'] : ($qty * $rate);
+                    $gst_pct = isset($it['gst_pct']) ? (float)$it['gst_pct'] : 0;
+                    $gst_amt = isset($it['gst_amt']) ? (float)$it['gst_amt'] : round($gross * ($gst_pct / 100), 2);
+                    $total = isset($it['total']) ? (float)$it['total'] : ($gross + $gst_amt);
+
+                    $formattedItems[] = [
+                        'sn' => $it['sn'] ?? (count($formattedItems) + 1),
+                        'desc' => $desc,
+                        'item_name' => $desc,
+                        'qty' => $qty,
+                        'rate' => $rate,
+                        'gross' => $gross,
+                        'gst_pct' => $gst_pct,
+                        'gst_amt' => $gst_amt,
+                        'total' => $total,
+                        'estimated_cost' => $total,
+                        'problem_description' => $desc,
+                    ];
+                }
+                $repair->problem_description = json_encode($formattedItems);
+
+                $firstRow = $formattedItems[0] ?? null;
                 if ($firstRow && !empty($firstRow['desc'])) {
                     $repair->item_name = \Illuminate\Support\Str::limit(trim($firstRow['desc']), 150);
                 }
