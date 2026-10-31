@@ -714,13 +714,8 @@ class RepairController extends Controller
         }
 
         try {
-            // Find AR or Sales/Revenue account for Credit side
-            $creditAcc = Account::where('account_code', 'SALES')
-                ->orWhere('title', 'like', '%Sales Revenue%')
-                ->orWhere('account_code', 'AR')
-                ->first();
-
-            $creditAccId = $creditAcc ? $creditAcc->id : 6;
+            $balanceService = app(\App\Services\BalanceService::class);
+            $receivableAccountId = $balanceService->getAccountsReceivableId();
 
             $voucherData = [
                 'voucher_type' => VoucherMaster::TYPE_RECEIPT,
@@ -739,10 +734,12 @@ class RepairController extends Controller
                     'narration' => "Cash In: {$narration}"
                 ],
                 [
-                    'account_id' => $creditAccId,
+                    'account_id' => $receivableAccountId,
                     'debit' => 0,
                     'credit' => $amount,
-                    'narration' => "Repair Service Revenue"
+                    'narration' => "Payment Received: {$narration}",
+                    'party_type' => $repair->customer_id ? Customer::class : null,
+                    'party_id' => $repair->customer_id ?? null,
                 ]
             ];
 
@@ -951,6 +948,111 @@ class RepairController extends Controller
                             "{$remarksQuery} - {$repair->item_name}",
                             $date
                         );
+                    }
+
+                    // --- ADVANCE RECEIPT VOUCHER & CUSTOMER LEDGER SYNC ---
+                    $advanceRemarks = "Advance Receipt for Repair #{$repair->repair_no} - {$repair->item_name}";
+                    $existingAdvanceVoucher = VoucherMaster::where('remarks', 'like', "Advance%#{$repair->repair_no}%")->first();
+                    $advanceAmount = (float)$repair->advance_paid;
+
+                    if ($advanceAmount > 0) {
+                        $cashAccountId = $repair->advance_account_id ?: $balanceService->getCashAccountId();
+                        if (!$cashAccountId) {
+                            $cashAcc = Account::where('account_code', 'CASH')
+                                ->orWhere('title', 'like', '%Cash%')
+                                ->first();
+                            $cashAccountId = $cashAcc ? $cashAcc->id : 4;
+                        }
+
+                        if ($existingAdvanceVoucher) {
+                            $advVoucher = $existingAdvanceVoucher;
+                            $advVoucher->update([
+                                'date' => $date,
+                                'party_type' => $customer ? Customer::class : null,
+                                'party_id' => $customer ? $customer->id : null,
+                                'total_amount' => $advanceAmount,
+                                'status' => VoucherMaster::STATUS_POSTED,
+                            ]);
+
+                            \App\Models\JournalEntry::where('source_type', VoucherMaster::class)
+                                ->where('source_id', $advVoucher->id)
+                                ->delete();
+                            $advVoucher->details()->delete();
+                        } else {
+                            $prefix = 'RV';
+                            $year = date('Y');
+                            $lastRV = VoucherMaster::where('voucher_type', VoucherMaster::TYPE_RECEIPT)
+                                ->where('voucher_no', 'like', "{$prefix}-{$year}-%")
+                                ->orderBy('id', 'desc')
+                                ->first();
+
+                            $nextRVNum = 1;
+                            if ($lastRV) {
+                                $parts = explode('-', $lastRV->voucher_no);
+                                $nextRVNum = (int)end($parts) + 1;
+                            }
+                            $rvNo = sprintf('%s-%s-%04d', $prefix, $year, $nextRVNum);
+
+                            $advVoucher = VoucherMaster::create([
+                                'voucher_type' => VoucherMaster::TYPE_RECEIPT,
+                                'voucher_no' => $rvNo,
+                                'date' => $date,
+                                'party_type' => $customer ? Customer::class : null,
+                                'party_id' => $customer ? $customer->id : null,
+                                'total_amount' => $advanceAmount,
+                                'remarks' => $advanceRemarks,
+                                'status' => VoucherMaster::STATUS_POSTED,
+                                'created_by' => Auth::id(),
+                                'posted_at' => now(),
+                            ]);
+                        }
+
+                        // Line 1: Debit Cash/Bank
+                        \App\Models\VoucherDetail::create([
+                            'voucher_master_id' => $advVoucher->id,
+                            'account_id' => $cashAccountId,
+                            'debit' => $advanceAmount,
+                            'credit' => 0,
+                            'narration' => "Cash In: {$advanceRemarks}",
+                        ]);
+
+                        // Line 2: Credit Accounts Receivable (Customer)
+                        \App\Models\VoucherDetail::create([
+                            'voucher_master_id' => $advVoucher->id,
+                            'account_id' => $receivableAccountId,
+                            'debit' => 0,
+                            'credit' => $advanceAmount,
+                            'party_type' => $customer ? Customer::class : null,
+                            'party_id' => $customer ? $customer->id : null,
+                            'narration' => "Payment from Customer: {$advanceRemarks}",
+                        ]);
+
+                        // Journal Entry 1: Dr Cash/Bank
+                        $journalService->recordEntry(
+                            $advVoucher,
+                            $cashAccountId,
+                            $advanceAmount,
+                            0,
+                            "Cash In: {$advanceRemarks}",
+                            $date
+                        );
+
+                        // Journal Entry 2: Cr Accounts Receivable with Customer party (Reduces customer balance in ledger!)
+                        $journalService->recordEntry(
+                            $advVoucher,
+                            $receivableAccountId,
+                            0,
+                            $advanceAmount,
+                            "Advance Payment Received: {$advanceRemarks}",
+                            $date,
+                            $customer
+                        );
+                    } elseif ($existingAdvanceVoucher && $advanceAmount <= 0) {
+                        \App\Models\JournalEntry::where('source_type', VoucherMaster::class)
+                            ->where('source_id', $existingAdvanceVoucher->id)
+                            ->delete();
+                        $existingAdvanceVoucher->details()->delete();
+                        $existingAdvanceVoucher->delete();
                     }
                 }
             }

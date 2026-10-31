@@ -344,16 +344,14 @@
 
         {{-- Meta Information Lines --}}
         @php
-            $descTitle = $repair->item_name;
-            $descExtra = [];
-            if (!empty($repair->brand_model)) $descExtra[] = 'Model: ' . $repair->brand_model;
-            if (!empty($repair->serial_no)) $descExtra[] = 'SN: ' . $repair->serial_no;
-            $defectText = $repair->reported_defect;
-            if (!empty($defectText) && $defectText !== '—' && $defectText !== $descTitle) {
-                $descExtra[] = $defectText;
+            // Sub: strictly Device / Item Name only! Clean any technical Model / SN / Fault strings
+            $rawSubject = !empty($repair->subject) ? $repair->subject : $repair->item_name;
+            if (str_contains($rawSubject, 'Model:') || str_contains($rawSubject, 'SN:') || str_contains($rawSubject, 'Fault:')) {
+                $rawSubject = preg_replace('/\s*\(Model:.*?\)/i', '', $rawSubject);
+                $rawSubject = preg_replace('/\s*Model:.*?$/i', '', $rawSubject);
+                $rawSubject = preg_replace('/\s*\(Fault\s*:.*?\)/i', '', $rawSubject);
             }
-            $defaultSubject = $descTitle . (!empty($descExtra) ? ' (' . implode(' | ', $descExtra) . ')' : '');
-            $subjectText = !empty($repair->subject) ? $repair->subject : $defaultSubject;
+            $subjectText = trim($rawSubject) ?: $repair->item_name;
         @endphp
         <div class="meta-lines">
             <div class="meta-line-row">
@@ -361,13 +359,11 @@
                     Sr. <span class="line-field" contenteditable="true" style="min-width: 160px; font-weight: 800; font-family: monospace;">{{ $repair->repair_no }}</span>
                 </div>
                 <div>
-                    Date. <span class="line-field" contenteditable="true" style="min-width: 140px;">{{ date('d-M-Y', strtotime($repair->received_date ?? now())) }}</span>
+                    Date. <span class="line-field" contenteditable="true" style="min-width: 140px;">{{ date('d-M-Y') }}</span>
                 </div>
             </div>
             <div style="margin-bottom: 6px;">
-                M/s. <span class="line-field" contenteditable="true" style="width: calc(100% - 45px); font-weight: 800;">
-                    {{ $repair->customer_display_name }} @if($repair->customer_display_phone) ({{ $repair->customer_display_phone }}) @endif @if($repair->customer_display_address) - {{ $repair->customer_display_address }} @endif
-                </span>
+                M/s. <span class="line-field" contenteditable="true" style="width: calc(100% - 45px); font-weight: 800;">{{ $repair->customer_display_name }}</span>
             </div>
             <div>
                 Sub: <span class="line-field" id="subjectLineField" contenteditable="true" style="width: calc(100% - 40px); font-weight: 800;">{{ $subjectText }}</span>
@@ -393,22 +389,18 @@
                     $itemsData = json_decode($repair->problem_description, true);
                     $rows = [];
 
-                    if (is_array($itemsData) && count($itemsData) > 0) {
+                    if (is_array($itemsData) && count($itemsData) > 0 && $totalBill > 0) {
                         foreach($itemsData as $idx => $it) {
-                            // Extract description from desc, item_name, or problem_description
                             $desc = trim($it['desc'] ?? ($it['item_name'] ?? ''));
                             if (empty($desc) && !empty($it['problem_description']) && !is_array($it['problem_description'])) {
                                 $desc = trim($it['problem_description']);
                             }
-                            if (empty($desc)) {
-                                $desc = $repair->item_name;
+                            
+                            // Clean any technical fault details - technical data belongs strictly on Job Sheet
+                            if (str_contains($desc, 'Fault :') || str_contains($desc, 'Fault:')) {
+                                $desc = preg_replace('/\s*\(Fault\s*:.*?\)/i', '', $desc);
                             }
-
-                            // If problem_description has fault details different from item name, append it
-                            $reportedFault = trim($it['problem_description'] ?? '');
-                            if (!empty($reportedFault) && $reportedFault !== '—' && $reportedFault !== $desc && !str_contains($desc, $reportedFault)) {
-                                $desc .= ' (' . $reportedFault . ')';
-                            }
+                            $desc = trim($desc);
 
                             $qty = isset($it['qty']) && $it['qty'] !== '' ? (float)$it['qty'] : 1;
                             $rate = (float)($it['rate'] ?? ($it['estimated_cost'] ?? 0));
@@ -424,9 +416,21 @@
                                 $gross = $totalBill;
                             }
 
-                            if (!empty($desc) || $total > 0) {
+                            // If multiple items exist and this row has 0 rate/total, skip placeholder
+                            $hasOtherBilledRows = false;
+                            foreach($itemsData as $otherIt) {
+                                if ((float)($otherIt['rate'] ?? ($otherIt['total'] ?? 0)) > 0) {
+                                    $hasOtherBilledRows = true;
+                                    break;
+                                }
+                            }
+                            if ($hasOtherBilledRows && $rate <= 0 && $total <= 0) {
+                                continue;
+                            }
+
+                            if ($total > 0 || (!empty($desc) && $rate > 0)) {
                                 $rows[] = [
-                                    'no' => $it['sn'] ?? ($idx + 1),
+                                    'no' => count($rows) + 1,
                                     'desc' => $desc,
                                     'qty' => $qty,
                                     'rate' => $rate,
@@ -439,23 +443,32 @@
                         }
                     }
 
-                    // Fallback: If no rows extracted, automatically populate from repair details & total bill so invoice is NEVER empty
+                    // Fallback: If no rows extracted or completely unbilled fresh invoice
                     if (empty($rows)) {
-                        $primaryDesc = $repair->item_name;
-                        $reportedDefect = $repair->reported_defect;
-                        if (!empty($reportedDefect) && $reportedDefect !== '—' && $reportedDefect !== $primaryDesc) {
-                            $primaryDesc .= ' (' . $reportedDefect . ')';
+                        if ($totalBill > 0) {
+                            $rows[] = [
+                                'no' => 1,
+                                'desc' => $repair->item_name ?: 'Repair & Service Charges',
+                                'qty' => 1,
+                                'rate' => $totalBill,
+                                'gross' => $totalBill,
+                                'gst_pct' => 0,
+                                'gst_amt' => 0,
+                                'total' => $totalBill,
+                            ];
+                        } else {
+                            // Fresh invoice: start with clean blank row 1 so user can enter custom items
+                            $rows[] = [
+                                'no' => 1,
+                                'desc' => '',
+                                'qty' => 1,
+                                'rate' => 0,
+                                'gross' => 0,
+                                'gst_pct' => 0,
+                                'gst_amt' => 0,
+                                'total' => 0,
+                            ];
                         }
-                        $rows[] = [
-                            'no' => 1,
-                            'desc' => $primaryDesc ?: 'Repair & Service Charges',
-                            'qty' => 1,
-                            'rate' => $totalBill,
-                            'gross' => $totalBill,
-                            'gst_pct' => 0,
-                            'gst_amt' => 0,
-                            'total' => $totalBill,
-                        ];
                     }
 
                     // Total initial rows in pad grid: at least 10 rows
