@@ -193,7 +193,7 @@ body{
             <td class="lbl">Type</td>
             <td class="val" style="text-transform:capitalize;">{{ $voucher->type }}</td>
             <td class="lbl">Entry Date</td>
-            <td class="val">{{ \Carbon\Carbon::parse($voucher->entry_date ?? $voucher->created_at)->format('d-M-Y') }}</td>
+            <td class="val">{{ \Carbon\Carbon::parse(!empty($voucher->entry_date) ? $voucher->entry_date : (!empty($voucher->created_at) ? $voucher->created_at : ($voucher->receipt_date ?? now())))->format('d-M-Y') }}</td>
         </tr>
         @if(!empty($voucher->remarks))
         <tr>

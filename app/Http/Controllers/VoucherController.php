@@ -183,7 +183,9 @@ class VoucherController extends Controller
             // -- Adapter for V2 to V1 View --
             $voucher = (object) [
                 'rvid' => $voucherV2->voucher_no,
-                'receipt_date' => $voucherV2->date->format('Y-m-d'),
+                'receipt_date' => $voucherV2->date ? $voucherV2->date->format('Y-m-d') : now()->format('Y-m-d'),
+                'entry_date' => $voucherV2->date ? $voucherV2->date->format('Y-m-d') : now()->format('Y-m-d'),
+                'created_at' => $voucherV2->created_at ?? now(),
                 'total_amount' => $voucherV2->amount,
                 'remarks' => $voucherV2->remarks,
                 'type' => 'unknown', // Default
@@ -1319,6 +1321,11 @@ class VoucherController extends Controller
             ]);
 
             // 5. Invoice settlement logic (both sales and repairs)
+            $vType      = strtolower($request->vendor_type ?? '');
+            $customerId = (int) ($request->vendor_id ?? 0);
+            $totalAmt   = (float) ($request->total_amount ?? 0);
+            $settledSaleIds = [];
+
             if (($vType === 'customer' || $vType === 'walkin') && $customerId > 0 && $totalAmt > 0) {
                 $linkedSaleIds     = array_filter((array)($request->input('linked_sale_ids', [])));
                 $linkedSaleTypes   = (array)($request->input('linked_sale_types', []));
@@ -1473,6 +1480,8 @@ class VoucherController extends Controller
                         $remaining -= $applyAmt;
                     }
                 }
+                $receiptVoucher->update(['settled_invoices' => json_encode($settledSaleIds)]);
+                \Log::info('Invoice Settlement Done on Update. Voucher: ' . $rvid . ', Settled: ' . json_encode($settledSaleIds));
             }
 
             // 6. V2 Integration
