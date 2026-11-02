@@ -276,6 +276,12 @@
                                         <span class="doc-kv-label">Delivered By:</span>
                                         <span class="doc-kv-value">{{ $repair->deliverer->name ?? ($repair->status === 'delivered' ? 'Staff' : 'Not delivered yet') }}</span>
                                     </div>
+                                    @if($repair->status === 'delivered')
+                                    <div class="doc-kv-row">
+                                        <span class="doc-kv-label">Delivered Date:</span>
+                                        <span class="doc-kv-value text-success fw-bold font-monospace">{{ $repair->delivered_at ? $repair->delivered_at->format('d-M-Y') : ($repair->updated_at ? $repair->updated_at->format('d-M-Y') : 'Delivered') }}</span>
+                                    </div>
+                                    @endif
                                 </div>
                             </div>
                         </div>

@@ -389,7 +389,7 @@
                     $itemsData = json_decode($repair->problem_description, true);
                     $rows = [];
 
-                    if (is_array($itemsData) && count($itemsData) > 0 && $totalBill > 0) {
+                    if (is_array($itemsData) && count($itemsData) > 0) {
                         foreach($itemsData as $idx => $it) {
                             $desc = trim($it['desc'] ?? ($it['item_name'] ?? ''));
                             if (empty($desc) && !empty($it['problem_description']) && !is_array($it['problem_description'])) {
@@ -416,19 +416,7 @@
                                 $gross = $totalBill;
                             }
 
-                            // If multiple items exist and this row has 0 rate/total, skip placeholder
-                            $hasOtherBilledRows = false;
-                            foreach($itemsData as $otherIt) {
-                                if ((float)($otherIt['rate'] ?? ($otherIt['total'] ?? 0)) > 0) {
-                                    $hasOtherBilledRows = true;
-                                    break;
-                                }
-                            }
-                            if ($hasOtherBilledRows && $rate <= 0 && $total <= 0) {
-                                continue;
-                            }
-
-                            if ($total > 0 || (!empty($desc) && $rate > 0)) {
+                            if (!empty($desc) || $total > 0 || $rate > 0) {
                                 $rows[] = [
                                     'no' => count($rows) + 1,
                                     'desc' => $desc,

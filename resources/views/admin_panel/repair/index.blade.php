@@ -690,6 +690,17 @@
                                                     @endif
                                                     {{ $repair->status_label }}
                                                 </span>
+                                                @if($repair->status === 'delivered')
+                                                    @php
+                                                        $finalDelDate = $repair->delivered_at ?? $repair->updated_at;
+                                                    @endphp
+                                                    @if($finalDelDate)
+                                                        <div class="mt-1" style="font-size: 0.68rem; line-height: 1.25;">
+                                                            <span class="text-muted" style="font-size: 0.65rem;">Delivery Date:</span>
+                                                            <div class="font-monospace fw-bold text-dark" style="font-size: 0.72rem;">{{ $finalDelDate->format('d-M-Y') }}</div>
+                                                        </div>
+                                                    @endif
+                                                @endif
                                             </td>
 
                                                      {{-- Action Dropdown --}}
@@ -858,7 +869,7 @@
 
                                          <div class="mb-3">
                                              <label class="form-label small fw-bold text-dark">Delivery Date <span class="text-danger">*</span></label>
-                                             <input type="date" name="delivery_date" class="form-control form-control-sm font-monospace fw-bold" value="{{ date('Y-m-d') }}" style="border-radius: 8px; height: 36px;" required>
+                                             <input type="date" name="delivery_date" class="form-control form-control-sm font-monospace fw-bold" value="{{ $repair->delivered_at ? $repair->delivered_at->format('Y-m-d') : date('Y-m-d') }}" style="border-radius: 8px; height: 36px;" required>
                                          </div>
 
                                          <div class="mb-1">
