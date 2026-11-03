@@ -389,6 +389,10 @@
                     $itemsData = json_decode($repair->problem_description, true);
                     $rows = [];
 
+                    // Normalized subject text and item_name to prevent intake device/subject line from auto-populating row 1
+                    $normSubject  = strtolower(trim(preg_replace('/[^a-z0-9]/', '', $subjectText ?? '')));
+                    $normItemName = strtolower(trim(preg_replace('/[^a-z0-9]/', '', $repair->item_name ?? '')));
+
                     if (is_array($itemsData) && count($itemsData) > 0) {
                         foreach($itemsData as $idx => $it) {
                             $desc = trim($it['desc'] ?? ($it['item_name'] ?? ''));
@@ -403,20 +407,30 @@
                             $desc = trim($desc);
 
                             $qty = isset($it['qty']) && $it['qty'] !== '' ? (float)$it['qty'] : 1;
-                            $rate = (float)($it['rate'] ?? ($it['estimated_cost'] ?? 0));
-                            if ($rate <= 0 && count($itemsData) === 1 && $totalBill > 0) {
-                                $rate = $totalBill;
-                            }
+                            $rate = (float)($it['rate'] ?? 0);
                             $gross = (float)($it['gross'] ?? ($qty * $rate));
                             $gst_pct = (float)($it['gst_pct'] ?? 0);
                             $gst_amt = (float)($it['gst_amt'] ?? round($gross * ($gst_pct / 100), 2));
                             $total = (float)($it['total'] ?? ($gross + $gst_amt));
-                            if ($total <= 0 && count($itemsData) === 1 && $totalBill > 0) {
-                                $total = $totalBill;
-                                $gross = $totalBill;
+
+                            // If this row's description is just the device name / subject line from intake, DO NOT put it as invoice row description
+                            $normDesc = strtolower(trim(preg_replace('/[^a-z0-9]/', '', $desc)));
+                            $isSubjectLine = false;
+                            if (!empty($normDesc)) {
+                                if ($normDesc === $normSubject || $normDesc === $normItemName || 
+                                    (!empty($normSubject) && str_starts_with($normDesc, $normSubject)) ||
+                                    (!empty($normSubject) && str_starts_with($normSubject, $normDesc))) {
+                                    $isSubjectLine = true;
+                                }
                             }
 
-                            if (!empty($desc) || $total > 0 || $rate > 0) {
+                            // If it's the subject line from intake or unbilled, skip it from invoice table
+                            if ($isSubjectLine) {
+                                continue;
+                            }
+
+                            // Only include if there is an actual part/service description or non-zero billed amount
+                            if (!empty($desc) && ($total > 0 || $rate > 0 || count($itemsData) > 1)) {
                                 $rows[] = [
                                     'no' => count($rows) + 1,
                                     'desc' => $desc,
@@ -431,32 +445,18 @@
                         }
                     }
 
-                    // Fallback: If no rows extracted or completely unbilled fresh invoice
+                    // Fallback: Fresh or unbilled invoice - Row 1 must ALWAYS be clean and EMPTY for user to enter custom items
                     if (empty($rows)) {
-                        if ($totalBill > 0) {
-                            $rows[] = [
-                                'no' => 1,
-                                'desc' => $repair->item_name ?: 'Repair & Service Charges',
-                                'qty' => 1,
-                                'rate' => $totalBill,
-                                'gross' => $totalBill,
-                                'gst_pct' => 0,
-                                'gst_amt' => 0,
-                                'total' => $totalBill,
-                            ];
-                        } else {
-                            // Fresh invoice: start with clean blank row 1 so user can enter custom items
-                            $rows[] = [
-                                'no' => 1,
-                                'desc' => '',
-                                'qty' => 1,
-                                'rate' => 0,
-                                'gross' => 0,
-                                'gst_pct' => 0,
-                                'gst_amt' => 0,
-                                'total' => 0,
-                            ];
-                        }
+                        $rows[] = [
+                            'no' => 1,
+                            'desc' => '',
+                            'qty' => 1,
+                            'rate' => 0,
+                            'gross' => 0,
+                            'gst_pct' => 0,
+                            'gst_amt' => 0,
+                            'total' => 0,
+                        ];
                     }
 
                     // Total initial rows in pad grid: at least 10 rows

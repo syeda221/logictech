@@ -700,6 +700,11 @@
                                                             <div class="font-monospace fw-bold text-dark" style="font-size: 0.72rem;">{{ $finalDelDate->format('d-M-Y') }}</div>
                                                         </div>
                                                     @endif
+                                                    @if(!empty($repair->delivery_notes))
+                                                        <div class="mt-1 text-secondary fst-italic text-break" style="font-size: 0.66rem; line-height: 1.2; max-width: 140px; margin: 0 auto;" title="{{ $repair->delivery_notes }}">
+                                                            <i class="fas fa-comment-alt text-muted me-1" style="font-size: 0.6rem;"></i>{{ Str::limit($repair->delivery_notes, 35) }}
+                                                        </div>
+                                                    @endif
                                                 @endif
                                             </td>
 
@@ -874,7 +879,7 @@
 
                                          <div class="mb-1">
                                              <label class="form-label small fw-bold text-dark">Delivery Remarks</label>
-                                             <input type="text" name="delivery_notes" class="form-control form-control-sm" placeholder="e.g. Tested in front of customer, handed over safely" style="border-radius: 8px; font-size: 0.78rem;">
+                                             <input type="text" name="delivery_notes" class="form-control form-control-sm" value="{{ $repair->delivery_notes }}" placeholder="e.g. Tested in front of customer, handed over safely" style="border-radius: 8px; font-size: 0.78rem;">
                                          </div>
                                      </div>
                                      <div class="modal-footer py-2.5 px-4 bg-light border-top d-flex justify-content-between align-items-center">

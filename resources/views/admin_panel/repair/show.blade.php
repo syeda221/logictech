@@ -281,6 +281,12 @@
                                         <span class="doc-kv-label">Delivered Date:</span>
                                         <span class="doc-kv-value text-success fw-bold font-monospace">{{ $repair->delivered_at ? $repair->delivered_at->format('d-M-Y') : ($repair->updated_at ? $repair->updated_at->format('d-M-Y') : 'Delivered') }}</span>
                                     </div>
+                                    @if(!empty($repair->delivery_notes))
+                                    <div class="doc-kv-row">
+                                        <span class="doc-kv-label">Delivery Remarks:</span>
+                                        <span class="doc-kv-value text-dark fw-semibold fst-italic">{{ $repair->delivery_notes }}</span>
+                                    </div>
+                                    @endif
                                     @endif
                                 </div>
                             </div>
