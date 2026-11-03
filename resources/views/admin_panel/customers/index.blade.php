@@ -591,6 +591,7 @@
                                 <tr>
                                     <th class="ps-2 text-center" style="width: 95px;">CUSTOMER ID</th>
                                     <th style="min-width: 170px;">CLIENT NAME</th>
+                                    <th style="min-width: 160px;">ADDRESS</th>
                                     <th style="width: 130px;">MOBILE / CONTACT</th>
                                     <th class="text-end" style="width: 130px;">CREDIT LIMIT</th>
                                     <th class="text-center" style="width: 80px;">SOURCE</th>
@@ -632,6 +633,17 @@
                                                     </span>
                                                 </div>
                                             </div>
+                                        </td>
+
+                                        {{-- Address --}}
+                                        <td>
+                                            @if(!empty($customer->address))
+                                                <span class="text-dark" style="font-size: 0.76rem; font-weight: 500; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;" title="{{ $customer->address }}">
+                                                    <i class="fas fa-map-marker-alt text-danger small me-1"></i>{{ $customer->address }}
+                                                </span>
+                                            @else
+                                                <span class="text-muted" style="font-size: 0.75rem;">-</span>
+                                            @endif
                                         </td>
 
                                         {{-- Mobile Phone --}}
@@ -730,7 +742,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="7" class="text-center py-5 text-muted">
+                                        <td colspan="8" class="text-center py-5 text-muted">
                                             <i class="fas fa-users-slash fa-3x mb-3 text-light"></i>
                                             <h6 class="fw-bold">No customers found</h6>
                                             <p class="small text-muted mb-3">Add your first customer to begin recording sales and balances.</p>
