@@ -27,6 +27,9 @@ class BalanceService
             return 0;
         }
 
+        // Auto-heal any unsynced receipt vouchers so statements are always complete
+        \App\Http\Controllers\VoucherController::syncOrphanReceiptsVouchers();
+
         // Auto-sync opening balance if present in customer table but journal/ledger entry is missing
         $this->ensureCustomerOpeningBalanceSynced($customer);
 
@@ -66,6 +69,9 @@ class BalanceService
                 'transactions' => [],
             ];
         }
+
+        // Auto-heal any unsynced receipt vouchers so statements are always complete
+        \App\Http\Controllers\VoucherController::syncOrphanReceiptsVouchers();
 
         // Auto-sync opening balance if present in customer table but journal/ledger entry is missing
         $this->ensureCustomerOpeningBalanceSynced($customer);

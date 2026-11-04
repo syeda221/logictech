@@ -450,6 +450,9 @@ $(document).ready(function() {
             let h='<option value="">Select Account</option>';
             (r||[]).forEach(a => h+=`<option value="${a.id}">${a.title}</option>`);
             $sub.html(h);
+            if (r && r.length > 0) {
+                $sub.val(r[0].id);
+            }
         }).fail(() => $sub.html('<option disabled>Error</option>'));
     });
 

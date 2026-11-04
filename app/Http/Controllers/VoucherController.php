@@ -736,14 +736,30 @@ class VoucherController extends Controller
                         foreach ($request->row_account_id as $idx => $accId) {
                             $amt = (float) ($request->amount[$idx] ?? 0);
                             if ($amt > 0) {
+                                $targetAccId = (is_numeric($accId) && (int) $accId > 0)
+                                    ? (int) $accId
+                                    : $balanceService->getCashAccountId();
+
                                 $v2Lines[] = [
-                                    'account_id' => $accId,
+                                    'account_id' => $targetAccId,
                                     'debit'      => $amt,
                                     'credit'     => 0,
                                     'narration'  => $request->narration_text[$idx] ?? 'Receipt',
                                 ];
                             }
                         }
+                    }
+
+                    $sumDebit = array_sum(array_column($v2Lines, 'debit'));
+                    if ($sumDebit <= 0 || abs($sumDebit - $totalAmt) > 0.05) {
+                        $v2Lines = [
+                            [
+                                'account_id' => $balanceService->getCashAccountId(),
+                                'debit'      => $totalAmt,
+                                'credit'     => 0,
+                                'narration'  => 'Receipt',
+                            ]
+                        ];
                     }
 
                     // Build remarks with settled invoice info
@@ -774,7 +790,7 @@ class VoucherController extends Controller
                             'party_type'   => $partyType,
                             'party_id'     => $request->vendor_id,
                             'remarks'      => $remarksNote,
-                        ], $v2Lines, auth()->id());
+                        ], $v2Lines, auth()->id() ?: 1);
 
                         \Log::info('V2 Voucher Created Successfully.');
 
@@ -791,7 +807,7 @@ class VoucherController extends Controller
                             }
                             CustomerLedger::create([
                                 'customer_id'      => $request->vendor_id,
-                                'admin_or_user_id' => auth()->id(),
+                                'admin_or_user_id' => auth()->id() ?: 1,
                                 'previous_balance' => $prevBal,
                                 'opening_balance'  => 0,
                                 'closing_balance'  => $prevBal - $totalAmt,
@@ -2829,7 +2845,14 @@ class VoucherController extends Controller
                     })
                     ->first();
 
-                $vType      = strtolower($rv->type ?? 'customer');
+                // If existing VM has no details, it is incomplete/broken from an earlier crash - recreate it
+                if ($existingVm && $existingVm->details()->count() == 0) {
+                    $existingVm->journalEntries()->delete();
+                    $existingVm->delete();
+                    $existingVm = null;
+                }
+
+                $vType      = strtolower($rv->type ?: ($rv->vendor_type ?: 'customer'));
                 $totalAmt   = (float) ($rv->total_amount ?? 0);
                 $customerId = (int) ($rv->party_id ?? 0);
 
@@ -2857,8 +2880,12 @@ class VoucherController extends Controller
                             foreach ($rowAccs as $idx => $accId) {
                                 $amt = (float) ($amounts[$idx] ?? 0);
                                 if ($amt > 0) {
+                                    $targetAccId = (is_numeric($accId) && (int) $accId > 0)
+                                        ? (int) $accId
+                                        : $balanceService->getCashAccountId();
+
                                     $v2Lines[] = [
-                                        'account_id' => $accId,
+                                        'account_id' => $targetAccId,
                                         'debit'      => $amt,
                                         'credit'     => 0,
                                         'narration'  => 'Receipt',
@@ -2869,10 +2896,9 @@ class VoucherController extends Controller
 
                         $sumDebit = array_sum(array_column($v2Lines, 'debit'));
                         if ($sumDebit <= 0 || abs($sumDebit - $totalAmt) > 0.05) {
-                            $defaultAcc = \App\Models\Account::where('head_id', 1)->first() ?? \App\Models\Account::first();
                             $v2Lines = [
                                 [
-                                    'account_id' => $defaultAcc ? $defaultAcc->id : 1,
+                                    'account_id' => $balanceService->getCashAccountId(),
                                     'debit'      => $totalAmt,
                                     'credit'     => 0,
                                     'narration'  => 'Receipt',
@@ -2910,8 +2936,11 @@ class VoucherController extends Controller
                             'party_type'   => $partyType,
                             'party_id'     => $customerId,
                             'remarks'      => $remarksNote,
-                        ], $v2Lines, auth()->id() ?? 1);
+                        ], $v2Lines, auth()->id() ?: 1);
                     }
+                } elseif ($existingVm && $existingVm->status === 'posted' && $existingVm->journalEntries()->count() == 0) {
+                    // VoucherMaster exists but has missing journal entries, post it
+                    $voucherService->postToJournal($existingVm);
                 }
 
                 // Ensure CustomerLedger row exists if customer
@@ -2930,7 +2959,7 @@ class VoucherController extends Controller
 
                         \App\Models\CustomerLedger::create([
                             'customer_id'      => $customerId,
-                            'admin_or_user_id' => auth()->id() ?? 1,
+                            'admin_or_user_id' => auth()->id() ?: 1,
                             'previous_balance' => $prevBal,
                             'opening_balance'  => 0,
                             'closing_balance'  => $prevBal - $totalAmt,
