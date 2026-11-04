@@ -359,7 +359,7 @@
                     Sr. <span class="line-field" contenteditable="true" style="min-width: 160px; font-weight: 800; font-family: monospace;">{{ $repair->repair_no }}</span>
                 </div>
                 <div>
-                    Date. <span class="line-field" contenteditable="true" style="min-width: 140px;">{{ date('d-M-Y') }}</span>
+                    Date. <span class="line-field" contenteditable="true" style="min-width: 140px;">{{ $repair->received_date ? $repair->received_date->format('d-M-Y') : ($repair->created_at ? $repair->created_at->format('d-M-Y') : date('d-M-Y')) }}</span>
                 </div>
             </div>
             <div style="margin-bottom: 6px;">
