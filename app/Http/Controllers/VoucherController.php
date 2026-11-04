@@ -746,6 +746,13 @@ class VoucherController extends Controller
                         }
                     }
 
+                    // Build remarks with settled invoice info
+                    $remarksNote = ($request->remarks ? $request->remarks . ' ' : '') . "(Ref: $rvid)";
+                    if (!empty($settledSaleIds)) {
+                        $invoiceNos = implode(', ', array_column($settledSaleIds, 'invoice_no'));
+                        $remarksNote .= " | Invoices: $invoiceNos";
+                    }
+
                     // CREDIT SIDE (AR)
                     if ($totalAmt > 0) {
                         $v2Lines[] = [
@@ -754,17 +761,11 @@ class VoucherController extends Controller
                             'credit'     => $totalAmt,
                             'party_type' => $partyType,
                             'party_id'   => $request->vendor_id,
-                            'narration'  => 'Receipt from '.$request->vendor_type,
+                            'narration'  => $remarksNote,
                         ];
                     }
 
                     if (! empty($v2Lines)) {
-                        // Build remarks with settled invoice info
-                        $remarksNote = $request->remarks . " (Ref: $rvid)";
-                        if (!empty($settledSaleIds)) {
-                            $invoiceNos = implode(', ', array_column($settledSaleIds, 'invoice_no'));
-                            $remarksNote .= " | Invoices: $invoiceNos";
-                        }
 
                         app(\App\Services\VoucherService::class)->createVoucher([
                             'voucher_type' => 'receipt',
@@ -1524,6 +1525,13 @@ class VoucherController extends Controller
                     }
                 }
 
+                // Build remarks with settled invoice info
+                $remarksNote = ($request->remarks ? $request->remarks . ' ' : '') . "(Ref: $rvid)";
+                if (!empty($settledSaleIds)) {
+                    $invoiceNos = implode(', ', array_column($settledSaleIds, 'invoice_no'));
+                    $remarksNote .= " | Invoices: $invoiceNos";
+                }
+
                 // CREDIT SIDE (AR/Party)
                 if ($totalAmt > 0) {
                     $v2Lines[] = [
@@ -1532,16 +1540,11 @@ class VoucherController extends Controller
                         'credit'     => $totalAmt,
                         'party_type' => $partyType,
                         'party_id'   => $request->vendor_id,
-                        'narration'  => 'Receipt from '.$request->vendor_type,
+                        'narration'  => $remarksNote,
                     ];
                 }
 
                 if (!empty($v2Lines)) {
-                    $remarksNote = $request->remarks . " (Ref: $rvid)";
-                    if (!empty($settledSaleIds)) {
-                        $invoiceNos = implode(', ', array_column($settledSaleIds, 'invoice_no'));
-                        $remarksNote .= " | Invoices: $invoiceNos";
-                    }
 
                     app(\App\Services\VoucherService::class)->createVoucher([
                         'voucher_type' => 'receipt',
@@ -2877,16 +2880,6 @@ class VoucherController extends Controller
                             ];
                         }
 
-                        // Credit Side
-                        $v2Lines[] = [
-                            'account_id' => $creditAccountId,
-                            'debit'      => 0,
-                            'credit'     => $totalAmt,
-                            'party_type' => $partyType,
-                            'party_id'   => $customerId,
-                            'narration'  => 'Receipt from ' . $vType,
-                        ];
-
                         $remarksNote = ($rv->remarks ? $rv->remarks : 'Receipt Voucher') . " (Ref: {$rv->rvid})";
                         if (!empty($rv->settled_invoices)) {
                             $settled = json_decode($rv->settled_invoices, true);
@@ -2897,6 +2890,16 @@ class VoucherController extends Controller
                                 }
                             }
                         }
+
+                        // Credit Side
+                        $v2Lines[] = [
+                            'account_id' => $creditAccountId,
+                            'debit'      => 0,
+                            'credit'     => $totalAmt,
+                            'party_type' => $partyType,
+                            'party_id'   => $customerId,
+                            'narration'  => $remarksNote,
+                        ];
 
                         $vDate = $rv->receipt_date ? date('Y-m-d', strtotime($rv->receipt_date)) : ($rv->created_at ? $rv->created_at->format('Y-m-d') : date('Y-m-d'));
 
