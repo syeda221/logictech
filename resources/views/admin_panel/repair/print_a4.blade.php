@@ -389,10 +389,6 @@
                     $itemsData = json_decode($repair->problem_description, true);
                     $rows = [];
 
-                    // Normalized subject text and item_name to prevent intake device/subject line from auto-populating row 1
-                    $normSubject  = strtolower(trim(preg_replace('/[^a-z0-9]/', '', $subjectText ?? '')));
-                    $normItemName = strtolower(trim(preg_replace('/[^a-z0-9]/', '', $repair->item_name ?? '')));
-
                     if (is_array($itemsData) && count($itemsData) > 0) {
                         foreach($itemsData as $idx => $it) {
                             $desc = trim($it['desc'] ?? ($it['item_name'] ?? ''));
@@ -407,33 +403,28 @@
                             $desc = trim($desc);
 
                             $qty = isset($it['qty']) && $it['qty'] !== '' ? (float)$it['qty'] : 1;
-                            $rate = (float)($it['rate'] ?? 0);
+                            if ($qty <= 0) $qty = 1;
+
+                            $costVal = (float)($it['total'] ?? ($it['estimated_cost'] ?? 0));
+                            $rate = isset($it['rate']) && (float)$it['rate'] > 0 ? (float)$it['rate'] : ($costVal > 0 ? ($costVal / $qty) : 0);
                             $gross = (float)($it['gross'] ?? ($qty * $rate));
                             $gst_pct = (float)($it['gst_pct'] ?? 0);
                             $gst_amt = (float)($it['gst_amt'] ?? round($gross * ($gst_pct / 100), 2));
                             $total = (float)($it['total'] ?? ($gross + $gst_amt));
-
-                            // If this row's description is just the device name / subject line from intake, DO NOT put it as invoice row description
-                            $normDesc = strtolower(trim(preg_replace('/[^a-z0-9]/', '', $desc)));
-                            $isSubjectLine = false;
-                            if (!empty($normDesc)) {
-                                if ($normDesc === $normSubject || $normDesc === $normItemName || 
-                                    (!empty($normSubject) && str_starts_with($normDesc, $normSubject)) ||
-                                    (!empty($normSubject) && str_starts_with($normSubject, $normDesc))) {
-                                    $isSubjectLine = true;
-                                }
+                            if ($total <= 0 && $costVal > 0) {
+                                $total = $costVal;
                             }
 
-                            // If it's the subject line from intake or unbilled, skip it from invoice table
-                            if ($isSubjectLine) {
+                            // If this is an unbilled single intake ticket without any pricing, skip so row 1 starts clean
+                            if (count($itemsData) === 1 && $costVal <= 0 && $rate <= 0) {
                                 continue;
                             }
 
-                            // Only include if there is an actual part/service description or non-zero billed amount
-                            if (!empty($desc) && ($total > 0 || $rate > 0 || count($itemsData) > 1)) {
+                            // Include all quoted/itemized items or items with description/amount
+                            if (!empty($desc) || $total > 0 || $rate > 0) {
                                 $rows[] = [
                                     'no' => count($rows) + 1,
-                                    'desc' => $desc,
+                                    'desc' => $desc ?: $repair->item_name,
                                     'qty' => $qty,
                                     'rate' => $rate,
                                     'gross' => $gross,
