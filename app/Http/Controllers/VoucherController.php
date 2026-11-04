@@ -120,6 +120,9 @@ class VoucherController extends Controller
 
     public function all_recepit_vochers()
     {
+        // Auto-heal and sync any ReceiptsVoucher records that have no VoucherMaster
+        self::syncOrphanReceiptsVouchers();
+
         // V2: Fetch Receipt Vouchers only
         $receipts = \App\Models\VoucherMaster::where('voucher_type', \App\Models\VoucherMaster::TYPE_RECEIPT)
             ->with('party') // Eager load the polymorphic party
@@ -700,7 +703,9 @@ class VoucherController extends Controller
                     }
                 }
 
-                $rec->update(['settled_invoices' => json_encode($settledSaleIds)]);
+                if (\Illuminate\Support\Facades\Schema::hasColumn('receipts_vouchers', 'settled_invoices')) {
+                    $rec->update(['settled_invoices' => json_encode($settledSaleIds)]);
+                }
                 \Log::info('Invoice Settlement Done. Voucher: '.$rvid.', Settled: '.json_encode($settledSaleIds));
             }
             // ─────────────────────────────────────────────────────────────
@@ -747,6 +752,8 @@ class VoucherController extends Controller
                             'account_id' => $creditAccountId,
                             'debit'      => 0,
                             'credit'     => $totalAmt,
+                            'party_type' => $partyType,
+                            'party_id'   => $request->vendor_id,
                             'narration'  => 'Receipt from '.$request->vendor_type,
                         ];
                     }
@@ -2793,5 +2800,146 @@ class VoucherController extends Controller
         return response()->json([
             'accounts' => $accounts,
         ]);
+    }
+
+    /**
+     * Auto-sync any ReceiptsVoucher records that are missing in VoucherMaster / Journal / CustomerLedger
+     */
+    public static function syncOrphanReceiptsVouchers()
+    {
+        try {
+            $rvs = \App\Models\ReceiptsVoucher::orderBy('id', 'asc')->get();
+            if ($rvs->isEmpty()) {
+                return;
+            }
+
+            $balanceService = app(\App\Services\BalanceService::class);
+            $voucherService = app(\App\Services\VoucherService::class);
+
+            foreach ($rvs as $rv) {
+                // Check if VoucherMaster already exists for this ReceiptsVoucher
+                $existingVm = \App\Models\VoucherMaster::where('voucher_type', \App\Models\VoucherMaster::TYPE_RECEIPT)
+                    ->where(function ($q) use ($rv) {
+                        $q->where('remarks', 'like', "%Ref: {$rv->rvid}%")
+                          ->orWhere('remarks', 'like', "%({$rv->rvid})%")
+                          ->orWhere('voucher_no', $rv->rvid);
+                    })
+                    ->first();
+
+                $vType      = strtolower($rv->type ?? 'customer');
+                $totalAmt   = (float) ($rv->total_amount ?? 0);
+                $customerId = (int) ($rv->party_id ?? 0);
+
+                if (! $existingVm && $totalAmt > 0) {
+                    $partyType       = null;
+                    $creditAccountId = null;
+
+                    if ($vType == 'customer' || $vType == 'walkin') {
+                        $partyType       = \App\Models\Customer::class;
+                        $creditAccountId = $balanceService->getAccountsReceivableId();
+                    } elseif ($vType == 'vendor') {
+                        $partyType       = \App\Models\Vendor::class;
+                        $creditAccountId = $balanceService->getAccountsPayableId();
+                    } else {
+                        $partyType       = \App\Models\Account::class;
+                        $creditAccountId = $rv->party_id;
+                    }
+
+                    if ($creditAccountId) {
+                        $v2Lines = [];
+                        $rowAccs = json_decode($rv->row_account_id, true) ?: [];
+                        $amounts = json_decode($rv->amount, true) ?: [];
+
+                        if (is_array($rowAccs) && is_array($amounts)) {
+                            foreach ($rowAccs as $idx => $accId) {
+                                $amt = (float) ($amounts[$idx] ?? 0);
+                                if ($amt > 0) {
+                                    $v2Lines[] = [
+                                        'account_id' => $accId,
+                                        'debit'      => $amt,
+                                        'credit'     => 0,
+                                        'narration'  => 'Receipt',
+                                    ];
+                                }
+                            }
+                        }
+
+                        $sumDebit = array_sum(array_column($v2Lines, 'debit'));
+                        if ($sumDebit <= 0 || abs($sumDebit - $totalAmt) > 0.05) {
+                            $defaultAcc = \App\Models\Account::where('head_id', 1)->first() ?? \App\Models\Account::first();
+                            $v2Lines = [
+                                [
+                                    'account_id' => $defaultAcc ? $defaultAcc->id : 1,
+                                    'debit'      => $totalAmt,
+                                    'credit'     => 0,
+                                    'narration'  => 'Receipt',
+                                ]
+                            ];
+                        }
+
+                        // Credit Side
+                        $v2Lines[] = [
+                            'account_id' => $creditAccountId,
+                            'debit'      => 0,
+                            'credit'     => $totalAmt,
+                            'party_type' => $partyType,
+                            'party_id'   => $customerId,
+                            'narration'  => 'Receipt from ' . $vType,
+                        ];
+
+                        $remarksNote = ($rv->remarks ? $rv->remarks : 'Receipt Voucher') . " (Ref: {$rv->rvid})";
+                        if (!empty($rv->settled_invoices)) {
+                            $settled = json_decode($rv->settled_invoices, true);
+                            if (is_array($settled) && !empty($settled)) {
+                                $invNos = implode(', ', array_filter(array_column($settled, 'invoice_no')));
+                                if ($invNos) {
+                                    $remarksNote .= " | Invoices: {$invNos}";
+                                }
+                            }
+                        }
+
+                        $vDate = $rv->receipt_date ? date('Y-m-d', strtotime($rv->receipt_date)) : ($rv->created_at ? $rv->created_at->format('Y-m-d') : date('Y-m-d'));
+
+                        $existingVm = $voucherService->createVoucher([
+                            'voucher_type' => 'receipt',
+                            'date'         => $vDate,
+                            'status'       => 'posted',
+                            'party_type'   => $partyType,
+                            'party_id'     => $customerId,
+                            'remarks'      => $remarksNote,
+                        ], $v2Lines, auth()->id() ?? 1);
+                    }
+                }
+
+                // Ensure CustomerLedger row exists if customer
+                if (($vType == 'customer' || $vType == 'walkin') && $customerId > 0 && $totalAmt > 0) {
+                    $hasLedger = \App\Models\CustomerLedger::where('customer_id', $customerId)
+                        ->where(function ($q) use ($rv) {
+                            $q->where('description', 'like', "%{$rv->rvid}%");
+                        })
+                        ->exists();
+
+                    if (! $hasLedger) {
+                        $latestLedger = \App\Models\CustomerLedger::where('customer_id', $customerId)->latest('id')->first();
+                        $prevBal = $latestLedger ? $latestLedger->closing_balance : (
+                            \App\Models\Customer::find($customerId)->opening_balance ?? 0
+                        );
+
+                        \App\Models\CustomerLedger::create([
+                            'customer_id'      => $customerId,
+                            'admin_or_user_id' => auth()->id() ?? 1,
+                            'previous_balance' => $prevBal,
+                            'opening_balance'  => 0,
+                            'closing_balance'  => $prevBal - $totalAmt,
+                            'description'      => "Receipt Voucher {$rv->rvid}",
+                            'created_at'       => $rv->created_at ?? now(),
+                            'updated_at'       => $rv->updated_at ?? now(),
+                        ]);
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::error('syncOrphanReceiptsVouchers Error: ' . $e->getMessage());
+        }
     }
 }

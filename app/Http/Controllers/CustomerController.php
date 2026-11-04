@@ -232,6 +232,9 @@ class CustomerController extends Controller
             $closingBalance = 0;
             
             if ($request->filled('customer_id')) {
+                // Auto-sync any unsynced receipt vouchers
+                \App\Http\Controllers\VoucherController::syncOrphanReceiptsVouchers();
+
                 // Use Balance Service for accurate Statement
                 $balanceService = app(\App\Services\BalanceService::class);
                 

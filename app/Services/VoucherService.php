@@ -50,15 +50,22 @@ class VoucherService
                 $totalDebit += $debit;
                 $totalCredit += $credit;
 
-                VoucherDetail::create([
+                $detailData = [
                     'voucher_master_id' => $voucher->id,
                     'account_id' => $line['account_id'],
                     'debit' => $debit,
                     'credit' => $credit,
                     'narration' => $line['narration'] ?? null,
-                    'party_type' => $line['party_type'] ?? null,
-                    'party_id' => $line['party_id'] ?? null,
-                ]);
+                ];
+
+                if (\Illuminate\Support\Facades\Schema::hasColumn('voucher_details', 'party_type')) {
+                    $detailData['party_type'] = $line['party_type'] ?? null;
+                }
+                if (\Illuminate\Support\Facades\Schema::hasColumn('voucher_details', 'party_id')) {
+                    $detailData['party_id'] = $line['party_id'] ?? null;
+                }
+
+                VoucherDetail::create($detailData);
             }
 
             // 3. Update Voucher Totals
