@@ -161,17 +161,22 @@ class VoucherService
                 $detail->debit,
                 $detail->credit,
                 $detail->narration ?? $voucher->remarks,
-                $voucher->date->format('Y-m-d'),
+                $voucher->date instanceof \DateTimeInterface 
+                    ? $voucher->date->format('Y-m-d') 
+                    : (!empty($voucher->date) ? date('Y-m-d', strtotime($voucher->date)) : date('Y-m-d')),
                 $party
             );
         }
     }
 
-    private function generateVoucherNo($type)
+    public function generateVoucherNo($type)
     {
         // Simple generation: Type-Year-Index
         // e.g. RV-2026-0005
-        $prefix = strtoupper(substr($type, 0, 2)); // RV, PV, EX, JO
+        $prefix = strtoupper(substr($type, 0, 2));
+        if ($type == 'receipt') $prefix = 'RV';
+        if ($type == 'payment') $prefix = 'PV';
+        if ($type == 'expense') $prefix = 'EX';
         if ($type == 'contra') $prefix = 'CT';
         if ($type == 'journal') $prefix = 'JV';
         
@@ -179,7 +184,12 @@ class VoucherService
         
         // Find last voucher of this type in this year
         $lastVoucher = VoucherMaster::where('voucher_type', $type)
-            ->where('voucher_no', 'like', "{$prefix}-{$year}-%")
+            ->where(function ($q) use ($prefix, $year, $type) {
+                $q->where('voucher_no', 'like', "{$prefix}-{$year}-%");
+                if ($type === 'receipt') {
+                    $q->orWhere('voucher_no', 'like', "RE-{$year}-%");
+                }
+            })
             ->orderBy('id', 'desc')
             ->first();
             
@@ -191,7 +201,13 @@ class VoucherService
             $nextNum = 1;
         }
         
-        return sprintf('%s-%s-%04d', $prefix, $year, $nextNum);
+        $candidate = sprintf('%s-%s-%04d', $prefix, $year, $nextNum);
+        while (VoucherMaster::where('voucher_no', $candidate)->exists()) {
+            $nextNum++;
+            $candidate = sprintf('%s-%s-%04d', $prefix, $year, $nextNum);
+        }
+        
+        return $candidate;
     }
     
     private function getCurrentFiscalYear()

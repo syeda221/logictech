@@ -16,19 +16,24 @@ class CustomerController extends Controller
     // 🔹 Load customers list by type
     public function saleindex(Request $request)
     {
-        $type   = $request->type   ?? 'Main Customer';
-        $search = $request->search ?? '';
+        $type   = $request->type;
+        $search = $request->search ?? $request->term ?? $request->q ?? '';
 
-        $query = Customer::where('customer_type', $type);
+        $query = Customer::query();
+
+        if ($type && $type !== 'all') {
+            $query->where('customer_type', $type);
+        }
 
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('customer_name', 'like', "%{$search}%")
-                  ->orWhere('customer_id',   'like', "%{$search}%");
+                  ->orWhere('customer_id',   'like', "%{$search}%")
+                  ->orWhere('mobile',        'like', "%{$search}%");
             });
         }
 
-        $customers = $query->orderBy('customer_name')->get();
+        $customers = $query->orderBy('customer_name')->limit(50)->get();
 
         return response()->json($customers);
     }

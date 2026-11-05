@@ -497,9 +497,12 @@ class VoucherController extends Controller
         DB::beginTransaction();
         try {
             $rvid = $request->rvid ?: \App\Models\ReceiptsVoucher::generateRVID(auth()->id());
+            $receiptDate = !empty($request->receipt_date) ? date('Y-m-d', strtotime($request->receipt_date)) : date('Y-m-d');
+            $entryDate   = !empty($request->entry_date) ? date('Y-m-d', strtotime($request->entry_date)) : date('Y-m-d');
             $narrationIds = [];
 
-            foreach ($request->narration_id as $index => $narrId) {
+            if ($request->has('narration_id') && is_iterable($request->narration_id)) {
+                foreach ($request->narration_id as $index => $narrId) {
                 $manualText = $request->narration_text[$index] ?? null;
                 $manualType = $request->narration_type_text[$index] ?? 'Manual';
 
@@ -514,11 +517,12 @@ class VoucherController extends Controller
                     $narrationIds[] = (string) $narrId;
                 }
             }
+            }
 
             $voucherData = [
                 'rvid'             => $rvid,
-                'receipt_date'     => $request->receipt_date,
-                'entry_date'       => $request->entry_date,
+                'receipt_date'     => $receiptDate,
+                'entry_date'       => $entryDate,
                 'type'             => $request->vendor_type,
                 'party_id'         => $request->vendor_id,
                 'tel'              => $request->tel,
@@ -762,10 +766,13 @@ class VoucherController extends Controller
                         ];
                     }
 
-                    // Build remarks with settled invoice info
+                    // Build remarks with settled invoice info (always include # for complete linkability)
                     $remarksNote = ($request->remarks ? $request->remarks . ' ' : '') . "(Ref: $rvid)";
                     if (!empty($settledSaleIds)) {
-                        $invoiceNos = implode(', ', array_column($settledSaleIds, 'invoice_no'));
+                        $invoiceNos = implode(', ', array_map(function($item) {
+                            $no = $item['invoice_no'];
+                            return str_starts_with($no, '#') ? $no : '#' . $no;
+                        }, $settledSaleIds));
                         $remarksNote .= " | Invoices: $invoiceNos";
                     }
 
@@ -785,7 +792,7 @@ class VoucherController extends Controller
 
                         app(\App\Services\VoucherService::class)->createVoucher([
                             'voucher_type' => 'receipt',
-                            'date'         => $request->receipt_date,
+                            'date'         => $receiptDate,
                             'status'       => 'posted',
                             'party_type'   => $partyType,
                             'party_id'     => $request->vendor_id,
@@ -796,13 +803,16 @@ class VoucherController extends Controller
 
                         // ✅ Update CustomerLedger
                         if (($vType == 'customer' || $vType == 'walkin') && $totalAmt > 0) {
-                            $latestLedger = CustomerLedger::where('customer_id', $request->vendor_id)->latest()->first();
+                            $latestLedger = CustomerLedger::where('customer_id', $request->vendor_id)->latest('id')->first();
                             $prevBal = $latestLedger ? $latestLedger->closing_balance : (
                                 \App\Models\Customer::find($request->vendor_id)->opening_balance ?? 0
                             );
                             $ledgerDesc = 'Receipt Voucher '.$rvid;
                             if (!empty($settledSaleIds)) {
-                                $invoiceNos = implode(', ', array_column($settledSaleIds, 'invoice_no'));
+                                $invoiceNos = implode(', ', array_map(function($item) {
+                                    $no = $item['invoice_no'];
+                                    return str_starts_with($no, '#') ? $no : '#' . $no;
+                                }, $settledSaleIds));
                                 $ledgerDesc .= ' | ' . $invoiceNos;
                             }
                             CustomerLedger::create([
@@ -812,6 +822,8 @@ class VoucherController extends Controller
                                 'opening_balance'  => 0,
                                 'closing_balance'  => $prevBal - $totalAmt,
                                 'description'      => $ledgerDesc,
+                                'created_at'       => \Carbon\Carbon::parse($receiptDate)->setTimeFrom(now()),
+                                'updated_at'       => now(),
                             ]);
                         }
 
@@ -822,12 +834,13 @@ class VoucherController extends Controller
                     \Log::warning("Credit Account ID missing for type: $vType");
                 }
             } catch (\Exception $e) {
-                \Log::error('V2 Sync Error: '.$e->getMessage());
+                \Log::error('V2 Sync Error: '.$e->getMessage().' in '.$e->getFile().':'.$e->getLine());
+                throw new \Exception('Failed to create accounting voucher / ledger: '.$e->getMessage(), 0, $e);
             }
 
             DB::commit();
 
-            return back()->with('success', 'Receipt Voucher saved successfully!');
+            return redirect()->route('all_recepit_vochers')->with('success', "Receipt Voucher #{$rvid} saved successfully and ledgers updated!");
         } catch (\Exception $e) {
             DB::rollBack();
 
@@ -2910,7 +2923,9 @@ class VoucherController extends Controller
                         if (!empty($rv->settled_invoices)) {
                             $settled = json_decode($rv->settled_invoices, true);
                             if (is_array($settled) && !empty($settled)) {
-                                $invNos = implode(', ', array_filter(array_column($settled, 'invoice_no')));
+                                $invNos = implode(', ', array_map(function($inv) {
+                                    return str_starts_with($inv, '#') ? $inv : '#' . $inv;
+                                }, array_filter(array_column($settled, 'invoice_no'))));
                                 if ($invNos) {
                                     $remarksNote .= " | Invoices: {$invNos}";
                                 }

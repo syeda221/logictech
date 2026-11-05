@@ -111,7 +111,7 @@ class RepairController extends Controller
         $revenueCollected = (float) RepairOrder::sum('advance_paid') + (float) RepairOrder::sum('final_paid');
         $totalEstimated = (float) RepairOrder::sum('estimated_cost');
 
-        $customers = Customer::orderBy('customer_name')->get();
+        $customers = Customer::orderBy('customer_name')->limit(50)->get();
         $accounts = Account::where('status', 1)->orderBy('title')->get();
 
         return view('admin_panel.repair.index', compact(

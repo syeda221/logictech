@@ -215,6 +215,44 @@
             border-color: #60a5fa !important;
             background-color: #f8fbff !important;
         }
+        /* Select2 Ajax Dropdown in Filter Bar */
+        .erp-item-customer .select2-container {
+            width: 100% !important;
+        }
+        .erp-item-customer .select2-container .select2-selection--single {
+            height: 34px !important;
+            border: 1.5px solid #bfdbfe !important;
+            border-radius: 6px !important;
+            display: flex !important;
+            align-items: center !important;
+            background-color: #ffffff !important;
+            padding: 0 4px !important;
+            transition: all 0.15s ease-in-out !important;
+        }
+        .erp-item-customer .select2-container--default.select2-container--focus .select2-selection--single,
+        .erp-item-customer .select2-container--default.select2-container--open .select2-selection--single {
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+        }
+        .erp-item-customer .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: 32px !important;
+            font-size: 0.78rem !important;
+            font-weight: 500 !important;
+            color: #0f172a !important;
+            padding-left: 6px !important;
+            padding-right: 22px !important;
+        }
+        .erp-item-customer .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 32px !important;
+            right: 6px !important;
+        }
+        .erp-item-customer .select2-container--default .select2-selection--single .select2-selection__clear {
+            margin-right: 18px !important;
+            font-size: 1.05rem !important;
+            color: #94a3b8 !important;
+            line-height: 32px !important;
+        }
+        
         .erp-filter-input:focus {
             border-color: #2563eb !important;
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
@@ -733,11 +771,17 @@
 
                                 <div class="erp-filter-item erp-item-customer">
                                     <label class="erp-filter-label"><i class="fas fa-user text-primary"></i> Customer</label>
-                                    <select class="form-select erp-filter-input" name="customer_id" id="filter_customer_id">
+                                    @php
+                                        $selectedCustId = request('customer_id');
+                                        $selectedCust = $selectedCustId ? \App\Models\Customer::find($selectedCustId) : null;
+                                    @endphp
+                                    <select class="form-select erp-filter-input" name="customer_id" id="filter_customer_id" style="width: 100%;">
                                         <option value="">All Customers</option>
-                                        @foreach ($customers as $c)
-                                            <option value="{{ $c->id }}">{{ $c->customer_name }}</option>
-                                        @endforeach
+                                        @if($selectedCust)
+                                            <option value="{{ $selectedCust->id }}" selected>
+                                                {{ $selectedCust->customer_id ? $selectedCust->customer_id . ' — ' : '' }}{{ $selectedCust->customer_name }}{{ $selectedCust->mobile ? ' (' . $selectedCust->mobile . ')' : '' }}
+                                            </option>
+                                        @endif
                                     </select>
                                 </div>
 
@@ -1344,9 +1388,53 @@
                 window.changeSaleOrderStatus(e, saleId, newStatus, this);
             });
 
+            // Customer Select2 with AJAX Search
+            $('#filter_customer_id').select2({
+                placeholder: 'All Customers',
+                allowClear: true,
+                width: '100%',
+                ajax: {
+                    url: '{{ route("salecustomers.index") }}',
+                    dataType: 'json',
+                    delay: 250,
+                    data: function(params) {
+                        return {
+                            type: 'all',
+                            search: params.term || ''
+                        };
+                    },
+                    processResults: function(data) {
+                        return {
+                            results: [
+                                { id: '', text: 'All Customers' }
+                            ].concat(data.map(function(c) {
+                                let label = c.customer_name;
+                                if (c.customer_id) {
+                                    label = c.customer_id + ' — ' + label;
+                                }
+                                if (c.mobile) {
+                                    label += ' (' + c.mobile + ')';
+                                }
+                                return {
+                                    id: c.id,
+                                    text: label
+                                };
+                            }))
+                        };
+                    },
+                    cache: true
+                }
+            });
+
+            // On customer select or clear, trigger search
+            $('#filter_customer_id').on('select2:select select2:clear', function(e) {
+                $('#filterForm').trigger('submit');
+            });
+
             // Reset form
             $('#btnReset').on('click', function() {
                 $('#filterForm')[0].reset();
+                $('#filter_customer_id').val(null).trigger('change.select2');
                 $('#filterForm').trigger('submit');
             });
 

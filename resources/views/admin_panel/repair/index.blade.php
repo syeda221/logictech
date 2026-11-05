@@ -350,6 +350,40 @@
             flex-shrink: 0;
         }
         .erp-filter-box input, 
+        /* Select2 Ajax Dropdown in Repair Filter Toolbar */
+        .erp-filter-box .select2-container {
+            flex: 1;
+            min-width: 0;
+            width: 100% !important;
+        }
+        .erp-filter-box .select2-container .select2-selection--single {
+            border: none !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            height: 30px !important;
+            display: flex !important;
+            align-items: center !important;
+            padding: 0 !important;
+        }
+        .erp-filter-box .select2-container--default .select2-selection--single .select2-selection__rendered {
+            padding-left: 2px !important;
+            padding-right: 20px !important;
+            font-size: 0.78rem !important;
+            color: #0f172a !important;
+            line-height: normal !important;
+            font-weight: 500 !important;
+        }
+        .erp-filter-box .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 30px !important;
+            right: 0 !important;
+        }
+        .erp-filter-box .select2-container--default .select2-selection--single .select2-selection__clear {
+            margin-right: 16px !important;
+            font-size: 1rem !important;
+            color: #94a3b8 !important;
+            line-height: 30px !important;
+        }
+        
         .erp-filter-box select {
             border: none !important;
             background: transparent !important;
@@ -362,6 +396,40 @@
             line-height: normal !important;
             margin: 0 !important;
         }
+        /* Select2 Ajax Dropdown in Repair Filter Toolbar */
+        .erp-filter-box .select2-container {
+            flex: 1;
+            min-width: 0;
+            width: 100% !important;
+        }
+        .erp-filter-box .select2-container .select2-selection--single {
+            border: none !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            height: 30px !important;
+            display: flex !important;
+            align-items: center !important;
+            padding: 0 !important;
+        }
+        .erp-filter-box .select2-container--default .select2-selection--single .select2-selection__rendered {
+            padding-left: 2px !important;
+            padding-right: 20px !important;
+            font-size: 0.78rem !important;
+            color: #0f172a !important;
+            line-height: normal !important;
+            font-weight: 500 !important;
+        }
+        .erp-filter-box .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 30px !important;
+            right: 0 !important;
+        }
+        .erp-filter-box .select2-container--default .select2-selection--single .select2-selection__clear {
+            margin-right: 16px !important;
+            font-size: 1rem !important;
+            color: #94a3b8 !important;
+            line-height: 30px !important;
+        }
+        
         .erp-filter-box select {
             cursor: pointer;
             width: 100%;
@@ -485,15 +553,19 @@
                                 <input type="text" name="ticket_no" placeholder="Ticket #" value="{{ request('ticket_no') }}" class="font-monospace fw-semibold">
                             </div>
 
-                            <div class="erp-filter-box" style="width: 210px;">
+                            <div class="erp-filter-box" style="width: 220px;">
                                 <i class="fas fa-user"></i>
-                                <select name="customer_id">
+                                @php
+                                    $selectedRepairCustId = request('customer_id');
+                                    $selectedRepairCust = $selectedRepairCustId ? \App\Models\Customer::find($selectedRepairCustId) : null;
+                                @endphp
+                                <select name="customer_id" id="repair_customer_id" style="width: 100%;">
                                     <option value="">All Customers</option>
-                                    @foreach($customers as $cust)
-                                        <option value="{{ $cust->id }}" {{ request('customer_id') == $cust->id ? 'selected' : '' }}>
-                                            {{ $cust->customer_name }}
+                                    @if($selectedRepairCust)
+                                        <option value="{{ $selectedRepairCust->id }}" selected>
+                                            {{ $selectedRepairCust->customer_id ? $selectedRepairCust->customer_id . ' — ' : '' }}{{ $selectedRepairCust->customer_name }}{{ $selectedRepairCust->mobile ? ' (' . $selectedRepairCust->mobile . ')' : '' }}
                                         </option>
-                                    @endforeach
+                                    @endif
                                 </select>
                             </div>
 
@@ -904,6 +976,49 @@
 
                 <script>
                     $(document).ready(function() {
+                        // Customer Select2 with AJAX Search
+                        $('#repair_customer_id').select2({
+                            placeholder: 'All Customers',
+                            allowClear: true,
+                            width: '100%',
+                            ajax: {
+                                url: '{{ route("salecustomers.index") }}',
+                                dataType: 'json',
+                                delay: 250,
+                                data: function(params) {
+                                    return {
+                                        type: 'all',
+                                        search: params.term || ''
+                                    };
+                                },
+                                processResults: function(data) {
+                                    return {
+                                        results: [
+                                            { id: '', text: 'All Customers' }
+                                        ].concat(data.map(function(c) {
+                                            let label = c.customer_name;
+                                            if (c.customer_id) {
+                                                label = c.customer_id + ' — ' + label;
+                                            }
+                                            if (c.mobile) {
+                                                label += ' (' + c.mobile + ')';
+                                            }
+                                            return {
+                                                id: c.id,
+                                                text: label
+                                            };
+                                        }))
+                                    };
+                                },
+                                cache: true
+                            }
+                        });
+
+                        // Auto-submit filter on customer change
+                        $('#repair_customer_id').on('select2:select select2:clear', function(e) {
+                            $(this).closest('form').submit();
+                        });
+
                         if ($.fn.DataTable.isDataTable('#repair-table')) {
                             $('#repair-table').DataTable().destroy();
                         }

@@ -122,7 +122,7 @@ class SaleController extends Controller
         }
 
         // Load all customers for filter dropdown
-        $customers = Customer::orderBy('customer_name')->get();
+        $customers = Customer::orderBy('customer_name')->limit(50)->get();
 
         return view('admin_panel.sale.index', compact('sales', 'customers', 'stats'));
     }

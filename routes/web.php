@@ -194,7 +194,7 @@ Route::middleware('auth')->group(function () {
 
     // Customer Routes
     // Dropdown list (by type)
-    Route::get('sale/customers', [CustomerController::class, 'saleindex'])->middleware('permission:customers.view')->name('salecustomers.index');
+    Route::get('sale/customers', [CustomerController::class, 'saleindex'])->name('salecustomers.index');
 
     // Single customer detail
     Route::get('sale/customers/{id}', [CustomerController::class, 'show'])->middleware('permission:customers.view')->name('salecustomers.show');
