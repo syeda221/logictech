@@ -246,6 +246,37 @@
             height: 32px !important;
             right: 6px !important;
         }
+                /* Select2 Dropdown Popup Custom Styling */
+        .select2-dropdown {
+            border: 1.5px solid #bfdbfe !important;
+            border-radius: 8px !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15) !important;
+            z-index: 99999 !important;
+            font-size: 0.8rem !important;
+        }
+        .select2-search--dropdown {
+            padding: 6px !important;
+        }
+        .select2-search--dropdown .select2-search__field {
+            border: 1.5px solid #bfdbfe !important;
+            border-radius: 6px !important;
+            padding: 6px 10px !important;
+            font-size: 0.8rem !important;
+            outline: none !important;
+            width: 100% !important;
+        }
+        .select2-search--dropdown .select2-search__field:focus {
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15) !important;
+        }
+        .select2-results__option {
+            padding: 6px 10px !important;
+            font-size: 0.8rem !important;
+        }
+        .select2-results__option--highlighted[aria-selected] {
+            background-color: #2563eb !important;
+            color: #ffffff !important;
+        }
         .erp-item-customer .select2-container--default .select2-selection--single .select2-selection__clear {
             margin-right: 18px !important;
             font-size: 1.05rem !important;
@@ -773,14 +804,23 @@
                                     <label class="erp-filter-label"><i class="fas fa-user text-primary"></i> Customer</label>
                                     @php
                                         $selectedCustId = request('customer_id');
-                                        $selectedCust = $selectedCustId ? \App\Models\Customer::find($selectedCustId) : null;
+                                        $selectedCust = ($selectedCustId && (!isset($customers) || !$customers->contains('id', $selectedCustId))) 
+                                            ? \App\Models\Customer::find($selectedCustId) 
+                                            : null;
                                     @endphp
-                                    <select class="form-select erp-filter-input" name="customer_id" id="filter_customer_id" style="width: 100%;">
+                                    <select class="form-select erp-filter-input select2-customer-ajax" name="customer_id" id="filter_customer_id" style="width: 100%;">
                                         <option value="">All Customers</option>
                                         @if($selectedCust)
                                             <option value="{{ $selectedCust->id }}" selected>
                                                 {{ $selectedCust->customer_id ? $selectedCust->customer_id . ' — ' : '' }}{{ $selectedCust->customer_name }}{{ $selectedCust->mobile ? ' (' . $selectedCust->mobile . ')' : '' }}
                                             </option>
+                                        @endif
+                                        @if(isset($customers))
+                                            @foreach ($customers as $c)
+                                                <option value="{{ $c->id }}" {{ (string)$c->id === (string)$selectedCustId ? 'selected' : '' }}>
+                                                    {{ $c->customer_id ? $c->customer_id . ' — ' : '' }}{{ $c->customer_name }}{{ $c->mobile ? ' (' . $c->mobile . ')' : '' }}
+                                                </option>
+                                            @endforeach
                                         @endif
                                     </select>
                                 </div>
@@ -1139,6 +1179,60 @@
         };
 
         $(document).ready(function() {
+            // Customer Select2 with AJAX Search (Run First & Resilient)
+            function initCustomerSelect2() {
+                if (typeof $ === 'undefined' || !$.fn || !$.fn.select2) {
+                    setTimeout(initCustomerSelect2, 60);
+                    return;
+                }
+                var $cSelect = $('#filter_customer_id');
+                if (!$cSelect.length) return;
+
+                $cSelect.select2({
+                    placeholder: 'All Customers',
+                    allowClear: true,
+                    width: '100%',
+                    ajax: {
+                        url: '{{ route("salecustomers.index") }}',
+                        dataType: 'json',
+                        delay: 250,
+                        data: function(params) {
+                            return {
+                                type: 'all',
+                                search: params.term || ''
+                            };
+                        },
+                        processResults: function(data) {
+                            return {
+                                results: [
+                                    { id: '', text: 'All Customers' }
+                                ].concat(data.map(function(c) {
+                                    var label = c.customer_name;
+                                    if (c.customer_id) {
+                                        label = c.customer_id + ' — ' + label;
+                                    }
+                                    if (c.mobile) {
+                                        label += ' (' + c.mobile + ')';
+                                    }
+                                    return {
+                                        id: c.id,
+                                        text: label
+                                    };
+                                }))
+                            };
+                        },
+                        cache: true
+                    }
+                });
+
+                $cSelect.on('select2:select select2:clear change', function(e) {
+                    if (e.target === this) {
+                        $('#filterForm').trigger('submit');
+                    }
+                });
+            }
+            initCustomerSelect2();
+
             let submenuHoverTimer = null;
 
             // Auto-detect viewport space: if near bottom, open upwards (dropup)
@@ -1297,7 +1391,7 @@
             }
 
             // Initial call
-            initDataTable();
+            try { initDataTable(); } catch(e) { console.warn('DataTable error:', e); }
 
             // Mobile Filter Panel Toggle
             $('#toggleFilterPanel').on('click', function() {
@@ -1388,48 +1482,7 @@
                 window.changeSaleOrderStatus(e, saleId, newStatus, this);
             });
 
-            // Customer Select2 with AJAX Search
-            $('#filter_customer_id').select2({
-                placeholder: 'All Customers',
-                allowClear: true,
-                width: '100%',
-                ajax: {
-                    url: '{{ route("salecustomers.index") }}',
-                    dataType: 'json',
-                    delay: 250,
-                    data: function(params) {
-                        return {
-                            type: 'all',
-                            search: params.term || ''
-                        };
-                    },
-                    processResults: function(data) {
-                        return {
-                            results: [
-                                { id: '', text: 'All Customers' }
-                            ].concat(data.map(function(c) {
-                                let label = c.customer_name;
-                                if (c.customer_id) {
-                                    label = c.customer_id + ' — ' + label;
-                                }
-                                if (c.mobile) {
-                                    label += ' (' + c.mobile + ')';
-                                }
-                                return {
-                                    id: c.id,
-                                    text: label
-                                };
-                            }))
-                        };
-                    },
-                    cache: true
-                }
-            });
-
-            // On customer select or clear, trigger search
-            $('#filter_customer_id').on('select2:select select2:clear', function(e) {
-                $('#filterForm').trigger('submit');
-            });
+// (Customer select2 initialized at top of ready)
 
             // Reset form
             $('#btnReset').on('click', function() {

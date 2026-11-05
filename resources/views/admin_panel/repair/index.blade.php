@@ -377,6 +377,37 @@
             height: 30px !important;
             right: 0 !important;
         }
+                /* Select2 Dropdown Popup Custom Styling */
+        .select2-dropdown {
+            border: 1.5px solid #bfdbfe !important;
+            border-radius: 8px !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15) !important;
+            z-index: 99999 !important;
+            font-size: 0.8rem !important;
+        }
+        .select2-search--dropdown {
+            padding: 6px !important;
+        }
+        .select2-search--dropdown .select2-search__field {
+            border: 1.5px solid #bfdbfe !important;
+            border-radius: 6px !important;
+            padding: 6px 10px !important;
+            font-size: 0.8rem !important;
+            outline: none !important;
+            width: 100% !important;
+        }
+        .select2-search--dropdown .select2-search__field:focus {
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15) !important;
+        }
+        .select2-results__option {
+            padding: 6px 10px !important;
+            font-size: 0.8rem !important;
+        }
+        .select2-results__option--highlighted[aria-selected] {
+            background-color: #2563eb !important;
+            color: #ffffff !important;
+        }
         .erp-filter-box .select2-container--default .select2-selection--single .select2-selection__clear {
             margin-right: 16px !important;
             font-size: 1rem !important;
@@ -422,6 +453,37 @@
         .erp-filter-box .select2-container--default .select2-selection--single .select2-selection__arrow {
             height: 30px !important;
             right: 0 !important;
+        }
+                /* Select2 Dropdown Popup Custom Styling */
+        .select2-dropdown {
+            border: 1.5px solid #bfdbfe !important;
+            border-radius: 8px !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15) !important;
+            z-index: 99999 !important;
+            font-size: 0.8rem !important;
+        }
+        .select2-search--dropdown {
+            padding: 6px !important;
+        }
+        .select2-search--dropdown .select2-search__field {
+            border: 1.5px solid #bfdbfe !important;
+            border-radius: 6px !important;
+            padding: 6px 10px !important;
+            font-size: 0.8rem !important;
+            outline: none !important;
+            width: 100% !important;
+        }
+        .select2-search--dropdown .select2-search__field:focus {
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15) !important;
+        }
+        .select2-results__option {
+            padding: 6px 10px !important;
+            font-size: 0.8rem !important;
+        }
+        .select2-results__option--highlighted[aria-selected] {
+            background-color: #2563eb !important;
+            color: #ffffff !important;
         }
         .erp-filter-box .select2-container--default .select2-selection--single .select2-selection__clear {
             margin-right: 16px !important;
@@ -557,14 +619,23 @@
                                 <i class="fas fa-user"></i>
                                 @php
                                     $selectedRepairCustId = request('customer_id');
-                                    $selectedRepairCust = $selectedRepairCustId ? \App\Models\Customer::find($selectedRepairCustId) : null;
+                                    $selectedRepairCust = ($selectedRepairCustId && (!isset($customers) || !$customers->contains('id', $selectedRepairCustId))) 
+                                        ? \App\Models\Customer::find($selectedRepairCustId) 
+                                        : null;
                                 @endphp
-                                <select name="customer_id" id="repair_customer_id" style="width: 100%;">
+                                <select name="customer_id" id="repair_customer_id" class="form-select select2-customer-ajax" style="width: 100%;">
                                     <option value="">All Customers</option>
                                     @if($selectedRepairCust)
                                         <option value="{{ $selectedRepairCust->id }}" selected>
                                             {{ $selectedRepairCust->customer_id ? $selectedRepairCust->customer_id . ' — ' : '' }}{{ $selectedRepairCust->customer_name }}{{ $selectedRepairCust->mobile ? ' (' . $selectedRepairCust->mobile . ')' : '' }}
                                         </option>
+                                    @endif
+                                    @if(isset($customers))
+                                        @foreach ($customers as $c)
+                                            <option value="{{ $c->id }}" {{ (string)$c->id === (string)$selectedRepairCustId ? 'selected' : '' }}>
+                                                {{ $c->customer_id ? $c->customer_id . ' — ' : '' }}{{ $c->customer_name }}{{ $c->mobile ? ' (' . $c->mobile . ')' : '' }}
+                                            </option>
+                                        @endforeach
                                     @endif
                                 </select>
                             </div>
@@ -969,94 +1040,109 @@
                      @endif
                 @endforeach
 
-                {{-- DataTables Dependencies --}}
-                <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
-                <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-                <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-
-                <script>
-                    $(document).ready(function() {
-                        // Customer Select2 with AJAX Search
-                        $('#repair_customer_id').select2({
-                            placeholder: 'All Customers',
-                            allowClear: true,
-                            width: '100%',
-                            ajax: {
-                                url: '{{ route("salecustomers.index") }}',
-                                dataType: 'json',
-                                delay: 250,
-                                data: function(params) {
-                                    return {
-                                        type: 'all',
-                                        search: params.term || ''
-                                    };
-                                },
-                                processResults: function(data) {
-                                    return {
-                                        results: [
-                                            { id: '', text: 'All Customers' }
-                                        ].concat(data.map(function(c) {
-                                            let label = c.customer_name;
-                                            if (c.customer_id) {
-                                                label = c.customer_id + ' — ' + label;
-                                            }
-                                            if (c.mobile) {
-                                                label += ' (' + c.mobile + ')';
-                                            }
-                                            return {
-                                                id: c.id,
-                                                text: label
-                                            };
-                                        }))
-                                    };
-                                },
-                                cache: true
-                            }
-                        });
-
-                        // Auto-submit filter on customer change
-                        $('#repair_customer_id').on('select2:select select2:clear', function(e) {
-                            $(this).closest('form').submit();
-                        });
-
-                        if ($.fn.DataTable.isDataTable('#repair-table')) {
-                            $('#repair-table').DataTable().destroy();
-                        }
-                        $('#repair-table').DataTable({
-                            pageLength: 10,
-                            lengthMenu: [5, 10, 25, 50, 100],
-                            order: [
-                                [0, 'desc']
-                            ],
-                            language: {
-                                search: "",
-                                searchPlaceholder: "Search ticket, customer, device...",
-                                lengthMenu: "Show _MENU_ entries",
-                                info: "Showing _START_ to _END_ of _TOTAL_ repair jobs",
-                                paginate: {
-                                    previous: '<i class="fas fa-chevron-left"></i>',
-                                    next: '<i class="fas fa-chevron-right"></i>'
-                                }
-                            }
-                        });
-
-                        // Auto-detect viewport space: open dropdown upward (dropup) if near bottom
-                        $(document).on('show.bs.dropdown', '.dropdown', function () {
-                            let $btn = $(this).find('[data-toggle="dropdown"], [data-bs-toggle="dropdown"]');
-                            if ($btn.length) {
-                                let offset = $btn.offset();
-                                let spaceBelow = $(window).height() - (offset.top - $(window).scrollTop()) - $btn.outerHeight();
-                                if (spaceBelow < 280) {
-                                    $(this).addClass('dropup');
-                                } else {
-                                    $(this).removeClass('dropup');
-                                }
-                            }
-                        });
-                    });
-                </script>
-
             </div>
         </div>
     </div>
+@endsection
+
+@section('js')
+    <script>
+        (function initRepairCustomer() {
+            function bindRepairSelect2() {
+                if (typeof $ === 'undefined' || !$.fn || !$.fn.select2) {
+                    setTimeout(bindRepairSelect2, 60);
+                    return;
+                }
+                var $sel = $('#repair_customer_id');
+                if (!$sel.length) return;
+
+                $sel.select2({
+                    placeholder: 'All Customers',
+                    allowClear: true,
+                    width: '100%',
+                    ajax: {
+                        url: '{{ route("salecustomers.index") }}',
+                        dataType: 'json',
+                        delay: 250,
+                        data: function(params) {
+                            return {
+                                type: 'all',
+                                search: params.term || ''
+                            };
+                        },
+                        processResults: function(data) {
+                            return {
+                                results: [
+                                    { id: '', text: 'All Customers' }
+                                ].concat(data.map(function(c) {
+                                    var label = c.customer_name;
+                                    if (c.customer_id) {
+                                        label = c.customer_id + ' — ' + label;
+                                    }
+                                    if (c.mobile) {
+                                        label += ' (' + c.mobile + ')';
+                                    }
+                                    return {
+                                        id: c.id,
+                                        text: label
+                                    };
+                                }))
+                            };
+                        },
+                        cache: true
+                    }
+                });
+
+                $sel.on('select2:select select2:clear change', function(e) {
+                    if (e.target === this) {
+                        $(this).closest('form').submit();
+                    }
+                });
+            }
+            bindRepairSelect2();
+        })();
+
+        $(document).ready(function() {
+            try {
+                if ($.fn.DataTable && $.fn.DataTable.isDataTable('#repair-table')) {
+                    $('#repair-table').DataTable().destroy();
+                }
+                if ($.fn.DataTable) {
+                    $('#repair-table').DataTable({
+                        pageLength: 10,
+                        lengthMenu: [5, 10, 25, 50, 100],
+                        order: [
+                            [0, 'desc']
+                        ],
+                        language: {
+                            search: "",
+                            searchPlaceholder: "Search ticket, customer, device...",
+                            lengthMenu: "Show _MENU_ entries",
+                            info: "Showing _START_ to _END_ of _TOTAL_ repair jobs",
+                            paginate: {
+                                previous: '<i class="fas fa-chevron-left"></i>',
+                                next: '<i class="fas fa-chevron-right"></i>'
+                            }
+                        }
+                    });
+                }
+            } catch(e) {
+                console.warn('DataTable notice:', e);
+            }
+
+            // Auto-detect viewport space: open dropdown upward (dropup) if near bottom
+            $(document).on('show.bs.dropdown', '.dropdown', function () {
+                var $btn = $(this).find('[data-toggle="dropdown"], [data-bs-toggle="dropdown"]');
+                if ($btn.length) {
+                    var offset = $btn.offset();
+                    var spaceBelow = $(window).height() - (offset.top - $(window).scrollTop()) - $btn.outerHeight();
+                    if (spaceBelow < 280) {
+                        $(this).addClass('dropup');
+                    } else {
+                        $(this).removeClass('dropup');
+                    }
+                }
+            });
+        });
+    </script>
 @endsection
