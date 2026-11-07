@@ -180,6 +180,7 @@
         .erp-item-date { flex: 1; min-width: 95px; }
         .erp-item-bill, .erp-item-serial { flex: 1; min-width: 110px; }
         .erp-item-status { flex: 1.1; min-width: 105px; }
+        .erp-item-balance { flex: 1.1; min-width: 110px; }
         .erp-item-customer { flex: 1.4; min-width: 135px; }
         .erp-item-actions {
             flex: 0 0 auto;
@@ -762,7 +763,10 @@
 
                         {{-- Modern ERP Filter Panel (Single-Row Toolbar with Right Pill Buttons) --}}
                         <div class="erp-filter-card" id="filterPanelContainer">
-                            <form id="filterForm" class="erp-filter-single-row" autocomplete="off">
+                            <form id="filterForm" action="{{ route('sale.index') }}" method="GET" class="erp-filter-single-row" autocomplete="off">
+                                @if(request('status'))
+                                    <input type="hidden" name="status" value="{{ request('status') }}">
+                                @endif
                                 <div class="erp-filter-item erp-item-quick">
                                     <label class="erp-filter-label"><i class="far fa-clock text-primary"></i> Period</label>
                                     <select id="quick_filter" class="form-select erp-filter-input">
@@ -776,27 +780,36 @@
 
                                 <div class="erp-filter-item erp-item-date">
                                     <label class="erp-filter-label"><i class="far fa-calendar-alt text-primary"></i> From</label>
-                                    <input type="text" class="form-control erp-filter-input datepicker-custom bg-white" name="from_date" id="filter_from_date" placeholder="dd/mm/yy">
+                                    <input type="text" class="form-control erp-filter-input datepicker-custom bg-white" name="from_date" id="filter_from_date" value="{{ request('from_date') }}" placeholder="dd/mm/yy">
                                 </div>
 
                                 <div class="erp-filter-item erp-item-date">
                                     <label class="erp-filter-label"><i class="far fa-calendar-check text-primary"></i> To</label>
-                                    <input type="text" class="form-control erp-filter-input datepicker-custom bg-white" name="to_date" id="filter_to_date" placeholder="dd/mm/yy">
+                                    <input type="text" class="form-control erp-filter-input datepicker-custom bg-white" name="to_date" id="filter_to_date" value="{{ request('to_date') }}" placeholder="dd/mm/yy">
                                 </div>
 
                                 <div class="erp-filter-item erp-item-serial">
                                     <label class="erp-filter-label"><i class="fas fa-barcode text-primary"></i> Serial / Search</label>
-                                    <input type="text" class="form-control erp-filter-input" name="serial_no" id="filter_serial_no" placeholder="Serial / Product...">
+                                    <input type="text" class="form-control erp-filter-input" name="serial_no" id="filter_serial_no" value="{{ request('serial_no') }}" placeholder="Serial / Product...">
                                 </div>
 
                                 <div class="erp-filter-item erp-item-status">
                                     <label class="erp-filter-label"><i class="fas fa-tasks text-primary"></i> Status</label>
                                     <select class="form-select erp-filter-input" name="order_status" id="filter_order_status">
                                         <option value="all">All Status</option>
-                                        <option value="pending">🔴 Pending</option>
-                                        <option value="ready">🔵 Ready</option>
-                                        <option value="delivered">🟢 Delivered</option>
-                                        <option value="cancelled">🟡 Cancelled</option>
+                                        <option value="pending" {{ request('order_status') === 'pending' ? 'selected' : '' }}>🔴 Pending</option>
+                                        <option value="ready" {{ request('order_status') === 'ready' ? 'selected' : '' }}>🔵 Ready</option>
+                                        <option value="delivered" {{ request('order_status') === 'delivered' ? 'selected' : '' }}>🟢 Delivered</option>
+                                        <option value="cancelled" {{ request('order_status') === 'cancelled' ? 'selected' : '' }}>🟡 Cancelled</option>
+                                    </select>
+                                </div>
+
+                                <div class="erp-filter-item erp-item-balance">
+                                    <label class="erp-filter-label"><i class="fas fa-wallet text-primary"></i> Balance</label>
+                                    <select class="form-select erp-filter-input" name="balance_status" id="filter_balance_status">
+                                        <option value="all">All Balances</option>
+                                        <option value="due" {{ request('balance_status') === 'due' ? 'selected' : '' }}>🔴 Due Only</option>
+                                        <option value="paid" {{ request('balance_status') === 'paid' ? 'selected' : '' }}>🟢 Paid Only</option>
                                     </select>
                                 </div>
 
@@ -827,9 +840,9 @@
 
                                 <div class="erp-filter-item erp-item-actions ms-auto">
                                     <div class="d-flex align-items-center gap-1">
-                                        <button type="button" class="btn btn-erp-pill-outline" id="btnReset" title="Reset Filters">
+                                        <a href="{{ route('sale.index', request('status') ? ['status' => request('status')] : []) }}" class="btn btn-erp-pill-outline" id="btnReset" title="Reset Filters">
                                             <i class="fas fa-undo"></i> <span>Reset</span>
-                                        </button>
+                                        </a>
                                         <button type="submit" class="btn btn-erp-pill-primary" id="btnSearch" title="Apply Filter">
                                             <i class="fas fa-filter"></i> <span>Filter</span>
                                         </button>
@@ -1225,10 +1238,8 @@
                     }
                 });
 
-                $cSelect.on('select2:select select2:clear change', function(e) {
-                    if (e.target === this) {
-                        $('#filterForm').trigger('submit');
-                    }
+                $cSelect.on('select2:select select2:clear', function(e) {
+                    $('#filterForm').submit();
                 });
             }
             initCustomerSelect2();
@@ -1430,49 +1441,15 @@
                 $('#filterForm').trigger('submit');
             });
 
-            // Submit filter form via AJAX
-            $('#filterForm').on('submit', function(e) {
-                e.preventDefault();
+            // Auto-submit when status or balance changes
+            $('#filter_order_status, #filter_balance_status').on('change', function() {
+                $('#filterForm').submit();
+            });
+
+            // Submit filter form directly via GET
+            $('#filterForm').on('submit', function() {
                 const $btn = $('#btnSearch');
-                const origHtml = $btn.html();
-                $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Searching...');
-
-                let formData = $(this).serialize();
-                let urlParams = new URLSearchParams(window.location.search);
-                if (urlParams.has('status')) {
-                    formData += '&status=' + urlParams.get('status');
-                }
-
-                $.ajax({
-                    url: window.location.pathname,
-                    method: 'GET',
-                    data: formData,
-                    success: function(response) {
-                        $btn.prop('disabled', false).html(origHtml);
-                        
-                        if ($.fn.DataTable.isDataTable('.datanew')) {
-                            $('.datanew').DataTable().destroy();
-                        }
-                        
-                        $('#salesTableBody').html(response.html);
-                        
-                        // Update Stat Cards dynamically if present
-                        if (response.stats) {
-                            $('#statTotalCount').text(Number(response.stats.total_count || 0).toLocaleString());
-                            $('#statTotalNet').text('Rs. ' + Number(response.stats.total_net || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
-                            $('#statTotalDiscount').text('Rs. ' + Number(response.stats.total_discount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
-                            $('#statStatusCounts').html((response.stats.booked_count || 0) + ' <span class="fs-6 fw-normal text-muted">/ ' + (response.stats.confirmed_booking_count || 0) + '</span>');
-                        }
-
-                        initDataTable();
-                    },
-                    error: function(err) {
-                        $btn.prop('disabled', false).html(origHtml);
-                        if (typeof Swal !== 'undefined') {
-                            Swal.fire('Error', 'Failed to retrieve filtered list.', 'error');
-                        }
-                    }
-                });
+                $btn.html('<span class="spinner-border spinner-border-sm me-1"></span>Filtering...');
             });
 
             $(document).on('click', '.btn-change-order-status', function(e) {
@@ -1484,12 +1461,7 @@
 
 // (Customer select2 initialized at top of ready)
 
-            // Reset form
-            $('#btnReset').on('click', function() {
-                $('#filterForm')[0].reset();
-                $('#filter_customer_id').val(null).trigger('change.select2');
-                $('#filterForm').trigger('submit');
-            });
+
 
             // Confirm Booking Action
             $(document).on('click', '.confirm-booking-btn', function(e) {

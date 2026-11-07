@@ -828,11 +828,6 @@ class RepairController extends Controller
                     ];
                 }
                 $repair->problem_description = json_encode($formattedItems);
-
-                $firstRow = $formattedItems[0] ?? null;
-                if ($firstRow && !empty($firstRow['desc'])) {
-                    $repair->item_name = \Illuminate\Support\Str::limit(trim($firstRow['desc']), 150);
-                }
             }
 
             $repair->save();

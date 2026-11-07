@@ -34,6 +34,83 @@
     .rv-flash { border-radius:8px; padding:8px 13px; font-size:0.82rem; margin-bottom:9px; display:flex; align-items:center; gap:7px; }
     .rv-flash.ok  { background:#f0fdf4; border:1px solid #86efac; color:#16a34a; }
     .rv-flash.err { background:#fef2f2; border:1px solid #fca5a5; color:#dc2626; }
+    /* Select2 Container & Search Styling for Receipt Voucher */
+    .select2-container .select2-selection--single {
+        background-color: #fff !important;
+        border: 1px solid var(--rv-border) !important;
+        border-radius: 7px !important;
+        height: 32px !important;
+        display: flex !important;
+        align-items: center !important;
+        box-shadow: none !important;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        color: var(--rv-text) !important;
+        font-size: 0.83rem !important;
+        font-weight: 500 !important;
+        line-height: 30px !important;
+        padding-left: 9px !important;
+        padding-right: 24px !important;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__placeholder {
+        color: #94a3b8 !important;
+        font-size: 0.82rem !important;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 30px !important;
+        right: 6px !important;
+    }
+    .select2-container--default.select2-container--focus .select2-selection--single,
+    .select2-container--default.select2-container--open .select2-selection--single {
+        border-color: var(--rv-primary) !important;
+        box-shadow: 0 0 0 2px rgba(79,70,229,0.12) !important;
+        outline: none !important;
+    }
+    .select2-dropdown {
+        border: 1.5px solid #818cf8 !important;
+        border-radius: 8px !important;
+        box-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.15) !important;
+        z-index: 999999 !important;
+        background: #ffffff !important;
+    }
+    .select2-search--dropdown {
+        padding: 6px !important;
+        background: #f8fafc !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+    }
+    .select2-search--dropdown .select2-search__field {
+        border: 1.5px solid #cbd5e1 !important;
+        border-radius: 6px !important;
+        padding: 6px 10px !important;
+        font-size: 0.84rem !important;
+        font-weight: 600 !important;
+        color: #0f172a !important;
+        outline: none !important;
+        width: 100% !important;
+        background: #ffffff !important;
+    }
+    .select2-search--dropdown .select2-search__field:focus {
+        border-color: var(--rv-primary) !important;
+        box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15) !important;
+    }
+    .select2-results__option {
+        padding: 6px 10px !important;
+        font-size: 0.82rem !important;
+        color: var(--rv-text) !important;
+        border-bottom: 1px solid #f1f5f9 !important;
+    }
+    .select2-results__option:last-child {
+        border-bottom: none !important;
+    }
+    .select2-results__option--highlighted[aria-selected] {
+        background-color: var(--rv-primary) !important;
+        color: #ffffff !important;
+    }
+    .select2-results__option[aria-selected="true"] {
+        background-color: #e0e7ff !important;
+        color: var(--rv-primary) !important;
+        font-weight: 700 !important;
+    }
 </style>
 
 <div class="main-content">
@@ -103,16 +180,16 @@
             </div>
             <div class="col-md-4">
               <label class="rv-label">Party / Account</label>
-              <select name="vendor_id" class="rv-input" id="partyId">
+              <select name="vendor_id" class="rv-input" id="partyId" style="width: 100%;">
                 @if(isset($partyList) && count($partyList) > 0)
-                  <option disabled>Select Party</option>
+                  <option value="" disabled>Select Party</option>
                   @foreach($partyList as $p)
-                    <option value="{{ $p['id'] }}" data-phone="{{ $p['mobile'] }}" data-bal="{{ $p['closing_balance'] }}" {{ ($partyId == $p['id']) ? 'selected' : '' }}>
+                    <option value="{{ $p['id'] }}" data-phone="{{ $p['mobile'] }}" data-bal="{{ $p['closing_balance'] }}" data-addr="{{ $p['address'] ?? '' }}" {{ ($partyId == $p['id']) ? 'selected' : '' }}>
                       {{ $p['text'] }}
                     </option>
                   @endforeach
                 @else
-                  <option disabled selected>Select Party</option>
+                  <option value="" disabled selected>Select Party</option>
                 @endif
               </select>
             </div>
@@ -329,37 +406,126 @@
 $(document).ready(function() {
     const dueUrl = '{{ url("/customer") }}';
     const isEditMode = {{ isset($receiptVoucher) ? 'true' : 'false' }};
+    const initialPartyId = '{{ $partyId ?? "" }}';
+
+    function initPartySelect2() {
+        if (typeof $ === 'undefined' || !$.fn || !$.fn.select2) {
+            setTimeout(initPartySelect2, 60);
+            return;
+        }
+        let $p = $('#partyId');
+        if ($p.hasClass("select2-hidden-accessible")) {
+            $p.select2('destroy');
+        }
+        $p.select2({
+            placeholder: 'Search Party / Account (Name, Mobile, ID)...',
+            allowClear: true,
+            width: '100%',
+            matcher: function(params, data) {
+                if ($.trim(params.term) === '') {
+                    return data;
+                }
+                if (typeof data.text === 'undefined') {
+                    return null;
+                }
+                let term = params.term.toLowerCase();
+                let text = (data.text || '').toLowerCase();
+                let phone = ($(data.element).data('phone') || '').toString().toLowerCase();
+                let addr = ($(data.element).data('addr') || '').toString().toLowerCase();
+
+                if (text.indexOf(term) > -1 || phone.indexOf(term) > -1 || addr.indexOf(term) > -1) {
+                    return data;
+                }
+                return null;
+            }
+        });
+    }
+
+    // Auto-focus search input when select2 dropdown opens
+    $(document).on('select2:open', () => {
+        let field = document.querySelector('.select2-container--open .select2-search__field');
+        if (field) {
+            field.focus();
+        }
+    });
 
     if (!isEditMode) {
         loadPartyList('customer');
+    } else {
+        initPartySelect2();
     }
 
     $('#partyType').on('change', function() { loadPartyList($(this).val()); resetOutstanding(); });
 
     function loadPartyList(type) {
         let $s = $('#partyId');
-        $s.html('<option disabled selected>Loading...</option>');
+        if ($s.hasClass("select2-hidden-accessible")) {
+            $s.select2('destroy');
+        }
+        $s.html('<option value="" disabled selected>Loading...</option>');
+        initPartySelect2();
         $('#tel').val(''); setBalance(0); resetOutstanding();
+
         if (['vendor','customer','walkin'].includes(type)) {
             $.get('{{ route("party.list") }}?type='+type, function(d) {
-                $s.empty().append('<option disabled selected>Select Party</option>');
-                (d||[]).forEach(i => $s.append(`<option value="${i.id}" data-phone="${i.mobile||''}" data-bal="${i.closing_balance}">${i.text}</option>`));
-            }).fail(() => $s.html('<option disabled>Error</option>'));
+                $s.empty().append('<option value="" disabled selected>Select Party</option>');
+                (d||[]).forEach(i => {
+                    let phone = i.mobile || '';
+                    let bal = i.closing_balance || 0;
+                    let addr = i.address || '';
+                    $s.append(`<option value="${i.id}" data-phone="${phone}" data-bal="${bal}" data-addr="${addr}">${i.text}</option>`);
+                });
+                initPartySelect2();
+                if (isEditMode && initialPartyId) {
+                    $s.val(initialPartyId).trigger('change');
+                }
+            }).fail(() => {
+                $s.html('<option value="" disabled>Error loading</option>');
+                initPartySelect2();
+            });
         } else if (type) {
             $.get('{{ route("get.accounts.by.head", ":id") }}'.replace(':id',type), function(d) {
-                $s.empty().append('<option disabled selected>Select Account</option>');
-                (d||[]).forEach(a => $s.append(`<option value="${a.id}" data-phone="${a.account_code||''}" data-bal="${a.current_balance||0}">${a.title}</option>`));
-            }).fail(() => $s.html('<option disabled>Error</option>'));
+                $s.empty().append('<option value="" disabled selected>Select Account</option>');
+                (d||[]).forEach(a => {
+                    let phone = a.account_code || '';
+                    let bal = a.current_balance || 0;
+                    $s.append(`<option value="${a.id}" data-phone="${phone}" data-bal="${bal}">${a.title}</option>`);
+                });
+                initPartySelect2();
+                if (isEditMode && initialPartyId) {
+                    $s.val(initialPartyId).trigger('change');
+                }
+            }).fail(() => {
+                $s.html('<option value="" disabled>Error loading</option>');
+                initPartySelect2();
+            });
         }
     }
 
     $('#partyId').on('change', function() {
-        let $o = $(this).find(':selected'), type = $('#partyType').val();
-        $('#tel').val($o.data('phone'));
-        setBalance(parseFloat($o.data('bal'))||0);
-        if (!$('#remarks').val()) $('#remarks').val('Receipt from '+$o.text().trim());
-        if (type==='customer'||type==='walkin') loadOutstanding($(this).val());
-        else resetOutstanding();
+        let $o = $(this).find(':selected');
+        let val = $(this).val();
+        if (!val) {
+            $('#tel').val('');
+            setBalance(0);
+            resetOutstanding();
+            return;
+        }
+        let type = $('#partyType').val();
+        $('#tel').val($o.data('phone') || '');
+        setBalance(parseFloat($o.data('bal')) || 0);
+
+        if (!$('#remarks').val()) {
+            let fullText = $o.text().trim();
+            let clean = fullText.split('(')[0].replace(/^#[\w\-]+\s*-\s*/, '').trim();
+            $('#remarks').val('Receipt from ' + (clean || fullText));
+        }
+
+        if (type === 'customer' || type === 'walkin') {
+            loadOutstanding(val);
+        } else {
+            resetOutstanding();
+        }
     });
 
     function setBalance(bal) {

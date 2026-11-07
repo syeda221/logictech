@@ -1000,10 +1000,14 @@ class VoucherController extends Controller
                 $parties = Customer::all();
                 foreach ($parties as $c) {
                     $bal = \App\Models\CustomerLedger::where('customer_id', $c->id)->latest()->value('closing_balance') ?? ($c->opening_balance ?? 0);
+                    $lbl = $bal >= 0 ? 'Dr' : 'Cr';
+                    $prefix = $c->customer_id ? "#{$c->customer_id} - " : '';
+                    $phone = $c->mobile ? " ({$c->mobile})" : '';
                     $partyList[] = [
                         'id'              => $c->id,
-                        'text'            => $c->customer_name . " ({$bal})",
+                        'text'            => "{$prefix}{$c->customer_name}{$phone} (Bal: " . number_format(abs($bal), 0) . " {$lbl})",
                         'mobile'          => $c->mobile ?? '',
+                        'address'         => $c->address ?? '',
                         'closing_balance' => $bal,
                     ];
                     if ($c->id == $partyId) {
@@ -1014,10 +1018,14 @@ class VoucherController extends Controller
                 $vendors = Vendor::all();
                 foreach ($vendors as $v) {
                     $bal = \App\Models\VendorLedger::where('vendor_id', $v->id)->latest()->value('closing_balance') ?? ($v->opening_balance ?? 0);
+                    $lbl = $bal >= 0 ? 'Cr' : 'Dr';
+                    $prefix = $v->id ? '#VEND-' . str_pad($v->id, 4, '0', STR_PAD_LEFT) . ' - ' : '';
+                    $phone = $v->phone ? " ({$v->phone})" : '';
                     $partyList[] = [
                         'id'              => $v->id,
-                        'text'            => $v->name . " ({$bal})",
+                        'text'            => "{$prefix}{$v->name}{$phone} (Bal: " . number_format(abs($bal), 0) . " {$lbl})",
                         'mobile'          => $v->phone ?? '',
+                        'address'         => $v->address ?? '',
                         'closing_balance' => $bal,
                     ];
                     if ($v->id == $partyId) {
@@ -2452,32 +2460,38 @@ class VoucherController extends Controller
                     $vendor->closing_balance = $balanceService->getVendorBalance($vendor->id);
                     $bal = number_format(abs($vendor->closing_balance), 0);
                     $lbl = $vendor->closing_balance >= 0 ? 'Cr' : 'Dr';
-                    $vendor->text = $vendor->text . " (Bal: {$bal} {$lbl})";
+                    $prefix = $vendor->id ? '#VEND-' . str_pad($vendor->id, 4, '0', STR_PAD_LEFT) . ' - ' : '';
+                    $phone = $vendor->mobile ? " ({$vendor->mobile})" : '';
+                    $vendor->text = "{$prefix}{$vendor->text}{$phone} (Bal: {$bal} {$lbl})";
                     $data[] = $vendor;
                 }
             } elseif ($type == 'customer') {
                 $customers = \App\Models\Customer::where('customer_type', '!=', 'Walking Customer')
-                    ->get(['id', 'customer_name', 'mobile', 'address', 'status', 'opening_balance']);
+                    ->get(['id', 'customer_id', 'customer_name', 'mobile', 'address', 'status', 'opening_balance']);
 
                 foreach ($customers as $customer) {
                     $customer->closing_balance = $balanceService->getCustomerBalance($customer->id);
                     $bal = number_format(abs($customer->closing_balance), 0);
                     $lbl = $customer->closing_balance >= 0 ? 'Dr' : 'Cr';
                     
-                    $customer->text = $customer->customer_name . " (Bal: {$bal} {$lbl})";
+                    $prefix = $customer->customer_id ? "#{$customer->customer_id} - " : '';
+                    $phone = $customer->mobile ? " ({$customer->mobile})" : '';
+                    $customer->text = "{$prefix}{$customer->customer_name}{$phone} (Bal: {$bal} {$lbl})";
                     $customer->remarks = $customer->status;
                     $data[] = $customer;
                 }
             } elseif ($type == 'walkin') {
                 $customers = \App\Models\Customer::where('customer_type', 'Walking Customer')
-                    ->get(['id', 'customer_name', 'mobile', 'address', 'status', 'opening_balance']);
+                    ->get(['id', 'customer_id', 'customer_name', 'mobile', 'address', 'status', 'opening_balance']);
 
                 foreach ($customers as $customer) {
                     $customer->closing_balance = $balanceService->getCustomerBalance($customer->id);
                     $bal = number_format(abs($customer->closing_balance), 0);
                     $lbl = $customer->closing_balance >= 0 ? 'Dr' : 'Cr';
 
-                    $customer->text = $customer->customer_name . " (Bal: {$bal} {$lbl})";
+                    $prefix = $customer->customer_id ? "#{$customer->customer_id} - " : '';
+                    $phone = $customer->mobile ? " ({$customer->mobile})" : '';
+                    $customer->text = "{$prefix}{$customer->customer_name}{$phone} (Bal: {$bal} {$lbl})";
                     $customer->remarks = $customer->status;
                     $data[] = $customer;
                 }
@@ -2972,13 +2986,26 @@ class VoucherController extends Controller
                             \App\Models\Customer::find($customerId)->opening_balance ?? 0
                         );
 
+                        $ledgerDesc = "Receipt Voucher {$rv->rvid}";
+                        if (!empty($rv->settled_invoices)) {
+                            $settled = json_decode($rv->settled_invoices, true);
+                            if (is_array($settled) && !empty($settled)) {
+                                $invNos = implode(', ', array_map(function($inv) {
+                                    return str_starts_with($inv, '#') ? $inv : '#' . $inv;
+                                }, array_filter(array_column($settled, 'invoice_no'))));
+                                if ($invNos) {
+                                    $ledgerDesc .= " | Invoices: {$invNos}";
+                                }
+                            }
+                        }
+
                         \App\Models\CustomerLedger::create([
                             'customer_id'      => $customerId,
                             'admin_or_user_id' => auth()->id() ?: 1,
                             'previous_balance' => $prevBal,
                             'opening_balance'  => 0,
                             'closing_balance'  => $prevBal - $totalAmt,
-                            'description'      => "Receipt Voucher {$rv->rvid}",
+                            'description'      => $ledgerDesc,
                             'created_at'       => $rv->created_at ?? now(),
                             'updated_at'       => $rv->updated_at ?? now(),
                         ]);

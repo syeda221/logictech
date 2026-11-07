@@ -44,12 +44,33 @@ class SaleController extends Controller
             $query->where('order_status', $request->order_status);
         }
 
+        // Apply Balance Status Filter (all, due, paid)
+        $balanceStatus = $request->input('balance_status', $request->input('payment_status', 'all'));
+        if ($balanceStatus && $balanceStatus !== 'all') {
+            if ($balanceStatus === 'due') {
+                $query->whereRaw('(total_net - COALESCE(cash, 0) - COALESCE(card, 0)) > 0')
+                      ->where('order_status', '!=', 'cancelled');
+            } elseif ($balanceStatus === 'paid') {
+                $query->whereRaw('(total_net - COALESCE(cash, 0) - COALESCE(card, 0)) <= 0');
+            }
+        }
+
         // Apply Date Filters
         if ($request->filled('from_date')) {
-            $query->whereDate('created_at', '>=', $request->from_date);
+            try {
+                $fromDate = \Carbon\Carbon::parse($request->from_date)->startOfDay();
+                $query->where('created_at', '>=', $fromDate);
+            } catch (\Exception $e) {
+                $query->whereDate('created_at', '>=', $request->from_date);
+            }
         }
         if ($request->filled('to_date')) {
-            $query->whereDate('created_at', '<=', $request->to_date);
+            try {
+                $toDate = \Carbon\Carbon::parse($request->to_date)->endOfDay();
+                $query->where('created_at', '<=', $toDate);
+            } catch (\Exception $e) {
+                $query->whereDate('created_at', '<=', $request->to_date);
+            }
         }
 
         // Apply Mobile Number Filter
@@ -67,12 +88,23 @@ class SaleController extends Controller
             });
         }
 
-        // Apply Serial No Filter
+        // Apply Serial No / Search Filter
         if ($request->filled('serial_no')) {
-            $query->whereHas('items', function ($q) use ($request) {
-                $q->where('serial_no', 'like', "%{$request->serial_no}%")
-                  ->orWhere('model', 'like', "%{$request->serial_no}%")
-                  ->orWhere('product_name', 'like', "%{$request->serial_no}%");
+            $term = trim($request->serial_no);
+            $query->where(function ($q) use ($term) {
+                $q->where('invoice_no', 'like', "%{$term}%")
+                  ->orWhere('id', 'like', "%{$term}%")
+                  ->orWhere('reference', 'like', "%{$term}%")
+                  ->orWhereHas('items', function ($sq) use ($term) {
+                      $sq->where('serial_no', 'like', "%{$term}%")
+                        ->orWhere('model', 'like', "%{$term}%")
+                        ->orWhere('product_name', 'like', "%{$term}%");
+                  })
+                  ->orWhereHas('customer_relation', function ($sq) use ($term) {
+                      $sq->where('customer_name', 'like', "%{$term}%")
+                        ->orWhere('mobile', 'like', "%{$term}%")
+                        ->orWhere('customer_id', 'like', "%{$term}%");
+                  });
             });
         }
 

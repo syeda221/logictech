@@ -389,6 +389,9 @@
                     $itemsData = json_decode($repair->problem_description, true);
                     $rows = [];
 
+                    $normSubject  = strtolower(trim(preg_replace('/[^a-z0-9]/', '', $subjectText ?? '')));
+                    $normItemName = strtolower(trim(preg_replace('/[^a-z0-9]/', '', $repair->item_name ?? '')));
+
                     if (is_array($itemsData) && count($itemsData) > 0) {
                         foreach($itemsData as $idx => $it) {
                             $desc = trim($it['desc'] ?? ($it['item_name'] ?? ''));
@@ -415,8 +418,18 @@
                                 $total = $costVal;
                             }
 
-                            // If this is an unbilled single intake ticket without any pricing, skip so row 1 starts clean
-                            if (count($itemsData) === 1 && $costVal <= 0 && $rate <= 0) {
+                            // Prevent intake device/subject line from auto-populating row 1 of invoice
+                            $normDesc = strtolower(trim(preg_replace('/[^a-z0-9]/', '', $desc)));
+                            $isSubjectLine = false;
+                            if (!empty($normDesc)) {
+                                if ($normDesc === $normSubject || $normDesc === $normItemName || 
+                                    (!empty($normSubject) && (str_starts_with($normDesc, $normSubject) || str_starts_with($normSubject, $normDesc))) ||
+                                    (!empty($normItemName) && (str_starts_with($normDesc, $normItemName) || str_starts_with($normItemName, $normDesc)))) {
+                                    $isSubjectLine = true;
+                                }
+                            }
+
+                            if ($isSubjectLine) {
                                 continue;
                             }
 
@@ -424,7 +437,7 @@
                             if (!empty($desc) || $total > 0 || $rate > 0) {
                                 $rows[] = [
                                     'no' => count($rows) + 1,
-                                    'desc' => $desc ?: $repair->item_name,
+                                    'desc' => $desc,
                                     'qty' => $qty,
                                     'rate' => $rate,
                                     'gross' => $gross,
