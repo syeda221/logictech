@@ -559,18 +559,21 @@
         .quick-links-inner {
             display: flex;
             align-items: center;
+            justify-content: center;
             width: 100%;
         }
 
         .quick-links-list {
             display: flex;
             align-items: center;
-            gap: 10px;
+            justify-content: center;
+            gap: 12px;
             flex-wrap: nowrap;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
             scrollbar-width: none;
             padding: 2px 0;
+            max-width: 100%;
         }
         .quick-links-list::-webkit-scrollbar {
             display: none;
@@ -670,9 +673,11 @@
                 padding: 6px 0 !important;
             }
             .quick-links-inner {
+                justify-content: flex-start;
                 gap: 8px;
             }
             .quick-links-list {
+                justify-content: flex-start;
                 gap: 6px;
             }
             .quick-link-item {
@@ -1456,12 +1461,12 @@
             <!-- Universal ERP Quick Links Bar -->
             <div class="nav-quick-links-bar no-print">
                 <div class="container-fluid" style="padding: 0 20px;">
-                    <div class="quick-links-inner d-flex align-items-center">
-                        <div class="quick-links-list d-flex align-items-center flex-wrap">
-                            <a href="{{ auth()->user() && auth()->user()->can('sales.create') ? route('sale.add') : url('sale') }}"
-                               class="quick-link-item {{ request()->routeIs('sale.add') ? 'active' : '' }}"
-                               title="Create Sales Order">
-                                <i class="fas fa-plus-circle text-primary"></i> <span>+Order</span>
+                    <div class="quick-links-inner d-flex align-items-center justify-content-center">
+                        <div class="quick-links-list d-flex align-items-center justify-content-center flex-wrap">
+                            <a href="{{ url('sale') }}"
+                               class="quick-link-item {{ request()->routeIs('sale.*') || request()->is('sale*') ? 'active' : '' }}"
+                               title="Sales Management">
+                                <i class="fas fa-receipt text-primary"></i> <span>Sale</span>
                             </a>
                             <a href="{{ route('repair.index') }}"
                                class="quick-link-item {{ request()->routeIs('repair.*') ? 'active' : '' }}"
