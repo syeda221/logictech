@@ -2436,7 +2436,17 @@ class ReportingController extends Controller
 
             $customers = DB::table('customers')->get();
             foreach ($customers as $c) {
-                if ($searchParty && stripos($c->customer_name, $searchParty) === false) continue;
+                if ($searchParty) {
+                    $term = trim($searchParty);
+                    $code = sprintf("C%04d", $c->id);
+                    $matched = (stripos($c->customer_name, $term) !== false)
+                            || (stripos($code, $term) !== false)
+                            || (!empty($c->customer_id) && stripos($c->customer_id, $term) !== false)
+                            || (!empty($c->mobile) && stripos($c->mobile, $term) !== false)
+                            || (!empty($c->address) && stripos($c->address, $term) !== false)
+                            || (!empty($c->contact_person) && stripos($c->contact_person, $term) !== false);
+                    if (!$matched) continue;
+                }
                 if ($searchMobile && stripos($c->mobile, $searchMobile) === false) continue;
                 
                 $balance = (float) ($custBalances[$c->id] ?? 0);
@@ -2462,8 +2472,18 @@ class ReportingController extends Controller
 
             $vendors = DB::table('vendors')->get();
             foreach ($vendors as $v) {
-                if ($searchParty && stripos($v->name, $searchParty) === false) continue;
-                if ($searchMobile && stripos($v->phone, $searchMobile) === false) continue;
+                if ($searchParty) {
+                    $term = trim($searchParty);
+                    $code = sprintf("V%04d", $v->id);
+                    $matched = (stripos($v->name, $term) !== false)
+                            || (stripos($code, $term) !== false)
+                            || (!empty($v->phone) && stripos($v->phone, $term) !== false)
+                            || (!empty($v->mobile) && stripos($v->mobile, $term) !== false)
+                            || (!empty($v->address) && stripos($v->address, $term) !== false)
+                            || (!empty($v->contact_person) && stripos($v->contact_person, $term) !== false);
+                    if (!$matched) continue;
+                }
+                if ($searchMobile && stripos($v->phone, $searchMobile) === false && stripos($v->mobile ?? '', $searchMobile) === false) continue;
                 
                 $balance = (float) ($vendorBalances[$v->id] ?? 0);
                 $parties[] = [

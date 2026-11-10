@@ -70,7 +70,8 @@ class CustomerController extends Controller
                   ->orWhere('mobile', 'like', "%{$term}%")
                   ->orWhere('email_address', 'like', "%{$term}%")
                   ->orWhere('ntn', 'like', "%{$term}%")
-                  ->orWhere('strn', 'like', "%{$term}%");
+                  ->orWhere('strn', 'like', "%{$term}%")
+                  ->orWhere('address', 'like', "%{$term}%");
             });
         }
 

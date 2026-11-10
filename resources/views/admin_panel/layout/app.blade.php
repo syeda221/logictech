@@ -547,12 +547,78 @@
             color: #2563eb !important;
         }
 
-        /* Universal App Page Body - Generous Top Clearance */
+        /* ── Universal ERP Quick Links Bar ── */
+        .nav-quick-links-bar {
+            background: #f8fafc !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+            padding: 8px 0 !important;
+            position: relative;
+            z-index: 1005;
+        }
+
+        .quick-links-inner {
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+
+        .quick-links-list {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            padding: 2px 0;
+        }
+        .quick-links-list::-webkit-scrollbar {
+            display: none;
+        }
+
+        .quick-link-item {
+            font-family: 'Outfit', sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
+            font-size: 13px;
+            font-weight: 600;
+            color: #334155 !important;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 20px;
+            padding: 5px 14px;
+            text-decoration: none !important;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+            transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .quick-link-item:hover {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+            color: #0f172a !important;
+            transform: translateY(-1.5px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.06);
+        }
+
+        .quick-link-item.active {
+            background: #2563eb !important;
+            border-color: #2563eb !important;
+            color: #ffffff !important;
+            box-shadow: 0 3px 8px rgba(37, 99, 235, 0.3) !important;
+            font-weight: 700;
+        }
+        .quick-link-item.active i {
+            color: #ffffff !important;
+        }
+
+        /* Universal App Page Body - Generous Top Clearance to prevent overlap */
         .app-page-body {
             position: relative;
             width: 100%;
             min-height: calc(100vh - 140px);
-            padding-top: 55px !important;
+            padding-top: 85px !important;
             padding-bottom: 60px !important;
             box-sizing: border-box;
         }
@@ -600,8 +666,21 @@
             .rt_nav_header.horizontal-layout {
                 position: relative !important;
             }
+            .nav-quick-links-bar {
+                padding: 6px 0 !important;
+            }
+            .quick-links-inner {
+                gap: 8px;
+            }
+            .quick-links-list {
+                gap: 6px;
+            }
+            .quick-link-item {
+                font-size: 12px;
+                padding: 4px 10px;
+            }
             .app-page-body {
-                padding-top: 35px !important;
+                padding-top: 50px !important;
             }
             .main-content {
                 padding-top: 15px !important;
@@ -1371,6 +1450,46 @@
 
                     <!-- Right: Balance Spacer for Perfect Dead-Center Navigation -->
                     <div class="nav-right-balance" aria-hidden="true"></div>
+                </div>
+            </div>
+
+            <!-- Universal ERP Quick Links Bar -->
+            <div class="nav-quick-links-bar no-print">
+                <div class="container-fluid" style="padding: 0 20px;">
+                    <div class="quick-links-inner d-flex align-items-center">
+                        <div class="quick-links-list d-flex align-items-center flex-wrap">
+                            <a href="{{ auth()->user() && auth()->user()->can('sales.create') ? route('sale.add') : url('sale') }}"
+                               class="quick-link-item {{ request()->routeIs('sale.add') ? 'active' : '' }}"
+                               title="Create Sales Order">
+                                <i class="fas fa-plus-circle text-primary"></i> <span>+Order</span>
+                            </a>
+                            <a href="{{ route('repair.index') }}"
+                               class="quick-link-item {{ request()->routeIs('repair.*') ? 'active' : '' }}"
+                               title="Repairing & Service Management">
+                                <i class="fas fa-tools text-warning"></i> <span>Repairing</span>
+                            </a>
+                            <a href="{{ route('report.parties_balance') }}"
+                               class="quick-link-item {{ request()->routeIs('report.parties_balance*') ? 'active' : '' }}"
+                               title="Parties Balances Report">
+                                <i class="fas fa-scale-balanced text-info"></i> <span>Party Balance</span>
+                            </a>
+                            <a href="{{ route('report.customer.ledger') }}"
+                               class="quick-link-item {{ request()->routeIs('report.customer.ledger*') || request()->routeIs('customers.ledger*') ? 'active' : '' }}"
+                               title="Customer Ledger Report">
+                                <i class="fas fa-book-open" style="color: #8b5cf6;"></i> <span>Customer Ledger</span>
+                            </a>
+                            <a href="{{ url('customers') }}"
+                               class="quick-link-item {{ (request()->is('customers') || request()->routeIs('customers.index')) && !request()->is('customers/ledger*') ? 'active' : '' }}"
+                               title="Customer Management">
+                                <i class="fas fa-user-group text-success"></i> <span>Customer</span>
+                            </a>
+                            <a href="{{ route('all_recepit_vochers') }}"
+                               class="quick-link-item {{ request()->routeIs('all_recepit_vochers') || request()->routeIs('recepit_vochers') || request()->routeIs('edit_rec_vochers') ? 'active' : '' }}"
+                               title="Receipt Vouchers">
+                                <i class="fas fa-file-invoice-dollar" style="color: #059669;"></i> <span>Reciept Voucher</span>
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </nav>

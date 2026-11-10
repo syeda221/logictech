@@ -1109,15 +1109,22 @@
                 }
                 if ($.fn.DataTable) {
                     $('#repair-table').DataTable({
-                        pageLength: 10,
-                        lengthMenu: [5, 10, 25, 50, 100],
+                        destroy: true,
+                        stateSave: false,
+                        bStateSave: false,
+                        pageLength: 100,
+                        iDisplayLength: 100,
+                        lengthMenu: [
+                            [100, 250, 500, -1],
+                            ["100 entries", "250 entries", "500 entries", "All (Unlimited)"]
+                        ],
                         order: [
                             [0, 'desc']
                         ],
                         language: {
                             search: "",
                             searchPlaceholder: "Search ticket, customer, device...",
-                            lengthMenu: "Show _MENU_ entries",
+                            lengthMenu: "Show _MENU_",
                             info: "Showing _START_ to _END_ of _TOTAL_ repair jobs",
                             paginate: {
                                 previous: '<i class="fas fa-chevron-left"></i>',

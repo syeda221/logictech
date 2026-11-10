@@ -544,17 +544,27 @@
                         <form method="GET" action="{{ route('customers.index') }}" class="erp-filter-single-row" autocomplete="off">
                             <div class="erp-filter-item erp-item-id">
                                 <label class="erp-filter-label"><i class="fas fa-hashtag text-primary"></i> Customer ID</label>
-                                <input type="text" class="form-control erp-filter-input" name="search_id" value="{{ request('search_id') }}" placeholder="CUST-ID...">
+                                <div class="position-relative">
+                                    <input type="text" class="form-control erp-filter-input customer-filter-input" name="search_id" id="filter_search_id" value="{{ request('search_id') }}" placeholder="CUST-ID..." style="padding-right: 22px;">
+                                    <span class="customer-clear-btn position-absolute text-muted" data-target="#filter_search_id" style="right: 7px; top: 50%; transform: translateY(-50%); display: none; cursor: pointer; font-size: 11px;" title="Clear">
+                                        <i class="fas fa-times-circle"></i>
+                                    </span>
+                                </div>
                             </div>
 
                             <div class="erp-filter-item erp-item-name">
                                 <label class="erp-filter-label"><i class="fas fa-user text-primary"></i> Name / Phone</label>
-                                <input type="text" class="form-control erp-filter-input" name="search_name" value="{{ request('search_name') }}" placeholder="Search name or mobile...">
+                                <div class="position-relative">
+                                    <input type="text" class="form-control erp-filter-input customer-filter-input" name="search_name" id="filter_search_name" value="{{ request('search_name') }}" placeholder="Search name, phone, city..." style="padding-right: 22px;">
+                                    <span class="customer-clear-btn position-absolute text-muted" data-target="#filter_search_name" style="right: 7px; top: 50%; transform: translateY(-50%); display: none; cursor: pointer; font-size: 11px;" title="Clear">
+                                        <i class="fas fa-times-circle"></i>
+                                    </span>
+                                </div>
                             </div>
 
                             <div class="erp-filter-item erp-item-status">
                                 <label class="erp-filter-label"><i class="fas fa-toggle-on text-primary"></i> Status</label>
-                                <select name="status" class="form-select erp-filter-input">
+                                <select name="status" id="filter_status" class="form-select erp-filter-input customer-filter-select">
                                     <option value="">All Status</option>
                                     <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Active</option>
                                     <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Inactive</option>
@@ -563,7 +573,7 @@
 
                             <div class="erp-filter-item erp-item-source">
                                 <label class="erp-filter-label"><i class="fas fa-globe text-primary"></i> Source</label>
-                                <select name="source" class="form-select erp-filter-input">
+                                <select name="source" id="filter_source" class="form-select erp-filter-input customer-filter-select">
                                     <option value="">All Sources</option>
                                     <option value="Manual" {{ request('source') == 'Manual' ? 'selected' : '' }}>Manual</option>
                                     <option value="Website" {{ request('source') == 'Website' ? 'selected' : '' }}>Website</option>
@@ -573,9 +583,9 @@
 
                             <div class="erp-filter-item erp-item-actions ms-auto">
                                 <div class="d-flex align-items-center gap-1">
-                                    <a href="{{ route('customers.index') }}" class="btn btn-erp-pill-outline" title="Reset Filters">
+                                    <button type="button" class="btn btn-erp-pill-outline" id="btnResetCustomers" title="Reset Filters">
                                         <i class="fas fa-undo"></i> <span>Reset</span>
-                                    </a>
+                                    </button>
                                     <button type="submit" class="btn btn-erp-pill-primary" title="Apply Filter">
                                         <i class="fas fa-filter"></i> <span>Filter</span>
                                     </button>
@@ -599,14 +609,28 @@
                                     <th class="pe-2 text-center" style="width: 85px;">ACTION</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="customersTableBody">
                                 @forelse ($customers as $customer)
                                     @php
                                         $name = $customer->customer_name ?? 'Customer';
                                         $initial = strtoupper(substr($name, 0, 1));
                                         $source = $customer->source ?? 'Manual';
+                                        $rowSearchText = strtolower(trim(
+                                            ($customer->customer_id ?? '') . ' ' .
+                                            $name . ' ' .
+                                            ($customer->mobile ?? '') . ' ' .
+                                            ($customer->address ?? '') . ' ' .
+                                            ($customer->customer_type ?? '') . ' ' .
+                                            ($customer->zone ?? '') . ' ' .
+                                            ($customer->ntn ?? '') . ' ' .
+                                            ($customer->strn ?? '')
+                                        ));
                                     @endphp
-                                    <tr>
+                                    <tr class="customer-row" 
+                                        data-search="{{ $rowSearchText }}"
+                                        data-id="{{ strtolower($customer->customer_id ?? '') }}"
+                                        data-status="{{ strtolower($customer->status ?? '') }}"
+                                        data-source="{{ strtolower($source) }}">
                                         {{-- Customer ID Badge --}}
                                         <td class="ps-2 text-center">
                                             <span class="erp-bill-tag">#{{ $customer->customer_id }}</span>
@@ -740,6 +764,13 @@
                                             </div>
                                         </td>
                                     </tr>
+                                    <tr id="noCustomerMatchRow" style="display: none;">
+                                        <td colspan="8" class="text-center py-5 text-muted">
+                                            <i class="fas fa-search fa-2x mb-2 text-secondary"></i>
+                                            <h6 class="fw-bold">No matching customers found</h6>
+                                            <p class="small text-muted mb-0">Try searching with a different name, phone number or ID.</p>
+                                        </td>
+                                    </tr>
                                 @empty
                                     <tr>
                                         <td colspan="8" class="text-center py-5 text-muted">
@@ -770,6 +801,118 @@
 <script src="{{ asset('assets/vendors/sweetalert2/js/sweetalert2.all.min.js') }}"></script>
 <script>
     $(document).ready(function() {
+        // Customer Live Search Filter (Instant 0ms real-time filtering)
+        function applyCustomerLiveFilter() {
+            var nameTerm = ($('#filter_search_name').val() || '').trim().toLowerCase();
+            var idTerm = ($('#filter_search_id').val() || '').trim().toLowerCase();
+            var statusVal = ($('#filter_status').val() || '').trim().toLowerCase();
+            var sourceVal = ($('#filter_source').val() || '').trim().toLowerCase();
+
+            // Toggle clear 'x' buttons
+            if (nameTerm.length > 0) {
+                $('.customer-clear-btn[data-target="#filter_search_name"]').show();
+            } else {
+                $('.customer-clear-btn[data-target="#filter_search_name"]').hide();
+            }
+
+            if (idTerm.length > 0) {
+                $('.customer-clear-btn[data-target="#filter_search_id"]').show();
+            } else {
+                $('.customer-clear-btn[data-target="#filter_search_id"]').hide();
+            }
+
+            var words = nameTerm ? nameTerm.split(/\s+/).filter(Boolean) : [];
+            var visibleCount = 0;
+
+            $('.customer-row').each(function() {
+                var $row = $(this);
+                var searchData = $row.attr('data-search') || '';
+                var rowId = ($row.attr('data-id') || '').toLowerCase();
+                var rowStatus = ($row.attr('data-status') || '').toLowerCase();
+                var rowSource = ($row.attr('data-source') || '').toLowerCase();
+
+                // 1. Keyword search (Name, Phone, City, Address, NTN, STRN)
+                var matchName = true;
+                if (words.length > 0) {
+                    matchName = words.every(function(word) {
+                        return searchData.indexOf(word) !== -1;
+                    });
+                }
+
+                // 2. Customer ID search
+                var matchId = true;
+                if (idTerm.length > 0) {
+                    matchId = rowId.indexOf(idTerm) !== -1;
+                }
+
+                // 3. Status filter
+                var matchStatus = true;
+                if (statusVal.length > 0) {
+                    matchStatus = (rowStatus === statusVal);
+                }
+
+                // 4. Source filter
+                var matchSource = true;
+                if (sourceVal.length > 0) {
+                    matchSource = (rowSource === sourceVal);
+                }
+
+                if (matchName && matchId && matchStatus && matchSource) {
+                    $row.show();
+                    visibleCount++;
+                } else {
+                    $row.hide();
+                }
+            });
+
+            if (visibleCount === 0 && $('.customer-row').length > 0) {
+                $('#noCustomerMatchRow').show();
+            } else {
+                $('#noCustomerMatchRow').hide();
+            }
+        }
+
+        // Real-time live filtering on typing (0ms delay)
+        $('.customer-filter-input').on('input keyup search paste', function() {
+            applyCustomerLiveFilter();
+        });
+
+        // Instant filtering on select change
+        $('.customer-filter-select').on('change', function() {
+            applyCustomerLiveFilter();
+        });
+
+        // Clear 'x' button inside input
+        $(document).on('click', '.customer-clear-btn', function() {
+            var targetInput = $(this).data('target');
+            $(targetInput).val('').focus();
+            $(this).hide();
+            applyCustomerLiveFilter();
+        });
+
+        // Reset button
+        $('#btnResetCustomers').on('click', function(e) {
+            e.preventDefault();
+            $('#filter_search_name').val('');
+            $('#filter_search_id').val('');
+            $('#filter_status').val('');
+            $('#filter_source').val('');
+            $('.customer-clear-btn').hide();
+            applyCustomerLiveFilter();
+            $('#filter_search_name').focus();
+        });
+
+        // Prevent accidental form submission on Enter to keep live filter active
+        $('.erp-filter-single-row').on('submit', function(e) {
+            e.preventDefault();
+            applyCustomerLiveFilter();
+        });
+
+        // Run initial live filter if input has value
+        if ($('#filter_search_name').val() || $('#filter_search_id').val() || $('#filter_status').val() || $('#filter_source').val()) {
+            applyCustomerLiveFilter();
+        }
+
         // SweetAlert2 Confirmation for Customer Deletion
         $(document).on('click', '.btn-delete-customer', function(e) {
             e.preventDefault();

@@ -160,7 +160,12 @@
 
                         <div class="d-flex align-items-center gap-1">
                             <label class="sale-filter-label mb-0 ms-1 me-1">Party:</label>
-                            <input type="text" id="party_name_desk" class="form-control form-control-sm fw-bold partyNameInput" placeholder="Name..." style="height: 32px; width: 140px; font-size: .78rem; border-radius: 6px;">
+                            <div class="position-relative d-inline-block">
+                                <input type="text" id="party_name_desk" class="form-control form-control-sm fw-bold partyNameInput" placeholder="Name, code, keyword..." style="height: 32px; width: 180px; font-size: .78rem; border-radius: 6px; padding-right: 22px;" autocomplete="off">
+                                <span id="partyClearBtnDesk" role="button" class="position-absolute text-muted" style="right: 7px; top: 50%; transform: translateY(-50%); display: none; cursor: pointer; font-size: 11px;" title="Clear">
+                                    <i class="fas fa-times-circle"></i>
+                                </span>
+                            </div>
                         </div>
 
                         <div class="d-flex align-items-center gap-1">
@@ -225,7 +230,12 @@
                     {{-- Party Name & Mobile --}}
                     <div class="col-6 mb-1">
                         <label class="form-label mb-1 fw-bold text-secondary" style="font-size: 11px;">Party Name</label>
-                        <input type="text" id="party_name_mob" class="form-control form-control-sm partyNameInput" placeholder="Name..." style="font-size: 11px;">
+                        <div class="position-relative">
+                            <input type="text" id="party_name_mob" class="form-control form-control-sm partyNameInput" placeholder="Name, code..." style="font-size: 11px; padding-right: 22px;" autocomplete="off">
+                            <span id="partyClearBtnMob" role="button" class="position-absolute text-muted" style="right: 7px; top: 50%; transform: translateY(-50%); display: none; cursor: pointer; font-size: 11px;" title="Clear">
+                                <i class="fas fa-times-circle"></i>
+                            </span>
+                        </div>
                     </div>
                     <div class="col-6 mb-1">
                         <label class="form-label mb-1 fw-bold text-secondary" style="font-size: 11px;">Mobile</label>
@@ -350,35 +360,197 @@
 <script>
     $(document).ready(function() {
         
-        // Sync Inputs between Desktop & Mobile
-        $('.reportTypeInput').on('change', function() { $('.reportTypeInput').val($(this).val()); });
-        $('.partyNameInput').on('keyup change', function() { $('.partyNameInput').val($(this).val()); });
-        $('.mobileInput').on('keyup change', function() { $('.mobileInput').val($(this).val()); });
-        $('.showZeroInput').on('change', function() { $('.showZeroInput').prop('checked', $(this).is(':checked')); });
+        let rawReportData = null;
+        let currentReportData = null;
 
         function fmt(amount) {
             let val = parseFloat(amount || 0);
             return 'Rs ' + val.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
         }
 
-        let currentReportData = null;
+        // Live Filter function: filters loaded dataset with 0ms delay as keywords are typed
+        function applyLiveFilter() {
+            if (!rawReportData || !rawReportData.rows) return;
 
+            let partyTerm = ($(".partyNameInput").val() || '').trim().toLowerCase();
+            let mobileTerm = ($(".mobileInput").val() || '').trim().toLowerCase();
+            let reportType = $(".reportTypeInput").val() || 'BOTH';
+
+            // Toggle clear button
+            if (partyTerm.length > 0) {
+                $('#partyClearBtnDesk, #partyClearBtnMob').show();
+            } else {
+                $('#partyClearBtnDesk, #partyClearBtnMob').hide();
+            }
+
+            let filteredRows = rawReportData.rows.filter(function(row) {
+                if (partyTerm) {
+                    let title = (row.title || '').toLowerCase();
+                    let code = (row.code || '').toLowerCase();
+                    let mobile = (row.mobile || '').toLowerCase();
+                    let type = (row.type || '').toLowerCase();
+                    let notes = (row.notes || '').toLowerCase();
+
+                    // Split into multiple words to support multi-keyword matching (e.g. "arsa sialkot")
+                    let words = partyTerm.split(/\s+/).filter(Boolean);
+                    let allWordsMatch = words.every(function(word) {
+                        return title.includes(word) ||
+                               code.includes(word) ||
+                               mobile.includes(word) ||
+                               type.includes(word) ||
+                               notes.includes(word);
+                    });
+
+                    if (!allWordsMatch) return false;
+                }
+
+                if (mobileTerm) {
+                    let mobile = (row.mobile || '').toLowerCase();
+                    if (!mobile.includes(mobileTerm)) return false;
+                }
+
+                return true;
+            });
+
+            let totalReceivable = filteredRows.reduce(function(sum, r) {
+                return sum + parseFloat(r.receivable || 0);
+            }, 0);
+            let totalPayable = filteredRows.reduce(function(sum, r) {
+                return sum + parseFloat(r.payable || 0);
+            }, 0);
+
+            currentReportData = {
+                rows: filteredRows,
+                totals: {
+                    receivable: totalReceivable,
+                    payable: totalPayable
+                }
+            };
+
+            renderRows(currentReportData.rows, reportType, currentReportData.totals, partyTerm);
+        }
+
+        // Render rows and update totals / stat pills
+        function renderRows(rows, reportType, totals, searchKeyword) {
+            let rowsHtml = "";
+            let mobHtml = "";
+            let sr = 1;
+
+            if (rows && rows.length > 0) {
+                rows.forEach(function(row) {
+                    let isVendor = row.code && row.code.startsWith('V');
+                    let typeBadge = isVendor 
+                        ? `<span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size:10px;">Vendor</span>`
+                        : `<span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size:10px;">Customer</span>`;
+
+                    let ledgerBtn = `
+                        <a href="${row.ledger_url}" target="_blank" class="btn-erp-ledger" title="View ${isVendor ? 'Vendor' : 'Customer'} Ledger">
+                            <i class="fas fa-book-open" style="font-size: 9.5px;"></i> Ledger
+                        </a>
+                    `;
+
+                    let recVal = parseFloat(row.receivable || 0);
+                    let payVal = parseFloat(row.payable || 0);
+
+                    rowsHtml += `
+                        <tr>
+                            <td class="text-center text-muted fw-bold">${sr}</td>
+                            <td class="fw-bold text-secondary font-monospace" style="font-size: 11px;">${row.code}</td>
+                            <td class="fw-semibold text-dark">${row.title}</td>
+                            <td class="text-center">${ledgerBtn}</td>
+                            <td class="text-center">${typeBadge}</td>
+                            <td class="text-muted font-monospace" style="font-size: 11.5px;">${row.mobile || '-'}</td>
+                            ${reportType !== 'PAYABLE' ? `<td class="text-end text-primary fw-semibold">${recVal != 0 ? fmt(recVal) : '-'}</td>` : ''}
+                            ${reportType !== 'RECEIVABLE' ? `<td class="text-end text-danger fw-semibold">${payVal != 0 ? fmt(payVal) : '-'}</td>` : ''}
+                            <td class="text-muted small">${row.notes || '-'}</td>
+                        </tr>
+                    `;
+
+                    mobHtml += `
+                        <div class="mob-card p-2.5 p-2 mb-2">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <div class="d-flex align-items-center gap-1">
+                                    <span class="badge bg-light text-dark border font-monospace" style="font-size: 10px;">${row.code}</span>
+                                    <strong class="text-dark" style="font-size: 12.5px;">${row.title}</strong>
+                                </div>
+                                <div class="d-flex align-items-center gap-1">
+                                    <a href="${row.ledger_url}" target="_blank" class="btn-erp-ledger py-0.5 px-2" style="font-size: 10px;">
+                                        <i class="fas fa-book-open" style="font-size: 9px;"></i> Ledger
+                                    </a>
+                                    ${typeBadge}
+                                </div>
+                            </div>
+                            <div class="border-top pt-2 mt-1">
+                                <div class="row g-1 align-items-center" style="font-size: 11px;">
+                                    <div class="col-6">
+                                        <span class="text-muted d-block" style="font-size: 10px;"><i class="fas fa-phone me-1"></i>${row.mobile || 'No Mobile'}</span>
+                                    </div>
+                                    <div class="col-6 text-end">
+                                        ${recVal > 0 ? `<strong class="text-primary" style="font-size: 12px;">Rec: ${fmt(recVal)}</strong>` : ''}
+                                        ${payVal > 0 ? `<strong class="text-danger" style="font-size: 12px;">Pay: ${fmt(payVal)}</strong>` : ''}
+                                        ${recVal == 0 && payVal == 0 ? `<span class="text-muted fw-bold">Rs 0.00</span>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    sr++;
+                });
+
+                $("#tbodyRows").html(rowsHtml);
+                $("#mobPartiesContainer").html(mobHtml);
+
+                // Totals
+                let countStr = (sr - 1) + ((sr - 1) === 1 ? ' Party' : ' Parties');
+                let totalsHtml = `
+                    <tr>
+                        <td colspan="6" class="text-end text-dark">TOTAL (${countStr}):</td>
+                        ${reportType !== 'PAYABLE' ? `<td class="text-end text-primary">${fmt(totals.receivable)}</td>` : ''}
+                        ${reportType !== 'RECEIVABLE' ? `<td class="text-end text-danger">${fmt(totals.payable)}</td>` : ''}
+                        <td></td>
+                    </tr>
+                `;
+                $("#tfootTotals").html(totalsHtml);
+
+                // Update Stat Pills
+                let net = totals.receivable - totals.payable;
+                $('#pillReceivable, #mobPillReceivable').text(fmt(totals.receivable));
+                $('#pillPayable, #mobPillPayable').text(fmt(totals.payable));
+                
+                $('#pillNet, #mobPillNet').text(fmt(net));
+                if(net > 0) {
+                    $('#pillNet, #mobPillNet').removeClass('text-danger text-dark').addClass('text-primary');
+                } else if(net < 0) {
+                    $('#pillNet, #mobPillNet').removeClass('text-primary text-dark').addClass('text-danger');
+                } else {
+                    $('#pillNet, #mobPillNet').removeClass('text-primary text-danger').addClass('text-dark');
+                }
+            } else {
+                let colCount = reportType === 'BOTH' ? 9 : 8;
+                let msg = searchKeyword ? `No parties matching "${searchKeyword}".` : 'No data matching filters.';
+                $("#tbodyRows").html(`<tr><td colspan="${colCount}" class="text-center text-muted py-4"><i class="fas fa-search me-1 text-secondary"></i> ${msg}</td></tr>`);
+                $("#mobPartiesContainer").html(`<div class="card border-0 shadow-sm rounded-3 text-center py-4 bg-white"><div class="card-body py-4 text-muted"><i class="fas fa-search fa-2x mb-2 text-secondary"></i><p class="small fw-bold mb-0">${msg}</p></div></div>`);
+                $("#tfootTotals").empty();
+
+                $('#pillReceivable, #mobPillReceivable').text('Rs 0.00');
+                $('#pillPayable, #mobPillPayable').text('Rs 0.00');
+                $('#pillNet, #mobPillNet').text('Rs 0.00');
+            }
+        }
+
+        // Load report from server (for initial load, or when Type / Show Zero changes)
         function loadReport() {
             let reportType = $(".reportTypeInput").val() || 'BOTH';
             let showZero = $(".showZeroInput").is(":checked");
-            let partyName = $(".partyNameInput").val();
-            let mobile = $(".mobileInput").val();
             
             $("#loader").show();
             $("#reportBox").hide();
 
             $.get("{{ route('report.parties_balance.fetch') }}", {
                 report_type: reportType,
-                show_zero: showZero,
-                party_name: partyName,
-                mobile: mobile
+                show_zero: showZero
             }, function(res) {
-                currentReportData = res;
+                rawReportData = res;
                 $("#loader").hide();
                 $("#reportBox").show();
 
@@ -394,108 +566,63 @@
                     $(".col-payable").show();
                 }
 
-                let rowsHtml = "";
-                let mobHtml = "";
-
-                if (res.rows && res.rows.length > 0) {
-                    res.rows.forEach(function(row) {
-                        let isVendor = row.code && row.code.startsWith('V');
-                        let typeBadge = isVendor 
-                            ? `<span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size:10px;">Vendor</span>`
-                            : `<span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size:10px;">Customer</span>`;
-
-                        let ledgerBtn = `
-                            <a href="${row.ledger_url}" target="_blank" class="btn-erp-ledger" title="View ${isVendor ? 'Vendor' : 'Customer'} Ledger">
-                                <i class="fas fa-book-open" style="font-size: 9.5px;"></i> Ledger
-                            </a>
-                        `;
-
-                        rowsHtml += `
-                            <tr>
-                                <td class="text-center text-muted fw-bold">${row.sr}</td>
-                                <td class="fw-bold text-secondary" style="font-size: 11px;">${row.code}</td>
-                                <td class="fw-semibold text-dark">${row.title}</td>
-                                <td class="text-center">${ledgerBtn}</td>
-                                <td class="text-center">${typeBadge}</td>
-                                <td class="text-muted" style="font-size: 11.5px;">${row.mobile || '-'}</td>
-                                ${reportType !== 'PAYABLE' ? `<td class="text-end text-primary fw-semibold">${row.receivable != 0 ? fmt(row.receivable) : '-'}</td>` : ''}
-                                ${reportType !== 'RECEIVABLE' ? `<td class="text-end text-danger fw-semibold">${row.payable != 0 ? fmt(row.payable) : '-'}</td>` : ''}
-                                <td class="text-muted small">${row.notes || '-'}</td>
-                            </tr>
-                        `;
-
-                        mobHtml += `
-                            <div class="mob-card p-2.5 p-2 mb-2">
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <div class="d-flex align-items-center gap-1">
-                                        <span class="badge bg-light text-dark border" style="font-size: 10px;">${row.code}</span>
-                                        <strong class="text-dark" style="font-size: 12.5px;">${row.title}</strong>
-                                    </div>
-                                    <div class="d-flex align-items-center gap-1">
-                                        <a href="${row.ledger_url}" target="_blank" class="btn-erp-ledger py-0.5 px-2" style="font-size: 10px;">
-                                            <i class="fas fa-book-open" style="font-size: 9px;"></i> Ledger
-                                        </a>
-                                        ${typeBadge}
-                                    </div>
-                                </div>
-                                <div class="border-top pt-2 mt-1">
-                                    <div class="row g-1 align-items-center" style="font-size: 11px;">
-                                        <div class="col-6">
-                                            <span class="text-muted d-block" style="font-size: 10px;"><i class="fas fa-phone me-1"></i>${row.mobile || 'No Mobile'}</span>
-                                        </div>
-                                        <div class="col-6 text-end">
-                                            ${row.receivable > 0 ? `<strong class="text-primary" style="font-size: 12px;">Rec: ${fmt(row.receivable)}</strong>` : ''}
-                                            ${row.payable > 0 ? `<strong class="text-danger" style="font-size: 12px;">Pay: ${fmt(row.payable)}</strong>` : ''}
-                                            ${row.receivable == 0 && row.payable == 0 ? `<span class="text-muted fw-bold">Rs 0.00</span>` : ''}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    });
-
-                    $("#tbodyRows").html(rowsHtml);
-                    $("#mobPartiesContainer").html(mobHtml);
-
-                    // Totals
-                    if (res.totals) {
-                        let t = res.totals;
-                        let totalsHtml = `
-                            <tr>
-                                <td colspan="6" class="text-end text-dark">TOTAL:</td>
-                                ${reportType !== 'PAYABLE' ? `<td class="text-end text-primary">${fmt(t.receivable)}</td>` : ''}
-                                ${reportType !== 'RECEIVABLE' ? `<td class="text-end text-danger">${fmt(t.payable)}</td>` : ''}
-                                <td></td>
-                            </tr>
-                        `;
-                        $("#tfootTotals").html(totalsHtml);
-
-                        // Update Stat Pills
-                        let net = t.receivable - t.payable;
-                        $('#pillReceivable, #mobPillReceivable').text(fmt(t.receivable));
-                        $('#pillPayable, #mobPillPayable').text(fmt(t.payable));
-                        
-                        $('#pillNet, #mobPillNet').text(fmt(net));
-                        if(net > 0) {
-                            $('#pillNet, #mobPillNet').removeClass('text-danger text-dark').addClass('text-primary');
-                        } else if(net < 0) {
-                            $('#pillNet, #mobPillNet').removeClass('text-primary text-dark').addClass('text-danger');
-                        } else {
-                            $('#pillNet, #mobPillNet').removeClass('text-primary text-danger').addClass('text-dark');
-                        }
-                    }
-                } else {
-                    let colCount = reportType === 'BOTH' ? 9 : 8;
-                    $("#tbodyRows").html(`<tr><td colspan="${colCount}" class="text-center text-muted py-4">No data matching filters.</td></tr>`);
-                    $("#mobPartiesContainer").html('<div class="card border-0 shadow-sm rounded-3 text-center py-4 bg-white"><div class="card-body py-4 text-muted"><i class="fas fa-folder-open fa-2x mb-2 text-secondary"></i><p class="small fw-bold mb-0">No Parties Balance Found</p></div></div>');
-                    $("#tfootTotals").empty();
-
-                    $('#pillReceivable, #mobPillReceivable').text('Rs 0.00');
-                    $('#pillPayable, #mobPillPayable').text('Rs 0.00');
-                    $('#pillNet, #mobPillNet').text('Rs 0.00');
-                }
+                applyLiveFilter();
+            }).fail(function() {
+                $("#loader").hide();
+                $("#reportBox").show();
             });
         }
+
+        // Live Search on input events: instant 0ms filtering as keywords are typed
+        $('.partyNameInput').on('input keyup search paste', function() {
+            let val = $(this).val();
+            $('.partyNameInput').not(this).val(val);
+            applyLiveFilter();
+        });
+
+        $('.mobileInput').on('input keyup search paste', function() {
+            let val = $(this).val();
+            $('.mobileInput').not(this).val(val);
+            applyLiveFilter();
+        });
+
+        // Clear search buttons
+        $(document).on('click', '#partyClearBtnDesk, #partyClearBtnMob', function() {
+            $('.partyNameInput').val('');
+            $('#partyClearBtnDesk, #partyClearBtnMob').hide();
+            applyLiveFilter();
+            $('#party_name_desk').focus();
+        });
+
+        // Sync & auto-reload when Type or Show Zero changes
+        $('.reportTypeInput').on('change', function() {
+            $('.reportTypeInput').val($(this).val());
+            loadReport();
+        });
+
+        $('.showZeroInput').on('change', function() {
+            $('.showZeroInput').prop('checked', $(this).is(':checked'));
+            loadReport();
+        });
+
+        // Prevent accidental page submit on Enter & run live filter
+        $('#partiesFormDesk, #partiesFormMob').on('submit', function(e) {
+            e.preventDefault();
+            applyLiveFilter();
+        });
+
+        $(".btnSearchTrigger").click(function() {
+            applyLiveFilter();
+        });
+
+        $(".btnResetTrigger").click(function() {
+            $(".reportTypeInput").val('BOTH');
+            $(".partyNameInput").val('');
+            $(".mobileInput").val('');
+            $(".showZeroInput").prop('checked', false);
+            $('#partyClearBtnDesk, #partyClearBtnMob').hide();
+            loadReport();
+        });
 
         // Export to Excel function
         function exportToExcel() {
@@ -570,18 +697,6 @@
             link.click();
             document.body.removeChild(link);
         }
-
-        $(".btnSearchTrigger").click(function() {
-            loadReport();
-        });
-
-        $(".btnResetTrigger").click(function() {
-            $(".reportTypeInput").val('BOTH');
-            $(".partyNameInput").val('');
-            $(".mobileInput").val('');
-            $(".showZeroInput").prop('checked', false);
-            loadReport();
-        });
 
         $(".btnPrintReport").click(function() {
             window.print();
