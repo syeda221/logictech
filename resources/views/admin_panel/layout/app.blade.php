@@ -1109,6 +1109,8 @@
                                                         <li><a href="{{ url('sale') }}"><i class="fas fa-receipt"></i>
                                                                 Sales</a></li>
                                                     @endcan
+                                                    <li><a href="{{ url('quotations') }}"><i class="fas fa-file-contract text-primary"></i>
+                                                            Quotations</a></li>
                                                     <li><a href="{{ route('repair.index') }}"><i class="fas fa-tools text-primary"></i>
                                                             Repairing & Services</a></li>
                                                     @can('pos.view')
@@ -1467,6 +1469,11 @@
                                class="quick-link-item {{ request()->routeIs('sale.*') || request()->is('sale*') ? 'active' : '' }}"
                                title="Sales Management">
                                 <i class="fas fa-receipt text-primary"></i> <span>Sale</span>
+                            </a>
+                            <a href="{{ url('quotations') }}"
+                               class="quick-link-item {{ request()->routeIs('quotations.*') || request()->is('quotations*') || request()->is('quotation*') ? 'active' : '' }}"
+                               title="Quotations Management">
+                                <i class="fas fa-file-contract text-primary"></i> <span>Quotation</span>
                             </a>
                             <a href="{{ route('repair.index') }}"
                                class="quick-link-item {{ request()->routeIs('repair.*') ? 'active' : '' }}"

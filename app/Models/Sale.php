@@ -92,6 +92,11 @@ class Sale extends Model
         return $this->hasMany(SaleReturn::class, 'sale_id');
     }
 
+    public function quotation()
+    {
+        return $this->hasOne(Quotation::class, 'converted_sale_id', 'id');
+    }
+
     protected static function boot()
     {
         parent::boot();

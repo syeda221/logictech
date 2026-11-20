@@ -806,6 +806,27 @@
             justify-content: center !important;
             gap: 6px !important;
         }
+        .btn-walkin-toggle {
+            background-color: #fef3c7 !important;
+            border: 1.5px solid #f59e0b !important;
+            color: #92400e !important;
+            font-weight: 700 !important;
+            font-size: 0.75rem !important;
+            border-radius: 50px !important;
+            height: 34px !important;
+            padding: 0 14px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-walkin-toggle:hover, .btn-walkin-toggle.active {
+            background-color: #fde68a !important;
+            color: #78350f !important;
+            border-color: #d97706 !important;
+            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25) !important;
+        }
     </style>
 
     <div class="container-fluid py-2 px-2">
@@ -817,6 +838,16 @@
                 @csrf
                 <input type="hidden" id="booking_id" name="booking_id" value="">
                 <input type="hidden" id="action" name="action" value="sale">
+
+                @if(isset($fromQuotation) && $fromQuotation)
+                    <input type="hidden" name="from_quotation_id" value="{{ $fromQuotation->id }}">
+                    <div class="alert alert-info py-2 px-3 mb-2 d-flex align-items-center justify-content-between rounded-3" style="font-size: 0.82rem;">
+                        <div>
+                            <i class="fas fa-info-circle me-1"></i> Pre-loaded from <strong>Quotation #{{ $fromQuotation->quote_no }}</strong>. Saving will book this order and mark the quotation as converted.
+                        </div>
+                        <a href="{{ route('quotations.show', $fromQuotation->id) }}" target="_blank" class="text-decoration-none fw-bold">View Quote</a>
+                    </div>
+                @endif
 
                 {{-- TOP HEADER BAR --}}
                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 erp-page-header">
@@ -924,6 +955,9 @@
                                         <option value=""></option>
                                     </select>
                                 </div>
+                                <button type="button" class="btn btn-walkin-toggle flex-shrink-0" id="btnToggleWalkin" title="Toggle Walk In Customer">
+                                    <i class="fas fa-walking"></i> <span>walk in customer</span>
+                                </button>
                                 <button type="button" class="btn btn-erp-pill-primary flex-shrink-0" id="btnHeaderAddCustomer" data-bs-toggle="modal" data-bs-target="#addCustomerModal" data-toggle="modal" data-target="#addCustomerModal" title="Add New Customer">
                                     <i class="fas fa-plus-circle"></i> <span>Add Customer</span>
                                 </button>
@@ -1632,6 +1666,45 @@
 
             // Set initial visibility state of Customer Select / Walk-in input
             $('#walkinToggle').trigger('change');
+
+            // Walk-in Customer Button Toggle
+            $('#btnToggleWalkin').on('click', function(e) {
+                e.preventDefault();
+                var currentWalkin = $('#walkinToggle').val() === '1';
+                if (!currentWalkin) {
+                    $('#walkinToggle').val('1');
+                    $(this).addClass('active').html('<i class="fas fa-check"></i> <span>Walk-in Active</span>');
+                    $('#customerSelect').next('.select2-container').addClass('d-none');
+                    $('#walkinNameInput').removeClass('d-none').focus();
+                } else {
+                    $('#walkinToggle').val('0');
+                    $(this).removeClass('active').html('<i class="fas fa-walking"></i> <span>walk in customer</span>');
+                    $('#walkinNameInput').addClass('d-none').val('');
+                    $('#customerSelect').next('.select2-container').removeClass('d-none');
+                }
+            });
+
+            @if(isset($fromQuotation) && $fromQuotation)
+                @if(!empty($fromQuotation->walkin_name))
+                    $('#walkinToggle').val('1');
+                    $('#btnToggleWalkin').addClass('active').html('<i class="fas fa-check"></i> <span>Walk-in Active</span>');
+                    $('#customerSelect').next('.select2-container').addClass('d-none');
+                    $('#walkinNameInput').removeClass('d-none').val('{!! addslashes($fromQuotation->walkin_name) !!}');
+                @elseif($fromQuotation->customer_id)
+                    var qCustOpt = new Option('{!! addslashes(($fromQuotation->customer->customer_id ?? "") . " — " . ($fromQuotation->customer->customer_name ?? "")) !!}', '{{ $fromQuotation->customer_id }}', true, true);
+                    $('#customerSelect').append(qCustOpt).trigger('change');
+                @endif
+
+                @if(!empty($fromQuotation->reference))
+                    $('input[name="reference"]').val('{!! addslashes($fromQuotation->reference) !!}');
+                @endif
+                @if($fromQuotation->estimated_delivery_date)
+                    $('#estDeliveryDateInput').val('{{ \Carbon\Carbon::parse($fromQuotation->estimated_delivery_date)->format("Y-m-d") }}');
+                @endif
+                @if(!empty($fromQuotation->terms_and_conditions))
+                    $('#termsAndConditions').val(`{!! addslashes($fromQuotation->terms_and_conditions) !!}`);
+                @endif
+            @endif
 
             // Party type change → reset customer
             $(document).on('change', 'input[name="partyType"]', function() {

@@ -184,9 +184,16 @@ class SaleController extends Controller
 
         $accountHeads = \App\Models\AccountHead::orderBy('name')->get();
 
+        $fromQuotation = null;
+        if (request()->filled('from_quotation')) {
+            $fromQuotation = \App\Models\Quotation::with(['items.product', 'customer_relation'])
+                ->find(request()->from_quotation);
+        }
+
         return view('admin_panel.sale.add_sale222', compact(
             'warehouse', 'customer', 'nextInvoiceNumber', 'accounts', 
-            'recentProducts', 'allSeries', 'activePrefix', 'accountHeads'
+            'recentProducts', 'allSeries', 'activePrefix', 'accountHeads',
+            'fromQuotation'
         ));
     }
 
@@ -1275,6 +1282,17 @@ class SaleController extends Controller
             }
 
             $sale->save(); // Save first to get ID
+
+            // If created from quotation, mark quotation as converted
+            if ($request->filled('from_quotation_id')) {
+                $origQuote = \App\Models\Quotation::find($request->from_quotation_id);
+                if ($origQuote) {
+                    $origQuote->status = 'converted';
+                    $origQuote->converted_sale_id = $sale->id;
+                    $origQuote->converted_at = now();
+                    $origQuote->save();
+                }
+            }
 
             // Increment Invoice Series counter if matching series prefix
             \App\Models\InvoiceSeries::incrementCounterForInvoice($sale->invoice_no);

@@ -674,6 +674,9 @@
                         <p class="erp-subtitle">Executive sales ledger, bookings overview, dispatch status and invoice records</p>
                     </div>
                     <div class="sales-hdr-actions">
+                        <a class="btn-erp-outline" href="{{ url('quotations') }}" title="Quotations Management">
+                            <i class="fas fa-file-contract text-primary"></i> Quotations
+                        </a>
                         <a class="btn-erp-outline" href="{{ route('repair.index') }}" title="Repairing & Service Management">
                             <i class="fas fa-tools text-primary"></i> Repairing
                         </a>

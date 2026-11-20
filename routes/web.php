@@ -20,6 +20,7 @@ use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\ReportingController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SaleController;
+use App\Http\Controllers\QuotationController;
 use App\Http\Controllers\SalesOfficerController;
 use App\Http\Controllers\StocksController;
 use App\Http\Controllers\StockTransferController;
@@ -376,6 +377,18 @@ Route::middleware('auth')->group(function () {
     Route::get('booking/receipt/{id}', [ProductBookingController::class, 'receipt'])->middleware('permission:bookings.view')->name('booking.receipt');
     Route::get('/sales/from-booking/{id}', [SaleController::class, 'convertFromBooking'])->name('sales.from.booking');
     Route::post('/sales/{id}/confirm', [SaleController::class, 'confirmBooking'])->middleware('permission:sales.create')->name('sales.confirm');
+
+    // Quotations Module
+    Route::redirect('/quotation', '/quotations');
+    Route::get('/quotations', [QuotationController::class, 'index'])->name('quotations.index');
+    Route::get('/quotations/create', [QuotationController::class, 'create'])->name('quotations.create');
+    Route::post('/quotations/store', [QuotationController::class, 'store'])->name('quotations.store');
+    Route::get('/quotations/{id}', [QuotationController::class, 'show'])->name('quotations.show');
+    Route::get('/quotations/{id}/print', [QuotationController::class, 'show'])->name('quotations.print');
+    Route::get('/quotations/{id}/edit', [QuotationController::class, 'edit'])->name('quotations.edit');
+    Route::put('/quotations/{id}', [QuotationController::class, 'update'])->name('quotations.update');
+    Route::delete('/quotations/{id}', [QuotationController::class, 'destroy'])->name('quotations.destroy');
+    Route::match(['get', 'post'], '/quotations/{id}/convert-to-order', [QuotationController::class, 'convertToOrder'])->name('quotations.convert_to_order');
 
     // Repairing & Service Module
     Route::get('/repairs', [\App\Http\Controllers\RepairController::class, 'index'])->name('repair.index');
