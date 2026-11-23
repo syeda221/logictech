@@ -46,6 +46,14 @@ class Customer extends Model
         }
     }
 
+    protected $attributes = [
+        'opening_balance' => 0.00,
+        'previous_balance' => 0.00,
+        'balance_range' => 0.00,
+        'is_synced' => 0,
+        'source' => 'Manual',
+    ];
+
     protected static function boot()
     {
         parent::boot();
@@ -55,6 +63,9 @@ class Customer extends Model
             }
             if (!isset($model->is_synced)) {
                 $model->is_synced = 0;
+            }
+            if (!isset($model->opening_balance) || $model->opening_balance === null || $model->opening_balance === '') {
+                $model->opening_balance = 0.00;
             }
         });
     }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Brand;
 use App\Models\Customer;
 use App\Models\InvoiceSeries;
 use App\Models\Product;
@@ -10,6 +11,7 @@ use App\Models\QuotationItem;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\Setting;
+use App\Models\Unit;
 use App\Models\Warehouse;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -124,11 +126,12 @@ class QuotationController extends Controller
         $activePrefix = 'QUO';
         $nextQuoteNumber = Quotation::generateQuoteNo($activePrefix);
 
-        $recentProducts = Product::where('is_active', true)
-            ->whereIn('item_type', ['finish_goods', 'both'])
-            ->latest()
-            ->take(12)
+        $allProducts = Product::where('is_active', true)
+            ->with(['unit', 'brand'])
+            ->orderBy('item_name')
             ->get();
+
+        $recentProducts = $allProducts->take(12);
 
         $defaultTerms = Setting::get('quotation_terms') ?: Quotation::DEFAULT_TERMS;
 
@@ -139,6 +142,7 @@ class QuotationController extends Controller
             'activePrefix',
             'nextQuoteNumber',
             'recentProducts',
+            'allProducts',
             'defaultTerms'
         ));
     }
@@ -189,6 +193,7 @@ class QuotationController extends Controller
 
                 // Process Line Items
                 $itemNames = $request->input('item_name', []);
+                $productIds = $request->input('product_id', []);
                 $quantities = $request->input('qty', []);
                 $prices = $request->input('price', []);
                 $discounts = $request->input('discount', []);
@@ -201,6 +206,7 @@ class QuotationController extends Controller
                 $colors = $request->input('color', []);
                 $models = $request->input('model', []);
                 $units = $request->input('unit', []);
+                $brands = $request->input('brand', []);
                 $subcategories = $request->input('subcategory', []);
 
                 $grossSum = 0;
@@ -245,7 +251,32 @@ class QuotationController extends Controller
                     $totalPiecesCount += (int) $qtyVal;
 
                     // Find product if exists
-                    $product = Product::where('item_name', $name)->first();
+                    $prodId = !empty($productIds[$i]) ? $productIds[$i] : null;
+                    $product = null;
+                    if ($prodId) {
+                        $product = Product::find($prodId);
+                        if ($product && empty($name)) {
+                            $name = $product->item_name;
+                        }
+                    }
+                    if (!$product && !empty($name)) {
+                        if (is_numeric($name)) {
+                            $product = Product::find((int)$name);
+                            if ($product) {
+                                $name = $product->item_name;
+                            }
+                        } else {
+                            $product = Product::where('item_name', $name)->first();
+                        }
+                    }
+
+                    $unitRaw = trim((string)($units[$i] ?? ''));
+                    $unitId = $this->_resolveUnitId($unitRaw, $product);
+                    $unitName = !empty($unitRaw) ? $unitRaw : (optional(optional($product)->unit)->name ?? 'Pcs');
+
+                    $brandRaw = trim((string)($brands[$i] ?? ''));
+                    $brandId = $this->_resolveBrandId($brandRaw, $product);
+                    $brandName = !empty($brandRaw) ? $brandRaw : (optional(optional($product)->brand)->name ?? '');
 
                     $quotationItem = new QuotationItem();
                     $quotationItem->quotation_id = $quotation->id;
@@ -254,9 +285,11 @@ class QuotationController extends Controller
                     $quotationItem->technical_name = $techNames[$i] ?? null;
                     $quotationItem->technical_specs = $techSpecs[$i] ?? null;
                     $quotationItem->technical_remarks = $techRemarks[$i] ?? null;
-                    $quotationItem->unit_id = $units[$i] ?? ($product ? $product->unit_id : null);
+                    $quotationItem->unit_id = $unitId;
+                    $quotationItem->unit_name = $unitName;
                     $quotationItem->sub_category_id = $subcategories[$i] ?? ($product ? $product->sub_category_id : null);
-                    $quotationItem->brand_id = $product ? $product->brand_id : null;
+                    $quotationItem->brand_id = $brandId;
+                    $quotationItem->brand_name = $brandName;
                     $quotationItem->category_id = $product ? $product->category_id : null;
                     $quotationItem->qty = $qtyVal;
                     $quotationItem->price = $priceVal;
@@ -346,11 +379,12 @@ class QuotationController extends Controller
 
         $nextQuoteNumber = $quotation->quote_no;
 
-        $recentProducts = Product::where('is_active', true)
-            ->whereIn('item_type', ['finish_goods', 'both'])
-            ->latest()
-            ->take(12)
+        $allProducts = Product::where('is_active', true)
+            ->with(['unit', 'brand'])
+            ->orderBy('item_name')
             ->get();
+
+        $recentProducts = $allProducts->take(12);
 
         $defaultTerms = Quotation::DEFAULT_TERMS;
 
@@ -362,6 +396,7 @@ class QuotationController extends Controller
             'activePrefix',
             'nextQuoteNumber',
             'recentProducts',
+            'allProducts',
             'defaultTerms'
         ));
     }
@@ -399,6 +434,7 @@ class QuotationController extends Controller
 
                 // Re-create items
                 $itemNames = $request->input('item_name', []);
+                $productIds = $request->input('product_id', []);
                 $quantities = $request->input('qty', []);
                 $prices = $request->input('price', []);
                 $discounts = $request->input('discount', []);
@@ -411,6 +447,7 @@ class QuotationController extends Controller
                 $colors = $request->input('color', []);
                 $models = $request->input('model', []);
                 $units = $request->input('unit', []);
+                $brands = $request->input('brand', []);
                 $subcategories = $request->input('subcategory', []);
 
                 $grossSum = 0;
@@ -454,7 +491,33 @@ class QuotationController extends Controller
                     $netSum += ($lineTotal + $itemTaxAmt);
                     $totalPiecesCount += (int) $qtyVal;
 
-                    $product = Product::where('item_name', $name)->first();
+                    // Find product if exists
+                    $prodId = !empty($productIds[$i]) ? $productIds[$i] : null;
+                    $product = null;
+                    if ($prodId) {
+                        $product = Product::find($prodId);
+                        if ($product && empty($name)) {
+                            $name = $product->item_name;
+                        }
+                    }
+                    if (!$product && !empty($name)) {
+                        if (is_numeric($name)) {
+                            $product = Product::find((int)$name);
+                            if ($product) {
+                                $name = $product->item_name;
+                            }
+                        } else {
+                            $product = Product::where('item_name', $name)->first();
+                        }
+                    }
+
+                    $unitRaw = trim((string)($units[$i] ?? ''));
+                    $unitId = $this->_resolveUnitId($unitRaw, $product);
+                    $unitName = !empty($unitRaw) ? $unitRaw : (optional(optional($product)->unit)->name ?? 'Pcs');
+
+                    $brandRaw = trim((string)($brands[$i] ?? ''));
+                    $brandId = $this->_resolveBrandId($brandRaw, $product);
+                    $brandName = !empty($brandRaw) ? $brandRaw : (optional(optional($product)->brand)->name ?? '');
 
                     $quotationItem = new QuotationItem();
                     $quotationItem->quotation_id = $quotation->id;
@@ -463,9 +526,11 @@ class QuotationController extends Controller
                     $quotationItem->technical_name = $techNames[$i] ?? null;
                     $quotationItem->technical_specs = $techSpecs[$i] ?? null;
                     $quotationItem->technical_remarks = $techRemarks[$i] ?? null;
-                    $quotationItem->unit_id = $units[$i] ?? ($product ? $product->unit_id : null);
+                    $quotationItem->unit_id = $unitId;
+                    $quotationItem->unit_name = $unitName;
                     $quotationItem->sub_category_id = $subcategories[$i] ?? ($product ? $product->sub_category_id : null);
-                    $quotationItem->brand_id = $product ? $product->brand_id : null;
+                    $quotationItem->brand_id = $brandId;
+                    $quotationItem->brand_name = $brandName;
                     $quotationItem->category_id = $product ? $product->category_id : null;
                     $quotationItem->qty = $qtyVal;
                     $quotationItem->price = $priceVal;
@@ -573,7 +638,7 @@ class QuotationController extends Controller
                 $sale->cash = 0;
                 $sale->card = 0;
                 $sale->change = 0;
-                $sale->terms_and_conditions = $quotation->terms_and_conditions;
+                $sale->terms_and_conditions = \App\Models\Setting::get('invoice_terms', 'Payment due within 30 days. Late payments may incur additional charges.');
                 $sale->save();
 
                 // Copy items
@@ -624,6 +689,47 @@ class QuotationController extends Controller
     }
 
     /**
+     * Resolve unit_id safely from input string or product
+     */
+    private function _resolveUnitId($unitVal, $product = null)
+    {
+        $unitStr = trim((string)($unitVal ?? ''));
+        if ($unitStr === '') {
+            return $product ? $product->unit_id : null;
+        }
+        if (is_numeric($unitStr)) {
+            return (int)$unitStr;
+        }
+        $unit = Unit::where('name', $unitStr)->first();
+        if (!$unit) {
+            try {
+                $unit = new Unit();
+                $unit->name = $unitStr;
+                $unit->save();
+            } catch (\Exception $e) {
+                $unit = Unit::where('name', $unitStr)->first();
+            }
+        }
+        return $unit ? $unit->id : ($product ? $product->unit_id : null);
+    }
+
+    /**
+     * Resolve brand_id safely from input string or product
+     */
+    private function _resolveBrandId($brandVal, $product = null)
+    {
+        $brandStr = trim((string)($brandVal ?? ''));
+        if ($brandStr === '') {
+            return $product ? $product->brand_id : null;
+        }
+        if (is_numeric($brandStr)) {
+            return (int)$brandStr;
+        }
+        $brand = Brand::where('name', $brandStr)->first();
+        return $brand ? $brand->id : ($product ? $product->brand_id : null);
+    }
+
+    /**
      * Helper to format quotation items for view / print
      */
     private function _getQuotationItems($quotation)
@@ -636,8 +742,8 @@ class QuotationController extends Controller
                 'technical_name' => $item->technical_name,
                 'technical_specs' => $item->technical_specs,
                 'technical_remarks' => $item->technical_remarks,
-                'brand' => optional($item->brand)->name ?? '',
-                'unit' => optional($item->unit)->name ?? 'Pcs',
+                'brand' => !empty($item->brand_name) ? $item->brand_name : (optional($item->brand)->name ?? ''),
+                'unit' => !empty($item->unit_name) ? $item->unit_name : (optional($item->unit)->name ?? 'Pcs'),
                 'size_mode' => $item->size_mode,
                 'size_val' => $item->size_mode,
                 'color_val' => $item->color,

@@ -142,14 +142,6 @@
                                 <i class="fas fa-arrow-right-to-bracket fa-fw"></i> Convert to Order
                             </a>
                         </li>
-                        <li>
-                            <form action="{{ route('quotations.convert_to_order', $quote->id) }}" method="POST" onsubmit="return confirm('Quickly convert Quotation #{{ $quote->quote_no }} into a Booked Order now?');">
-                                @csrf
-                                <button type="submit" class="dropdown-item d-flex align-items-center gap-2 py-2 text-primary">
-                                    <i class="fas fa-bolt fa-fw"></i> Quick Book Order
-                                </button>
-                            </form>
-                        </li>
                     @else
                         <li>
                             <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-success" href="{{ route('sales.invoice', $quote->converted_sale_id) }}" target="_blank">

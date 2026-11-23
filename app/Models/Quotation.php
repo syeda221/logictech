@@ -87,8 +87,11 @@ class Quotation extends Model
             }
         }
 
-        $seriesNext = $series ? (int)$series->next_number : 1;
-        $nextNum = max($seriesNext, $numFromQuote + 1);
+        $seriesNext = $series ? (int)$series->next_number : 500;
+        if ($seriesNext < 500) {
+            $seriesNext = 500;
+        }
+        $nextNum = max($seriesNext, $numFromQuote >= 500 ? $numFromQuote + 1 : 500);
 
         return $prefix . '-' . str_pad($nextNum, $padding, '0', STR_PAD_LEFT);
     }

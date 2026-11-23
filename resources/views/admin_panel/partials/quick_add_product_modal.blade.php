@@ -305,8 +305,9 @@
                 // Detect screen context
                 var isSaleScreen = $('#salesTableBody').length > 0;
                 var isPurchaseScreen = $('#purchaseTableBody').length > 0;
+                var isQuotationScreen = $('#itemsTableBody').length > 0;
 
-                if (isSaleScreen) {
+                if (isSaleScreen || isQuotationScreen) {
                     updateQapItemType('finish_goods');
                 } else if (isPurchaseScreen) {
                     updateQapItemType('raw_material');
@@ -485,6 +486,50 @@
                                 if (typeof recalcRow === 'function') recalcRow($targetRow);
                                 if (typeof recalcAll === 'function') recalcAll();
                                 $targetRow.find('.main-qty-input').focus().select();
+                            }
+                            // ── Quotations Screen Auto-fill ──
+                            else if ($('#itemsTableBody').length) {
+                                let $targetRow = $('#itemsTableBody .item-main-row:last');
+                                const lastProdVal = $targetRow.find('.product-select').val();
+
+                                if (!$targetRow.length || lastProdVal) {
+                                    $('#btnAddRow').trigger('click');
+                                    $targetRow = $('#itemsTableBody .item-main-row:last');
+                                }
+
+                                const $select = $targetRow.find('.product-select');
+                                const salePrice = prod.sale_price || prod.sale_price_per_piece || prod.retail_price || 0;
+                                const skuTxt = prod.item_code ? ' (SKU: ' + prod.item_code + ')' : '';
+                                const priceTxt = salePrice > 0 ? ' — Rs. ' + Number(salePrice).toLocaleString() : '';
+                                const optText = prodName + skuTxt + priceTxt;
+                                const unitTxt = prod.unit_name || 'Pcs';
+                                const modelTxt = prod.model || $('#qap_model').val() || '';
+                                const brandTxt = prod.brand || '';
+
+                                const newOpt = new Option(optText, prodName, true, true);
+                                $(newOpt).attr('data-id', prod.id)
+                                         .attr('data-name', prodName)
+                                         .attr('data-price', salePrice)
+                                         .attr('data-unit', unitTxt)
+                                         .attr('data-sku', prod.item_code || '')
+                                         .attr('data-model', modelTxt)
+                                         .attr('data-brand', brandTxt);
+                                $select.append(newOpt).trigger('change');
+
+                                $targetRow.find('.product-id-input').val(prod.id);
+                                $targetRow.find('.price-input').val(parseFloat(salePrice).toFixed(2));
+                                $targetRow.find('.unit-input').val(unitTxt);
+
+                                const $specsRow = $targetRow.next('.specs-subrow');
+                                if ($specsRow.length) {
+                                    $specsRow.find('input[name="model[]"]').val(modelTxt);
+                                    $specsRow.find('input[name="brand[]"]').val(brandTxt);
+                                    if (!$specsRow.find('input[name="technical_name[]"]').val()) {
+                                        $specsRow.find('input[name="technical_name[]"]').val(prodName);
+                                    }
+                                }
+
+                                if (typeof recalcTotals === 'function') recalcTotals();
                             }
                         }
 

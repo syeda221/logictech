@@ -380,6 +380,40 @@
             background-color: #ffffff !important;
             padding: 0 !important;
         }
+
+        /* Select2 Product Dropdown in Sales Table */
+        .sales-table tbody .select2-container {
+            width: 100% !important;
+        }
+        .sales-table tbody .select2-container--default .select2-selection--single {
+            height: 28px !important;
+            min-height: 28px !important;
+            padding: 0 4px !important;
+            border: 1.5px solid #bfdbfe !important;
+            border-radius: 6px !important;
+            background-color: #ffffff !important;
+            display: flex;
+            align-items: center;
+        }
+        .sales-table tbody .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: 26px !important;
+            padding-left: 4px !important;
+            padding-right: 20px !important;
+            font-size: 0.78rem !important;
+            color: #0f172a !important;
+            font-weight: 600 !important;
+            text-align: left !important;
+        }
+        .sales-table tbody .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 26px !important;
+            right: 4px !important;
+        }
+        .select2-dropdown {
+            font-size: 0.78rem !important;
+            border: 1.5px solid #93c5fd !important;
+            border-radius: 8px !important;
+            box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.22) !important;
+        }
     </style>
 
     <div class="container-fluid py-2 px-2">
@@ -443,6 +477,18 @@
                     <div class="d-flex flex-wrap align-items-end gap-3 w-100">
                         @php
                             $isWalkinInit = empty($quotation->customer_id) || !empty($quotation->walkin_name);
+                            $productOptionsHtml = '<option value=""></option>';
+                            if (isset($allProducts) && count($allProducts) > 0) {
+                                foreach($allProducts as $p) {
+                                    $skuTxt = $p->item_code ? ' (SKU: ' . e($p->item_code) . ')' : '';
+                                    $priceTxt = ($p->sale_price_per_piece ?? 0) > 0 ? ' — Rs. ' . number_format($p->sale_price_per_piece, 0) : '';
+                                    $unitTxt = optional($p->unit)->name ?? 'Pcs';
+                                    $brandTxt = optional($p->brand)->name ?? '';
+                                    $modelTxt = $p->model ?? '';
+                                    $priceVal = (float)($p->sale_price_per_piece ?? 0);
+                                    $productOptionsHtml .= '<option value="' . e($p->item_name) . '" data-id="' . $p->id . '" data-name="' . e($p->item_name) . '" data-price="' . $priceVal . '" data-unit="' . e($unitTxt) . '" data-sku="' . e($p->item_code ?? '') . '" data-model="' . e($modelTxt) . '" data-brand="' . e($brandTxt) . '">' . e($p->item_name) . $skuTxt . $priceTxt . '</option>';
+                                }
+                            }
                         @endphp
                         <!-- Customer Selection + Walk In Customer Button -->
                         <div style="flex: 2.5 1 340px; min-width: 280px;">
@@ -462,6 +508,9 @@
 
                                 <button type="button" class="btn btn-walkin-toggle flex-shrink-0 {{ $isWalkinInit ? 'active' : '' }}" id="btnToggleWalkin" title="Toggle Walk In Customer">
                                     <i class="fas fa-walking"></i> <span>{{ $isWalkinInit ? 'Walk-in Active' : 'walk in customer' }}</span>
+                                </button>
+                                <button type="button" class="btn btn-erp-pill-primary flex-shrink-0" id="btnHeaderAddCustomer" data-bs-toggle="modal" data-bs-target="#addCustomerModal" data-toggle="modal" data-target="#addCustomerModal" title="Add New Customer">
+                                    <i class="fas fa-plus-circle"></i> <span>Add Customer</span>
                                 </button>
                                 <input type="hidden" id="walkinToggle" name="is_walkin" value="{{ $isWalkinInit ? '1' : '0' }}">
                             </div>
@@ -502,6 +551,9 @@
                                     <span class="fw-bold text-dark" style="font-size:0.82rem;"><i class="fas fa-cubes text-primary me-1"></i>Order Items (<span id="itemsCountBadge">{{ $quotation->items->count() }}</span>)</span>
                                 </div>
                                 <div class="d-flex align-items-center gap-1.5">
+                                    <button type="button" class="btn btn-erp-pill-outline py-0 px-2 fw-bold" id="btnQuickCreateProduct" data-bs-toggle="modal" data-bs-target="#quickAddProductModal" data-toggle="modal" data-target="#quickAddProductModal" style="height:26px; font-size:0.72rem;">
+                                        <i class="fas fa-bolt text-warning me-1"></i>Create Product
+                                    </button>
                                     <button type="button" class="btn btn-erp-pill-primary py-0 px-2.5 fw-bold" id="btnAddRow" style="height:26px; font-size:0.72rem;">
                                         <i class="fas fa-plus me-1"></i>Add Row
                                     </button>
@@ -529,7 +581,13 @@
                                                 <td class="text-center fw-bold row-index-cell" style="font-size: 0.75rem;">{{ $idx + 1 }}</td>
                                                 <td style="padding: 2px 4px !important;">
                                                     <div class="d-flex align-items-center gap-1">
-                                                        <input type="text" class="form-control item-name-input text-start fw-bold" name="item_name[]" value="{{ $it->product_name }}" placeholder="Search Product" required>
+                                                        <div style="flex-grow: 1; min-width: 0;">
+                                                            <select class="form-select product-select" name="item_name[]" style="width: 100%;">
+                                                                <option value="{{ $it->product_name }}" selected data-id="{{ $it->product_id }}" data-name="{{ $it->product_name }}" data-price="{{ (float)$it->price }}" data-unit="{{ !empty($it->unit_name) ? $it->unit_name : (optional($it->unit)->name ?? 'Pcs') }}" data-model="{{ $it->model }}" data-brand="{{ !empty($it->brand_name) ? $it->brand_name : (optional($it->brand)->name ?? '') }}">{{ $it->product_name }}</option>
+                                                                {!! $productOptionsHtml !!}
+                                                            </select>
+                                                            <input type="hidden" name="product_id[]" class="product-id-input" value="{{ $it->product_id }}">
+                                                        </div>
                                                         <button type="button" class="btn-toggle-specs flex-shrink-0" title="Toggle Specifications & Details">
                                                             <i class="fas fa-sliders-h"></i> Specs / Details <i class="fas fa-chevron-down ms-0.5"></i>
                                                         </button>
@@ -539,7 +597,7 @@
                                                     <input type="number" step="any" min="0" class="form-control qty-input font-monospace fw-bold" name="qty[]" value="{{ (float)$it->qty }}">
                                                 </td>
                                                 <td>
-                                                    <input type="text" class="form-control unit-input text-center text-muted" name="unit[]" value="{{ optional($it->unit)->name ?? 'Pcs' }}">
+                                                    <input type="text" class="form-control unit-input text-center text-muted" name="unit[]" value="{{ !empty($it->unit_name) ? $it->unit_name : (optional($it->unit)->name ?? 'Pcs') }}">
                                                 </td>
                                                 <td>
                                                     <div class="d-flex align-items-center">
@@ -581,7 +639,7 @@
                                                         </div>
                                                         <div class="col-md-4">
                                                             <label class="form-label" style="font-size: 0.68rem; color: #1e40af;">Input Power / Brand</label>
-                                                            <input type="text" class="form-control" name="brand[]" value="{{ optional($it->brand)->name ?? '' }}">
+                                                            <input type="text" class="form-control" name="brand[]" value="{{ !empty($it->brand_name) ? $it->brand_name : (optional($it->brand)->name ?? '') }}">
                                                         </div>
                                                         <div class="col-md-4">
                                                             <label class="form-label" style="font-size: 0.68rem; color: #1e40af;">Duty Cycle / Rating</label>
@@ -682,6 +740,61 @@
             </form>
         </div>
     </div>
+
+    <!-- Add Customer Modal -->
+    <div class="modal fade" id="addCustomerModal" tabindex="-1" aria-labelledby="addCustomerModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addCustomerModalLabel">
+                        <i class="fas fa-user-plus text-primary me-2"></i>New Customer
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" data-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="ajaxAddCustomerForm">
+                        @csrf
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Customer Type <span class="text-danger">*</span></label>
+                                <select class="form-select" name="customer_type" required>
+                                    <option value="Main Customer">Main Customer</option>
+                                    <option value="Walking Customer">Walking Customer</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Full Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="customer_name" required placeholder="Customer Name">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Mobile</label>
+                                <input type="text" class="form-control" name="mobile" placeholder="Mobile / WhatsApp">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">NTN / CNIC</label>
+                                <input type="text" class="form-control" name="ntn" placeholder="NTN or CNIC">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Opening Balance</label>
+                                <input type="number" step="0.01" class="form-control" name="opening_balance" value="0" placeholder="0.00">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-bold">Address</label>
+                                <input type="text" class="form-control" name="address" placeholder="Full Address">
+                            </div>
+                        </div>
+                        <div class="mt-3 text-end">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary" id="btnSaveNewCustomer">Save Customer</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Quick Add Product Modal --}}
+    @include('admin_panel.partials.quick_add_product_modal')
 @endsection
 
 @section('js')
@@ -785,6 +898,79 @@
                 recalcTotals();
             });
 
+            // Initialize Select2 on product dropdowns
+            function initProductSelect2($el) {
+                if (typeof $.fn.select2 === 'undefined') return;
+                $el.select2({
+                    placeholder: 'Search Product (Name / SKU / Barcode)',
+                    allowClear: true,
+                    width: '100%',
+                    tags: true,
+                    dropdownAutoWidth: true,
+                    createTag: function (params) {
+                        var term = $.trim(params.term);
+                        if (term === '') return null;
+                        return {
+                            id: term,
+                            text: term,
+                            name: term,
+                            isNew: true
+                        };
+                    }
+                });
+            }
+
+            initProductSelect2($('.product-select'));
+
+            // Product Select2 change event
+            $(document).on('select2:select', '.product-select', function(e) {
+                var data = e.params.data;
+                var $row = $(this).closest('tr.item-main-row');
+                var $specsRow = $row.next('tr.specs-subrow');
+
+                var $opt = $(this).find('option:selected');
+                var pId = $opt.data('id');
+                var pPrice = $opt.data('price');
+                var pUnit = $opt.data('unit');
+                var pModel = $opt.data('model');
+                var pBrand = $opt.data('brand');
+                var pName = $opt.data('name') || data.text;
+
+                if (pId) {
+                    $row.find('.product-id-input').val(pId);
+                    if (pPrice !== undefined && pPrice !== null && pPrice > 0) {
+                        $row.find('.price-input').val(parseFloat(pPrice).toFixed(2));
+                    }
+                    if (pUnit) {
+                        $row.find('.unit-input').val(pUnit);
+                    }
+                    if (pModel) {
+                        $specsRow.find('input[name="model[]"]').val(pModel);
+                    }
+                    if (pBrand) {
+                        $specsRow.find('input[name="brand[]"]').val(pBrand);
+                    }
+                    if (!$specsRow.find('input[name="technical_name[]"]').val()) {
+                        $specsRow.find('input[name="technical_name[]"]').val(pName);
+                    }
+                } else {
+                    $row.find('.product-id-input').val('');
+                    if (!$specsRow.find('input[name="technical_name[]"]').val()) {
+                        $specsRow.find('input[name="technical_name[]"]').val(data.text);
+                    }
+                }
+                recalcTotals();
+            });
+
+            $(document).on('select2:clear', '.product-select', function(e) {
+                var $row = $(this).closest('tr.item-main-row');
+                $row.find('.product-id-input').val('');
+                $row.find('.price-input').val('0.00');
+                recalcTotals();
+            });
+
+            var productOptionsTemplate = `{!! $productOptionsHtml !!}`;
+
             $('#btnAddRow').on('click', function(e) {
                 e.preventDefault();
                 var count = $('#itemsTableBody .item-main-row').length + 1;
@@ -793,14 +979,19 @@
                         <td class="text-center fw-bold row-index-cell">${count}</td>
                         <td style="padding: 2px 4px !important;">
                             <div class="d-flex align-items-center gap-1">
-                                <input type="text" class="form-control item-name-input text-start fw-bold" name="item_name[]" placeholder="Search Product" required>
+                                <div style="flex-grow: 1; min-width: 0;">
+                                    <select class="form-select product-select" name="item_name[]" style="width: 100%;">
+                                        ${productOptionsTemplate}
+                                    </select>
+                                    <input type="hidden" name="product_id[]" class="product-id-input" value="">
+                                </div>
                                 <button type="button" class="btn-toggle-specs flex-shrink-0" title="Toggle Specifications & Details">
                                     <i class="fas fa-sliders-h"></i> Specs / Details <i class="fas fa-chevron-down ms-0.5"></i>
                                 </button>
                             </div>
                         </td>
                         <td><input type="number" step="any" min="0" class="form-control qty-input font-monospace fw-bold" name="qty[]" value="1"></td>
-                        <td><input type="text" class="form-control unit-input text-center text-muted" name="unit[]" value="Pcs"></td>
+                        <td><input type="text" class="form-control unit-input text-center text-muted" name="unit[]" value="Pcs" placeholder="Pcs"></td>
                         <td>
                             <div class="d-flex align-items-center">
                                 <input type="number" step="0.01" min="0" class="form-control price-input text-end font-monospace fw-bold" name="price[]" value="0.00">
@@ -832,7 +1023,7 @@
                         <td colspan="9" style="background: #f8fbff; padding: 8px 12px !important;">
                             <div class="row g-2">
                                 <div class="col-md-6">
-                                    <label class="form-label" style="font-size: 0.68rem; color: #1e40af;">Equipment Title</label>
+                                    <label class="form-label" style="font-size: 0.68rem; color: #1e40af;">Equipment Title (Technical Name)</label>
                                     <input type="text" class="form-control" name="technical_name[]">
                                 </div>
                                 <div class="col-md-6">
@@ -855,7 +1046,9 @@
                         </td>
                     </tr>
                 `;
-                $('#itemsTableBody').append(html);
+                var $newRow = $(html);
+                $('#itemsTableBody').append($newRow);
+                initProductSelect2($newRow.find('.product-select'));
                 recalcTotals();
             });
 
@@ -876,6 +1069,111 @@
             $('#btnResetTerms').on('click', function(e) {
                 e.preventDefault();
                 $('#termsAndConditions').val(defaultQuotationTerms);
+            });
+
+            // Auto calculate Est Delivery Date as +25 days when Order Date is changed
+            $('#displayDateInput').on('change', function() {
+                var orderDateStr = $(this).val();
+                if (orderDateStr) {
+                    var parts = orderDateStr.split('-');
+                    if (parts.length === 3) {
+                        var d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+                        d.setDate(d.getDate() + 25);
+                        var yyyy = d.getFullYear();
+                        var mm = String(d.getMonth() + 1).padStart(2, '0');
+                        var dd = String(d.getDate()).padStart(2, '0');
+                        var newEst = yyyy + '-' + mm + '-' + dd;
+                        var estPicker = document.querySelector("#estDeliveryDateInput") ? document.querySelector("#estDeliveryDateInput")._flatpickr : null;
+                        if (estPicker) {
+                            estPicker.setDate(newEst, true);
+                        } else {
+                            $('#estDeliveryDateInput').val(newEst);
+                        }
+                    }
+                }
+            });
+
+            // Modal Trigger Buttons
+            $('#btnHeaderAddCustomer').on('click', function(e) {
+                e.preventDefault();
+                $('#addCustomerModal').modal('show');
+            });
+
+            $('#btnQuickCreateProduct').on('click', function(e) {
+                e.preventDefault();
+                $('#quickAddProductModal').modal('show');
+            });
+
+            // Universal modal close / cleanup
+            $(document).on('hidden.bs.modal', '.modal', function () {
+                $('.modal-backdrop').remove();
+                $('body').removeClass('modal-open').css({'overflow': '', 'padding-right': ''});
+            });
+
+            $(document).on('click', '[data-bs-dismiss="modal"], [data-dismiss="modal"]', function(e) {
+                var $m = $(this).closest('.modal');
+                if ($m.length) {
+                    $m.modal('hide');
+                    setTimeout(function() {
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css({'overflow': '', 'padding-right': ''});
+                    }, 200);
+                }
+            });
+
+            // Ajax Add Customer Form
+            $('#ajaxAddCustomerForm').on('submit', function(e) {
+                e.preventDefault();
+                var form = $(this);
+                var btn = $('#btnSaveNewCustomer');
+                btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Saving...');
+
+                $.ajax({
+                    url: "{{ route('customers.store') }}",
+                    type: "POST",
+                    data: form.serialize(),
+                    success: function(res) {
+                        btn.prop('disabled', false).text('Save Customer');
+                        if (res.success && res.customer) {
+                            $('#addCustomerModal').modal('hide');
+                            form[0].reset();
+
+                            if ($('#walkinToggle').val() === '1') {
+                                $('#btnToggleWalkin').click();
+                            }
+
+                            var label = (res.customer.customer_id ? res.customer.customer_id + ' — ' : '') + res.customer.customer_name + (res.customer.mobile ? ' (' + res.customer.mobile + ')' : '');
+                            var newOpt = new Option(label, res.customer.id, true, true);
+                            $('#customerSelect').append(newOpt).val(res.customer.id).trigger('change');
+
+                            if (typeof Swal !== 'undefined') {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Customer Added!',
+                                    text: res.message || 'Customer saved successfully.',
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                });
+                            }
+                        } else {
+                            alert(res.message || 'Could not save customer.');
+                        }
+                    },
+                    error: function(xhr) {
+                        btn.prop('disabled', false).text('Save Customer');
+                        var msg = 'Could not save customer.';
+                        if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors) {
+                            msg = Object.values(xhr.responseJSON.errors).flat().join('\n');
+                        } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                            msg = xhr.responseJSON.message;
+                        }
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire('Error', msg, 'error');
+                        } else {
+                            alert(msg);
+                        }
+                    }
+                });
             });
 
             $('#btnSaveQuote, #btnSaveQuoteBottom').on('click', function(e) {

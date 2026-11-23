@@ -169,6 +169,8 @@ class CustomerController extends Controller
             $data['customer_id'] = 'CUST-'.str_pad(\App\Models\Customer::max('id') + 1, 4, '0', STR_PAD_LEFT);
         }
 
+        $data['opening_balance'] = isset($data['opening_balance']) && is_numeric($data['opening_balance']) ? (float)$data['opening_balance'] : 0.00;
+
         // Customer create
         $customer = Customer::create($data);
 
