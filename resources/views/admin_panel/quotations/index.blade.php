@@ -221,6 +221,65 @@
             outline: none !important;
         }
 
+        /* Select2 Ajax Dropdown in Filter Bar */
+        .erp-item-customer .select2-container {
+            width: 100% !important;
+        }
+        .erp-item-customer .select2-container .select2-selection--single {
+            height: 34px !important;
+            border: 1.5px solid #bfdbfe !important;
+            border-radius: 6px !important;
+            display: flex !important;
+            align-items: center !important;
+            background-color: #ffffff !important;
+            padding: 0 4px !important;
+            transition: all 0.15s ease-in-out !important;
+        }
+        .erp-item-customer .select2-container--default.select2-container--focus .select2-selection--single,
+        .erp-item-customer .select2-container--default.select2-container--open .select2-selection--single {
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+        }
+        .erp-item-customer .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: 32px !important;
+            font-size: 0.78rem !important;
+            font-weight: 500 !important;
+            color: #0f172a !important;
+            padding-left: 6px !important;
+            padding-right: 22px !important;
+        }
+        .erp-item-customer .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 32px !important;
+            right: 6px !important;
+        }
+        /* Select2 Dropdown Popup Custom Styling */
+        .select2-dropdown {
+            border: 1.5px solid #bfdbfe !important;
+            border-radius: 8px !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15) !important;
+            z-index: 99999 !important;
+            font-size: 0.8rem !important;
+        }
+        .select2-search--dropdown {
+            padding: 6px !important;
+        }
+        .select2-search--dropdown .select2-search__field {
+            border: 1.5px solid #bfdbfe !important;
+            border-radius: 6px !important;
+            padding: 6px 10px !important;
+            font-size: 0.8rem !important;
+            outline: none !important;
+            width: 100% !important;
+        }
+        .select2-search--dropdown .select2-search__field:focus {
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15) !important;
+        }
+        .select2-results__option {
+            padding: 6px 10px !important;
+            font-size: 0.8rem !important;
+        }
+
         /* Pill Buttons */
         .btn-erp-pill-primary {
             background-color: #2563eb !important;
@@ -553,10 +612,8 @@
                                     <label class="erp-filter-label"><i class="fas fa-tasks text-primary"></i> Status</label>
                                     <select class="form-select erp-filter-input" name="status" id="filter_status">
                                         <option value="all">All Status</option>
-                                        <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>🔴 Pending</option>
-                                        <option value="approved" {{ request('status') === 'approved' ? 'selected' : '' }}>🟢 Approved</option>
-                                        <option value="converted" {{ request('status') === 'converted' ? 'selected' : '' }}>🔵 Converted</option>
-                                        <option value="cancelled" {{ request('status') === 'cancelled' ? 'selected' : '' }}>🟡 Cancelled</option>
+                                        <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>Pending</option>
+                                        <option value="converted" {{ request('status') === 'converted' ? 'selected' : '' }}>Converted to Order</option>
                                     </select>
                                 </div>
 
@@ -564,10 +621,14 @@
                                     <label class="erp-filter-label"><i class="fas fa-user text-primary"></i> Customer</label>
                                     <select class="form-select erp-filter-input select2-customer" name="customer_id" id="filter_customer_id" style="width: 100%;">
                                         <option value="">All Customers</option>
-                                        @if(isset($customers))
+                                        @if(isset($selectedCust) && $selectedCust)
+                                            <option value="{{ $selectedCust->id }}" selected>
+                                                {{ $selectedCust->customer_id ? $selectedCust->customer_id . ' — ' : '' }}{{ $selectedCust->customer_name }}{{ $selectedCust->mobile ? ' (' . $selectedCust->mobile . ')' : '' }}
+                                            </option>
+                                        @elseif(isset($customers))
                                             @foreach ($customers as $c)
                                                 <option value="{{ $c->id }}" {{ (string)$c->id === (string)request('customer_id') ? 'selected' : '' }}>
-                                                    {{ $c->customer_id ? $c->customer_id . ' — ' : '' }}{{ $c->customer_name }}
+                                                    {{ $c->customer_id ? $c->customer_id . ' — ' : '' }}{{ $c->customer_name }}{{ $c->mobile ? ' (' . $c->mobile . ')' : '' }}
                                                 </option>
                                             @endforeach
                                         @endif
@@ -624,13 +685,59 @@
     <script src="{{ asset('assets/js/flatpickr.js') }}"></script>
     <script>
         $(document).ready(function() {
-            // Initialize Flatpickr
+            // Customer Select2 with AJAX Search (Run First & Resilient)
+            function initCustomerSelect2() {
+                if (typeof $ === 'undefined' || !$.fn || !$.fn.select2) {
+                    setTimeout(initCustomerSelect2, 60);
+                    return;
+                }
+                var $cSelect = $('#filter_customer_id');
+                if (!$cSelect.length) return;
+
+                $cSelect.select2({
+                    placeholder: 'All Customers',
+                    allowClear: true,
+                    width: '100%',
+                    ajax: {
+                        url: '{{ route("salecustomers.index") }}',
+                        dataType: 'json',
+                        delay: 250,
+                        data: function (params) {
+                            return {
+                                q: params.term,
+                                page: params.page || 1
+                            };
+                        },
+                        processResults: function (data) {
+                            return {
+                                results: $.map(data.results || data, function (item) {
+                                    return {
+                                        id: item.id,
+                                        text: (item.customer_id ? item.customer_id + ' — ' : '') + item.customer_name + (item.mobile ? ' (' + item.mobile + ')' : '')
+                                    };
+                                })
+                            };
+                        },
+                        cache: true
+                    }
+                });
+
+                $cSelect.on('select2:select select2:clear change', function(e) {
+                    $('#filterForm').submit();
+                });
+            }
+            initCustomerSelect2();
+
+            // Initialize Flatpickr with instant live filter
             if (typeof flatpickr !== 'undefined') {
                 flatpickr('.datepicker-custom', {
                     dateFormat: 'Y-m-d',
                     altInput: true,
                     altFormat: 'd/m/Y',
-                    allowInput: true
+                    allowInput: true,
+                    onChange: function() {
+                        $('#filterForm').submit();
+                    }
                 });
             }
 
@@ -664,6 +771,25 @@
 
                 $('#filter_from_date').val(formatYMD(fromDate));
                 $('#filter_to_date').val(formatYMD(toDate));
+                $('#filterForm').submit();
+            });
+
+            // Live auto-submit when status changes
+            $('#filter_status').on('change', function() {
+                $('#filterForm').submit();
+            });
+
+            // Live search for Serial / Search input (350ms debounce)
+            var serialSearchTimer = null;
+            $('#filter_serial_no').on('input keyup paste', function() {
+                clearTimeout(serialSearchTimer);
+                serialSearchTimer = setTimeout(function() {
+                    $('#filterForm').submit();
+                }, 350);
+            });
+
+            // Auto-submit when date inputs change manually
+            $('#filter_from_date, #filter_to_date').on('change', function() {
                 $('#filterForm').submit();
             });
 

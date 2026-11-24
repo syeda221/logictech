@@ -639,15 +639,19 @@ body{
 
                     // Specs list
                     $specs = [];
-                    if (!empty($item['technical_name'])) {
-                        $specs[] = ['Equipment Title', $item['technical_name']];
-                    }
+                    // Equipment Title is hidden per client instruction: "Equipment Title ko wesy he hide kr deyn yahan sey .. Specifications kafi hain .."
                     if (!empty($item['technical_specs'])) {
                         $tLines = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', (string)$item['technical_specs'])), 'strlen'));
+                        $firstSpecAdded = false;
                         foreach ($tLines as $tIdx => $tLine) {
                             $cleanT = ltrim($tLine, "•-* \t");
                             if ($cleanT !== '') {
-                                $specs[] = [$tIdx === 0 ? 'Specifications' : '', $cleanT];
+                                // Omit if user manually typed "Equipment Title: ..." inside the text
+                                if (stripos($cleanT, 'Equipment Title:') === 0) {
+                                    continue;
+                                }
+                                $specs[] = [!$firstSpecAdded ? 'Specifications' : '', $cleanT];
+                                $firstSpecAdded = true;
                             }
                         }
                     }

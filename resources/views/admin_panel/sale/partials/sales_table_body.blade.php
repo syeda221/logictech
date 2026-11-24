@@ -184,6 +184,11 @@
             <div class="fw-medium text-dark" style="font-size: 0.78rem; line-height: 1.3;" title="{{ $pNames }}">
                 {{ $pNames }}
             </div>
+            @if(!empty($sale->reference))
+                <div class="text-muted small mt-0.5" style="font-size: 0.70rem; font-style: italic;">
+                    <span class="text-primary fw-semibold">Subj:</span> {{ $sale->reference }}
+                </div>
+            @endif
         </td>
         <td class="text-center font-monospace fw-semibold text-dark" style="font-size: 0.78rem;">
             {{ $sale->total_items > 0 ? $sale->total_items : $sale->qty }}
@@ -379,6 +384,15 @@
                             </div>
                         @endif
                     </div>
+                </div>
+
+                <div class="p-2 my-2 rounded-2" style="background-color: #f8fafc; border: 1px solid #f1f5f9;">
+                    <div class="small fw-bold text-dark mb-1">{{ $pNames }}</div>
+                    @if(!empty($sale->reference))
+                        <div class="text-muted small" style="font-size: 0.72rem; font-style: italic;">
+                            <span class="text-primary fw-semibold">Subj:</span> {{ $sale->reference }}
+                        </div>
+                    @endif
                 </div>
 
                 <div class="row g-2 bg-light rounded-2 p-2 my-2 text-center" style="font-size: 0.8rem;">

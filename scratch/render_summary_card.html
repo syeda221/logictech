@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Logic Tech Updates Showcase</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background: #0f172a;
+        color: #1e293b;
+        padding: 30px;
+        width: 1280px;
+    }
+    .header-card {
+        background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+        border: 1px solid #3b82f6;
+        border-radius: 16px;
+        padding: 24px 30px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    .header-title {
+        color: #ffffff;
+        font-size: 26px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .header-subtitle {
+        color: #93c5fd;
+        font-size: 14px;
+        font-weight: 500;
+        margin-top: 6px;
+    }
+    .verified-badge {
+        background: #059669;
+        color: #ffffff;
+        padding: 8px 18px;
+        border-radius: 50px;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 15px rgba(5, 150, 105, 0.4);
+    }
+    .section-card {
+        background: #ffffff;
+        border-radius: 14px;
+        padding: 22px;
+        margin-bottom: 20px;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+        border: 1px solid #e2e8f0;
+    }
+    .card-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 14px;
+        padding-bottom: 10px;
+        border-bottom: 1.5px solid #f1f5f9;
+    }
+    .card-title {
+        font-size: 17px;
+        font-weight: 800;
+        color: #1e3a8a;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .card-badge {
+        background: #ecfdf5;
+        color: #047857;
+        border: 1px solid #a7f3d0;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    
+    /* Mock UI Components */
+    .filter-bar-mock {
+        display: flex;
+        gap: 12px;
+        background: #f8fafc;
+        border: 1.5px solid #bfdbfe;
+        border-radius: 10px;
+        padding: 12px 16px;
+        align-items: center;
+    }
+    .f-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        flex: 1;
+    }
+    .f-label {
+        font-size: 10px;
+        font-weight: 800;
+        color: #3730a3;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .f-input {
+        height: 34px;
+        border: 1.5px solid #bfdbfe;
+        border-radius: 6px;
+        padding: 0 10px;
+        font-size: 13px;
+        font-weight: 500;
+        background: #ffffff;
+        color: #0f172a;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .f-highlight {
+        border-color: #2563eb !important;
+        background: #eff6ff !important;
+        box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+    }
+    .live-tag {
+        background: #2563eb;
+        color: #fff;
+        font-size: 9px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-weight: 700;
+    }
+
+    /* Table Mock */
+    .table-mock {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12.5px;
+    }
+    .table-mock th {
+        background: #eff6ff;
+        color: #1e40af;
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        padding: 10px 12px;
+        border: 1px solid #bfdbfe;
+        text-align: left;
+    }
+    .table-mock td {
+        padding: 10px 12px;
+        border: 1px solid #e2e8f0;
+        background: #ffffff;
+        vertical-align: middle;
+    }
+    .p-name {
+        font-weight: 700;
+        color: #0f172a;
+        font-size: 13px;
+    }
+    .p-subj {
+        font-size: 11.5px;
+        color: #475569;
+        margin-top: 4px;
+        background: #f1f5f9;
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        border: 1px solid #e2e8f0;
+        font-style: italic;
+    }
+    .p-subj strong {
+        color: #2563eb;
+        font-style: normal;
+    }
+
+    /* Print Spec Box */
+    .print-spec-box {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 12px 16px;
+    }
+    .print-spec-title {
+        font-size: 12px;
+        font-weight: 800;
+        color: #1e3a8a;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+    }
+    .print-spec-list {
+        list-style: none;
+        padding: 0;
+        font-size: 12px;
+        color: #334155;
+        line-height: 1.6;
+    }
+    .print-spec-list li {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .print-spec-list li::before {
+        content: "•";
+        color: #2563eb;
+        font-weight: bold;
+        font-size: 14px;
+    }
+    .hide-note {
+        font-size: 11px;
+        color: #dc2626;
+        font-weight: 600;
+        margin-top: 8px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: #fef2f2;
+        padding: 6px 10px;
+        border-radius: 6px;
+        border: 1px solid #fecaca;
+    }
+</style>
+</head>
+<body>
+
+    <!-- Header Banner -->
+    <div class="header-card">
+        <div>
+            <div class="header-title">
+                <i class="fas fa-microchip text-primary"></i> LOGIC TECH ENGINEERING — ERP SYSTEM UPDATES
+            </div>
+            <div class="header-subtitle">
+                Summary of Resolved Issues & Functional Enhancements | 24 November 2026
+            </div>
+        </div>
+        <div class="verified-badge">
+            <i class="fas fa-check-circle"></i> 100% Tested & Verified
+        </div>
+    </div>
+
+    <!-- UPDATE 1: Quotation Print -->
+    <div class="section-card">
+        <div class="card-top">
+            <div class="card-title">
+                <i class="fas fa-print text-primary"></i> 1. Quotation Print — Equipment Title Hidden from Specifications
+            </div>
+            <div class="card-badge">
+                <i class="fas fa-check"></i> Resolved & Cleaned
+            </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div class="print-spec-box">
+                <div class="print-spec-title">Product Details on Print Invoice</div>
+                <div class="p-name" style="font-size: 14px; margin-bottom: 8px;">AIR-COOLED INDUCTION HEATER 25KW</div>
+                <ul class="print-spec-list">
+                    <li><strong>Specifications:</strong> HF Induction Heater Panel with Temperature Controller</li>
+                    <li>Water Capacity: 450 liter (450 ltr drain)</li>
+                    <li>Required Temperature: 75° C | Time: 50 min</li>
+                    <li>Input Power: 3-PHASE 440V AC 50Hz/60Hz</li>
+                </ul>
+            </div>
+            <div style="display: flex; flex-direction: column; justify-content: center; gap: 8px;">
+                <div class="hide-note" style="background: #f0fdf4; border-color: #bbf7d0; color: #166534;">
+                    <i class="fas fa-check-circle text-success"></i> <strong>Equipment Title Removed:</strong> Duplicate/Mismatched "Equipment Title: 40KW" is now completely omitted.
+                </div>
+                <div class="hide-note" style="background: #f0fdf4; border-color: #bbf7d0; color: #166534;">
+                    <i class="fas fa-sync text-success"></i> <strong>Form Sync Fixed:</strong> Selecting a new product in Quotation Create/Edit automatically updates the technical name without keeping stale product titles.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- UPDATE 2: Quotations Management -->
+    <div class="section-card">
+        <div class="card-top">
+            <div class="card-title">
+                <i class="fas fa-filter text-primary"></i> 2. Quotations Management — Simplified Status & Live Filters
+            </div>
+            <div class="card-badge">
+                <i class="fas fa-bolt"></i> Live AJAX Search Active
+            </div>
+        </div>
+        <div class="filter-bar-mock">
+            <div class="f-item" style="max-width: 140px;">
+                <div class="f-label"><i class="far fa-clock"></i> Period</div>
+                <div class="f-input">This Year <i class="fas fa-chevron-down" style="font-size: 10px; color: #94a3b8;"></i></div>
+            </div>
+            <div class="f-item" style="max-width: 220px;">
+                <div class="f-label"><i class="fas fa-search"></i> Serial / Search <span class="live-tag">LIVE</span></div>
+                <div class="f-input f-highlight">
+                    <span>QUO-0502</span>
+                    <i class="fas fa-search text-primary" style="font-size: 11px;"></i>
+                </div>
+            </div>
+            <div class="f-item" style="max-width: 200px;">
+                <div class="f-label"><i class="fas fa-tasks"></i> Status <span class="live-tag">LIVE</span></div>
+                <div class="f-input f-highlight">
+                    <span style="font-weight: 700; color: #1e3a8a;">Pending &amp; Converted</span>
+                    <i class="fas fa-check-circle text-primary" style="font-size: 11px;"></i>
+                </div>
+            </div>
+            <div class="f-item">
+                <div class="f-label"><i class="fas fa-user"></i> Customer (Select2) <span class="live-tag">LIVE</span></div>
+                <div class="f-input f-highlight">
+                    <span><i class="fas fa-search me-1 text-muted" style="font-size: 11px;"></i> CUST-0023 — Abdul Moiz</span>
+                    <i class="fas fa-times text-muted" style="font-size: 10px;"></i>
+                </div>
+            </div>
+        </div>
+        <div style="margin-top: 10px; font-size: 11.5px; color: #64748b; display: flex; gap: 20px;">
+            <span><i class="fas fa-check text-success"></i> Status filtered to Quotation records only (Pending &amp; Converted to Order)</span>
+            <span><i class="fas fa-check text-success"></i> Customer search box active with instant AJAX lookup</span>
+            <span><i class="fas fa-check text-success"></i> Instant auto-filtering on typing (350ms debounce)</span>
+        </div>
+    </div>
+
+    <!-- UPDATE 3: Sales Management -->
+    <div class="section-card" style="margin-bottom: 0;">
+        <div class="card-top">
+            <div class="card-title">
+                <i class="fas fa-shopping-cart text-primary"></i> 3. Sales Management — "SUBJECT" Line in Product Column
+            </div>
+            <div class="card-badge">
+                <i class="fas fa-check"></i> Displaying on Desktop &amp; Mobile
+            </div>
+        </div>
+        <table class="table-mock">
+            <thead>
+                <tr>
+                    <th style="width: 170px;">Customer</th>
+                    <th style="width: 105px;">Invoice No.</th>
+                    <th>Products / Machine Specifications</th>
+                    <th style="width: 60px; text-align: center;">Qty</th>
+                    <th style="width: 120px; text-align: right;">Net Total</th>
+                    <th style="width: 130px; text-align: center;">Order Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Nishat Mills Limited</strong><br><span style="font-size: 10.5px; color: #64748b;">CUST-0012</span></td>
+                    <td><span style="color: #2563eb; font-weight: 700; font-family: monospace;">#INV-0036</span></td>
+                    <td>
+                        <div class="p-name">Induction Working Coil</div>
+                        <div class="p-subj"><strong>Subj:</strong> HF Induction Heater for Water Heating with MS Tank &amp; Coil</div>
+                    </td>
+                    <td style="text-align: center; font-weight: 700;">1.00</td>
+                    <td style="text-align: right; font-weight: 700; color: #047857;">Rs. 350,000.00</td>
+                    <td style="text-align: center;"><span style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 3px 8px; border-radius: 20px; font-weight: 700; font-size: 11px;">Confirmed Order</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Najam Sb Daska</strong><br><span style="font-size: 10.5px; color: #64748b;">Walk-in</span></td>
+                    <td><span style="color: #2563eb; font-weight: 700; font-family: monospace;">#INV-0037</span></td>
+                    <td>
+                        <div class="p-name">Induction Parts &amp; Heating Element</div>
+                        <div class="p-subj"><strong>Subj:</strong> Induction Working Coil Custom Fabrication</div>
+                    </td>
+                    <td style="text-align: center; font-weight: 700;">1.00</td>
+                    <td style="text-align: right; font-weight: 700; color: #047857;">Rs. 23,500.00</td>
+                    <td style="text-align: center;"><span style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; padding: 3px 8px; border-radius: 20px; font-weight: 700; font-size: 11px;">Pending</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+</body>
+</html>

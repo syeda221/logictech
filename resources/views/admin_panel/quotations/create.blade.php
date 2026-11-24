@@ -1111,14 +1111,10 @@
                     if (pBrand) {
                         $specsRow.find('input[name="brand[]"]').val(pBrand);
                     }
-                    if (!$specsRow.find('input[name="technical_name[]"]').val()) {
-                        $specsRow.find('input[name="technical_name[]"]').val(pName);
-                    }
+                    $specsRow.find('input[name="technical_name[]"]').val(pName);
                 } else {
                     $row.find('.product-id-input').val('');
-                    if (!$specsRow.find('input[name="technical_name[]"]').val()) {
-                        $specsRow.find('input[name="technical_name[]"]').val(data.text);
-                    }
+                    $specsRow.find('input[name="technical_name[]"]').val(data.text);
                 }
                 recalcTotals();
             });
@@ -1271,9 +1267,7 @@
                 if (pBrand) {
                     $specsRow.find('input[name="brand[]"]').val(pBrand);
                 }
-                if (!$specsRow.find('input[name="technical_name[]"]').val()) {
-                    $specsRow.find('input[name="technical_name[]"]').val(pName);
-                }
+                $specsRow.find('input[name="technical_name[]"]').val(pName);
 
                 recalcTotals();
             });

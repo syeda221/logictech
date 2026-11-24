@@ -27,7 +27,19 @@ class QuotationController extends Controller
 
         // Apply Status Filter
         if ($request->filled('status') && $request->status !== 'all') {
-            $query->where('status', $request->status);
+            if ($request->status === 'converted') {
+                $query->where(function ($q) {
+                    $q->where('status', 'converted')
+                      ->orWhereNotNull('converted_sale_id');
+                });
+            } elseif ($request->status === 'pending') {
+                $query->where(function ($q) {
+                    $q->where('status', 'pending')
+                      ->orWhereNull('status');
+                })->whereNull('converted_sale_id');
+            } else {
+                $query->where('status', $request->status);
+            }
         }
 
         // Apply Date Filters
@@ -83,9 +95,12 @@ class QuotationController extends Controller
             'total_count' => $quotations->count(),
             'total_net' => (float) $quotations->sum('total_net'),
             'total_discount' => (float) $quotations->sum('total_discount'),
-            'converted_count' => $quotations->where('status', 'converted')->count(),
-            'pending_count' => $quotations->where('status', 'pending')->count(),
-            'approved_count' => $quotations->where('status', 'approved')->count(),
+            'converted_count' => $quotations->filter(function ($q) {
+                return $q->status === 'converted' || !empty($q->converted_sale_id);
+            })->count(),
+            'pending_count' => $quotations->filter(function ($q) {
+                return ($q->status === 'pending' || empty($q->status)) && empty($q->converted_sale_id);
+            })->count(),
         ];
 
         // If AJAX request, return partial HTML & stats
@@ -96,10 +111,16 @@ class QuotationController extends Controller
             ]);
         }
 
-        // Load customers for filter dropdown
-        $customers = Customer::orderBy('customer_name')->limit(50)->get();
+        // Selected customer for Select2
+        $selectedCust = null;
+        if ($request->filled('customer_id')) {
+            $selectedCust = Customer::find($request->customer_id);
+        }
 
-        return view('admin_panel.quotations.index', compact('quotations', 'customers', 'stats'));
+        // Load customers for filter dropdown
+        $customers = Customer::orderBy('customer_name')->limit(100)->get();
+
+        return view('admin_panel.quotations.index', compact('quotations', 'customers', 'stats', 'selectedCust'));
     }
 
     public function create()
