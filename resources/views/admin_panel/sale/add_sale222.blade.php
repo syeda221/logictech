@@ -1860,12 +1860,12 @@
                 e.preventDefault();
                 var currentWalkin = $('#walkinToggle').val() === '1';
                 if (!currentWalkin) {
-                    $('#walkinToggle').val('1');
+                    $('#walkinToggle').val('1').trigger('change');
                     $(this).addClass('active').html('<i class="fas fa-check"></i> <span>Walk-in Active</span>');
                     $('#customerSelect').next('.select2-container').addClass('d-none');
                     $('#walkinNameInput').removeClass('d-none').focus();
                 } else {
-                    $('#walkinToggle').val('0');
+                    $('#walkinToggle').val('0').trigger('change');
                     $(this).removeClass('active').html('<i class="fas fa-walking"></i> <span>walk in customer</span>');
                     $('#walkinNameInput').addClass('d-none').val('');
                     $('#customerSelect').next('.select2-container').removeClass('d-none');
@@ -1908,12 +1908,12 @@
 
             @if(isset($fromQuotation) && $fromQuotation)
                 @if(!empty($fromQuotation->walkin_name))
-                    $('#walkinToggle').val('1');
+                    $('#walkinToggle').val('1').trigger('change');
                     $('#btnToggleWalkin').addClass('active').html('<i class="fas fa-check"></i> <span>Walk-in Active</span>');
                     $('#customerSelect').next('.select2-container').addClass('d-none');
                     $('#walkinNameInput').removeClass('d-none').val('{!! addslashes($fromQuotation->walkin_name) !!}');
                 @elseif($fromQuotation->customer_id)
-                    $('#walkinToggle').val('0');
+                    $('#walkinToggle').val('0').trigger('change');
                     $('#btnToggleWalkin').removeClass('active').html('<i class="fas fa-walking"></i> <span>walk in customer</span>');
                     $('#walkinNameInput').addClass('d-none').val('');
                     $('#customerSelect').next('.select2-container').removeClass('d-none');

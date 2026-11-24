@@ -63,17 +63,31 @@
         }
     }
 
+    function isWalkinActive() {
+        const $toggle = $('#walkinToggle');
+        if ($toggle.length) {
+            if ($toggle.is(':checkbox')) {
+                return $toggle.is(':checked');
+            }
+            return $toggle.val() === '1';
+        }
+        return $('#walkinNameInput').is(':visible');
+    }
+
     function showAlert(type, msg) {
         const el = $('#alertBox');
         if (el.length) {
             el.removeClass('d-none alert-success alert-danger alert-warning').addClass('alert-' + type).text(msg)
                 .show();
-            setTimeout(() => el.addClass('d-none'), 4000);
-        } else {
-            // fallback if alertBox missing
-            if (type === 'error') Swal.fire('Error', msg, 'error');
-            else if (type === 'warning') Swal.fire('Warning', msg, 'warning');
-            else Swal.fire('Info', msg, 'info');
+            setTimeout(() => el.addClass('d-none'), 5000);
+        }
+        if (typeof Swal !== 'undefined' && (type === 'error' || type === 'warning')) {
+            Swal.fire({
+                icon: type,
+                title: type === 'warning' ? 'Attention' : 'Error',
+                text: msg,
+                confirmButtonColor: '#2563eb'
+            });
         }
     }
 
@@ -615,7 +629,7 @@
             tNet += net;
         });
 
-        const isWalkin = $('#walkinToggle').length > 0 && $('#walkinToggle').is(':checked');
+        const isWalkin = isWalkinActive();
         
         let orderDisc = 0;
         if (isWalkin) {
@@ -962,7 +976,7 @@
         let firstMessage = null;
         let firstEl = null;
 
-        const isWalkin = $('#walkinToggle').is(':checked');
+        const isWalkin = isWalkinActive();
 
         if (isWalkin) {
             const walkinName = $('#walkinNameInput').val().trim();
@@ -1110,14 +1124,14 @@
 
     // Walk-in Toggle Logic
     $('#walkinToggle').on('change', function() {
-        const isWalkin = $(this).is(':checked');
+        const isWalkin = isWalkinActive();
         if (isWalkin) {
             $('#customerSelect').addClass('d-none').next('.select2-container').addClass('d-none');
             $('#walkinNameInput').removeClass('d-none');
 
-            // Auto-fill advance with full net total for walk-in if only 1 row
+            // Auto-fill advance with full net total for walk-in ONLY if empty
             const netVal = toNum($('#totalBalance').val());
-            if (netVal > 0 && $('.rv-row').length === 1) {
+            if (netVal > 0 && $('.rv-row').length === 1 && !toNum($('.rv-amount').first().val())) {
                 $('.rv-amount').first().val(netVal.toFixed(2));
             }
         } else {
@@ -1711,22 +1725,6 @@
                 }
                 return;
             }
-            // Walk-in 100% Advance Payment Check for Booking
-            const isWalkin = $('#walkinToggle').is(':checked');
-            const invoiceNet = toNum($('#totalBalance').val());
-            const paidNow = toNum($('#receiptsTotal').text());
-
-            if (isWalkin) {
-                if (paidNow < (invoiceNet - 0.05)) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: '100% Advance Payment Required',
-                        text: 'Walk-in customers do not have a credit ledger. Full amount (Rs. ' + invoiceNet.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ') must be received in advance for booking.',
-                        confirmButtonColor: '#f59e0b'
-                    });
-                    return;
-                }
-            }
 
             if ($('#sale_status').val() === 'posted') {
                 $('#action').val('sale');
@@ -1754,7 +1752,7 @@
             }
 
             // Walk-in 100% Payment Validation Check
-            const isWalkin = $('#walkinToggle').is(':checked');
+            const isWalkin = isWalkinActive();
             const invoiceNet = toNum($('#totalBalance').val());
             const paidNow = toNum($('#receiptsTotal').text());
 

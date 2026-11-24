@@ -576,11 +576,7 @@ body{
             </tr>
             <tr>
                 <td class="ml">Quotation Date</td>
-                <td class="mv">{{ $quotation->quotation_date ? \Carbon\Carbon::parse($quotation->quotation_date)->format('d-M-Y') : $quotation->created_at->format('d-M-Y') }}</td>
-                <td class="ml">Status</td>
-                <td class="mv">
-                    <strong style="text-transform: uppercase;">{{ $quotation->status }}</strong>
-                </td>
+                <td class="mv" colspan="3">{{ $quotation->quotation_date ? \Carbon\Carbon::parse($quotation->quotation_date)->format('d-M-Y') : $quotation->created_at->format('d-M-Y') }}</td>
             </tr>
         </table>
     </div>
@@ -637,7 +633,8 @@ body{
                     $gross = $qty * $price;
                     $taxPct = (float)($item['tax_percent'] ?? 0);
                     $taxAmt = (float)($item['tax_amount'] ?? 0);
-                    $itemTotalWithTax = (float)($item['total'] ?? $gross - $disc) + $taxAmt;
+                    $afterDisc = max(0, $gross - $disc);
+                    $itemTotalWithTax = $afterDisc + $taxAmt;
                     $totalTableTax += $taxAmt;
 
                     // Specs list
@@ -659,7 +656,7 @@ body{
                     if (!empty($item['model'])) $specs[] = ['Cooling Type / Model', $item['model']];
                     if ($disc > 0) {
                         $discLabel = 'Discount' . ($discP > 0 ? ' (' . number_format($discP, 2) . '%)' : '');
-                        $specs[] = [$discLabel, '-' . number_format($disc, 2)];
+                        $specs[] = [$discLabel, '-' . number_format($disc, 2), true];
                     }
                 @endphp
                 <tr>
@@ -673,13 +670,16 @@ body{
                                 <div class="ispec-lbl">Specifications &amp; Details:</div>
                                 <ul class="ispec-ul">
                                     @foreach($specs as $sp)
+                                        @php
+                                            $isSpDisc = !empty($sp[2]);
+                                        @endphp
                                         <li>
-                                            <span class="ispec-bullet">•</span>
+                                            <span class="ispec-bullet" style="{{ $isSpDisc ? 'color: #dc2626 !important;' : '' }}">•</span>
                                             <div>
                                                 @if(!empty($sp[0]))
-                                                    <strong style="color: #1e3a8a;">{{ $sp[0] }}:</strong>
+                                                    <strong style="color: {{ $isSpDisc ? '#dc2626' : '#1e3a8a' }} !important;">{{ $sp[0] }}:</strong>
                                                 @endif
-                                                <span style="color: #334155;">{{ $sp[1] }}</span>
+                                                <span style="color: {{ $isSpDisc ? '#dc2626' : '#334155' }} !important; {{ $isSpDisc ? 'font-weight: 700;' : '' }}">{{ $sp[1] }}</span>
                                             </div>
                                         </li>
                                     @endforeach
@@ -689,13 +689,15 @@ body{
                     </td>
                     <td class="tc">{{ $qty }} {{ $item['unit'] ?? 'Pcs' }}</td>
                     <td class="tr">{{ number_format($price, 2) }}</td>
-                    <td class="tr" style="vertical-align: top; position: relative;">
-                        <div>{{ number_format($gross, 2) }}</div>
-                        @if($disc > 0)
-                            <div style="color: #c62828; font-weight: 700; font-size: 9px; margin-top: 2px;">
-                                -{{ number_format($disc, 2) }}
-                            </div>
-                        @endif
+                    <td class="tr" style="vertical-align: top; height: 100%;">
+                        <div style="display: flex; flex-direction: column; justify-content: space-between; height: 100%; min-height: {{ count($specs) > 0 ? '70px' : 'auto' }};">
+                            <div>{{ number_format($gross, 2) }}</div>
+                            @if($disc > 0)
+                                <div style="color: #dc2626; font-weight: 700; font-size: 9px; margin-top: auto; padding-top: 8px;">
+                                    -{{ number_format($disc, 2) }}
+                                </div>
+                            @endif
+                        </div>
                     </td>
                     <td class="tc">{{ $taxPct > 0 ? (float)$taxPct.'%' : '0%' }}</td>
                     <td class="tr">{{ $taxAmt > 0 ? number_format($taxAmt, 2) : '0.00' }}</td>

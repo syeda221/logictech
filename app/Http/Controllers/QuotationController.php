@@ -127,6 +127,7 @@ class QuotationController extends Controller
         $nextQuoteNumber = Quotation::generateQuoteNo($activePrefix);
 
         $allProducts = Product::where('is_active', true)
+            ->whereIn('item_type', ['finish_goods', 'both'])
             ->with(['unit', 'brand'])
             ->orderBy('item_name')
             ->get();
@@ -222,7 +223,7 @@ class QuotationController extends Controller
 
                     $qtyVal = (float)($quantities[$i] ?? 1);
                     $priceVal = (float)($prices[$i] ?? 0);
-                    $lineTotal = (float)($totals[$i] ?? ($qtyVal * $priceVal));
+                    $rowGross = $qtyVal * $priceVal;
                     $discVal = (float)($discounts[$i] ?? 0);
                     $discType = $discountTypes[$i] ?? 'percent';
 
@@ -230,24 +231,28 @@ class QuotationController extends Controller
                     $discPct = 0;
                     if ($discVal > 0) {
                         if ($discType === 'fixed') {
-                            $discAmount = $discVal;
-                            $discPct = ($qtyVal * $priceVal) > 0 ? ($discAmount / ($qtyVal * $priceVal)) * 100 : 0;
+                            $discAmount = min($rowGross, $discVal);
+                            $discPct = $rowGross > 0 ? round(($discAmount / $rowGross) * 100, 4) : 0;
                         } else {
                             $discPct = $discVal;
-                            $discAmount = (($qtyVal * $priceVal) * $discPct) / 100;
+                            $discAmount = round(($rowGross * $discPct) / 100, 2);
                         }
                     }
+
+                    $afterDisc = max(0, $rowGross - $discAmount);
 
                     $itemTaxVal = (float)($itemTaxes[$i] ?? 0);
                     $itemTaxAmt = 0;
                     if ($itemTaxVal > 0) {
-                        $itemTaxAmt = (($lineTotal) * $itemTaxVal) / 100;
+                        $itemTaxAmt = round(($afterDisc * $itemTaxVal) / 100, 2);
                     }
 
-                    $grossSum += ($qtyVal * $priceVal);
+                    $lineTotal = round($afterDisc + $itemTaxAmt, 2);
+
+                    $grossSum += $rowGross;
                     $discountSum += $discAmount;
                     $taxSum += $itemTaxAmt;
-                    $netSum += ($lineTotal + $itemTaxAmt);
+                    $netSum += $lineTotal;
                     $totalPiecesCount += (int) $qtyVal;
 
                     // Find product if exists
@@ -293,6 +298,7 @@ class QuotationController extends Controller
                     $quotationItem->category_id = $product ? $product->category_id : null;
                     $quotationItem->qty = $qtyVal;
                     $quotationItem->price = $priceVal;
+                    $quotationItem->discount_type = $discType;
                     $quotationItem->discount_percent = $discPct;
                     $quotationItem->discount_amount = $discAmount;
                     $quotationItem->tax_percent = $itemTaxVal;
@@ -308,17 +314,23 @@ class QuotationController extends Controller
                 $globalTaxPct = (float)$request->input('tax_percent', 0);
                 $globalTaxAmt = (float)$request->input('tax_amount', 0);
                 if ($globalTaxAmt <= 0 && $globalTaxPct > 0) {
-                    $globalTaxAmt = (($grossSum - $discountSum) * $globalTaxPct) / 100;
+                    $globalTaxAmt = round((($grossSum - $discountSum) * $globalTaxPct) / 100, 2);
                 }
                 if ($globalTaxAmt > 0 && $taxSum <= 0) {
                     $taxSum = $globalTaxAmt;
+                }
+
+                $effectiveTaxBase = max(0, $grossSum - $discountSum);
+                $effectiveTaxPct = $globalTaxPct;
+                if ($effectiveTaxPct <= 0 && $effectiveTaxBase > 0 && $taxSum > 0) {
+                    $effectiveTaxPct = round(($taxSum / $effectiveTaxBase) * 100, 2);
                 }
 
                 $finalNet = max(0, ($grossSum - $discountSum) + $taxSum);
 
                 $quotation->total_bill_amount = $grossSum;
                 $quotation->total_discount = $discountSum;
-                $quotation->tax_percent = $globalTaxPct;
+                $quotation->tax_percent = $effectiveTaxPct;
                 $quotation->tax_amount = $taxSum;
                 $quotation->total_net = $finalNet;
                 $quotation->total_items = $totalPiecesCount;
@@ -380,6 +392,7 @@ class QuotationController extends Controller
         $nextQuoteNumber = $quotation->quote_no;
 
         $allProducts = Product::where('is_active', true)
+            ->whereIn('item_type', ['finish_goods', 'both'])
             ->with(['unit', 'brand'])
             ->orderBy('item_name')
             ->get();
@@ -463,7 +476,7 @@ class QuotationController extends Controller
 
                     $qtyVal = (float)($quantities[$i] ?? 1);
                     $priceVal = (float)($prices[$i] ?? 0);
-                    $lineTotal = (float)($totals[$i] ?? ($qtyVal * $priceVal));
+                    $rowGross = $qtyVal * $priceVal;
                     $discVal = (float)($discounts[$i] ?? 0);
                     $discType = $discountTypes[$i] ?? 'percent';
 
@@ -471,24 +484,28 @@ class QuotationController extends Controller
                     $discPct = 0;
                     if ($discVal > 0) {
                         if ($discType === 'fixed') {
-                            $discAmount = $discVal;
-                            $discPct = ($qtyVal * $priceVal) > 0 ? ($discAmount / ($qtyVal * $priceVal)) * 100 : 0;
+                            $discAmount = min($rowGross, $discVal);
+                            $discPct = $rowGross > 0 ? round(($discAmount / $rowGross) * 100, 4) : 0;
                         } else {
                             $discPct = $discVal;
-                            $discAmount = (($qtyVal * $priceVal) * $discPct) / 100;
+                            $discAmount = round(($rowGross * $discPct) / 100, 2);
                         }
                     }
+
+                    $afterDisc = max(0, $rowGross - $discAmount);
 
                     $itemTaxVal = (float)($itemTaxes[$i] ?? 0);
                     $itemTaxAmt = 0;
                     if ($itemTaxVal > 0) {
-                        $itemTaxAmt = (($lineTotal) * $itemTaxVal) / 100;
+                        $itemTaxAmt = round(($afterDisc * $itemTaxVal) / 100, 2);
                     }
 
-                    $grossSum += ($qtyVal * $priceVal);
+                    $lineTotal = round($afterDisc + $itemTaxAmt, 2);
+
+                    $grossSum += $rowGross;
                     $discountSum += $discAmount;
                     $taxSum += $itemTaxAmt;
-                    $netSum += ($lineTotal + $itemTaxAmt);
+                    $netSum += $lineTotal;
                     $totalPiecesCount += (int) $qtyVal;
 
                     // Find product if exists
@@ -534,6 +551,7 @@ class QuotationController extends Controller
                     $quotationItem->category_id = $product ? $product->category_id : null;
                     $quotationItem->qty = $qtyVal;
                     $quotationItem->price = $priceVal;
+                    $quotationItem->discount_type = $discType;
                     $quotationItem->discount_percent = $discPct;
                     $quotationItem->discount_amount = $discAmount;
                     $quotationItem->tax_percent = $itemTaxVal;
@@ -548,17 +566,23 @@ class QuotationController extends Controller
                 $globalTaxPct = (float)$request->input('tax_percent', 0);
                 $globalTaxAmt = (float)$request->input('tax_amount', 0);
                 if ($globalTaxAmt <= 0 && $globalTaxPct > 0) {
-                    $globalTaxAmt = (($grossSum - $discountSum) * $globalTaxPct) / 100;
+                    $globalTaxAmt = round((($grossSum - $discountSum) * $globalTaxPct) / 100, 2);
                 }
                 if ($globalTaxAmt > 0 && $taxSum <= 0) {
                     $taxSum = $globalTaxAmt;
+                }
+
+                $effectiveTaxBase = max(0, $grossSum - $discountSum);
+                $effectiveTaxPct = $globalTaxPct;
+                if ($effectiveTaxPct <= 0 && $effectiveTaxBase > 0 && $taxSum > 0) {
+                    $effectiveTaxPct = round(($taxSum / $effectiveTaxBase) * 100, 2);
                 }
 
                 $finalNet = max(0, ($grossSum - $discountSum) + $taxSum);
 
                 $quotation->total_bill_amount = $grossSum;
                 $quotation->total_discount = $discountSum;
-                $quotation->tax_percent = $globalTaxPct;
+                $quotation->tax_percent = $effectiveTaxPct;
                 $quotation->tax_amount = $taxSum;
                 $quotation->total_net = $finalNet;
                 $quotation->total_items = $totalPiecesCount;

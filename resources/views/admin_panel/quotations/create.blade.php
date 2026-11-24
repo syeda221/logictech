@@ -588,6 +588,7 @@
     $productOptionsHtml = '<option value=""></option>';
     if (isset($allProducts) && count($allProducts) > 0) {
         foreach($allProducts as $p) {
+            if (isset($p->item_type) && $p->item_type === 'raw_material') continue;
             $skuTxt = $p->item_code ? ' (SKU: ' . e($p->item_code) . ')' : '';
             $priceTxt = ($p->sale_price_per_piece ?? 0) > 0 ? ' — Rs. ' . number_format($p->sale_price_per_piece, 0) : '';
             $unitTxt = optional($p->unit)->name ?? 'Pcs';
@@ -724,26 +725,14 @@
                                         <tr class="specs-subrow d-none" data-row="0">
                                             <td colspan="9" style="background: #f8fbff; padding: 8px 12px !important; border-top: none !important;">
                                                 <div class="row g-2">
-                                                    <div class="col-md-6">
-                                                        <label class="form-label" style="font-size: 0.68rem; color: #1e40af;"><i class="fas fa-tag me-1"></i>Equipment Title (Technical Name)</label>
-                                                        <input type="text" class="form-control" name="technical_name[]" placeholder="e.g. Induction Melting Furnace 40kw ABC">
+                                                    <div class="col-12">
+                                                        <label class="form-label fw-semibold" style="font-size: 0.72rem; color: #1e40af;"><i class="fas fa-cogs me-1"></i>TECHNICAL SPECIFICATIONS (MULTILINE BULLETS)</label>
+                                                        <textarea class="form-control" name="technical_specs[]" rows="3" placeholder="• Melting Capacity: 20kg Copper&#10;• Tilting System: Manual&#10;• Duty Cycle: 24/7 100%"></textarea>
                                                     </div>
-                                                    <div class="col-md-6">
-                                                        <label class="form-label" style="font-size: 0.68rem; color: #1e40af;"><i class="fas fa-cogs me-1"></i>Technical Specifications (Multiline bullets)</label>
-                                                        <textarea class="form-control" name="technical_specs[]" rows="2" placeholder="• Melting Capacity: 20kg Copper&#10;• Tilting System: Manual&#10;• Duty Cycle: 24/7 100%"></textarea>
-                                                    </div>
-                                                    <div class="col-md-4">
-                                                        <label class="form-label" style="font-size: 0.68rem; color: #1e40af;"><i class="fas fa-bolt me-1"></i>Input Power / Brand</label>
-                                                        <input type="text" class="form-control" name="brand[]" placeholder="e.g. 3-PHASE 440V AC 50Hz">
-                                                    </div>
-                                                    <div class="col-md-4">
-                                                        <label class="form-label" style="font-size: 0.68rem; color: #1e40af;"><i class="fas fa-tachometer-alt me-1"></i>Duty Cycle / Rating</label>
-                                                        <input type="text" class="form-control" name="color[]" placeholder="e.g. 24/7 100%">
-                                                    </div>
-                                                    <div class="col-md-4">
-                                                        <label class="form-label" style="font-size: 0.68rem; color: #1e40af;"><i class="fas fa-fan me-1"></i>Cooling Type / Model</label>
-                                                        <input type="text" class="form-control" name="model[]" placeholder="e.g. LTZMODEL Water Cooled">
-                                                    </div>
+                                                    <input type="hidden" name="technical_name[]" value="">
+                                                    <input type="hidden" name="brand[]" value="">
+                                                    <input type="hidden" name="color[]" value="">
+                                                    <input type="hidden" name="model[]" value="">
                                                 </div>
                                             </td>
                                         </tr>
@@ -1058,6 +1047,8 @@
                 $('#bottomInvoiceTotal').text(totalGross.toFixed(2));
                 $('#tLineDisc').text(totalDisc.toFixed(2));
                 $('#bottomTotalDiscount').text(totalDisc.toFixed(2));
+                var gstRate = (totalGross - totalDisc) > 0 ? ((totalGst / (totalGross - totalDisc)) * 100) : 0;
+                $('#summaryGstRate').text(gstRate % 1 === 0 ? gstRate.toFixed(0) : gstRate.toFixed(2));
                 $('#summaryGstAmount').text(totalGst.toFixed(2));
                 $('#tSub').text(totalNet.toFixed(2));
                 $('#bottomNetTotal').text(totalNet.toFixed(2));
@@ -1198,26 +1189,14 @@
                     <tr class="specs-subrow d-none" data-row="${count}">
                         <td colspan="9" style="background: #f8fbff; padding: 8px 12px !important; border-top: none !important;">
                             <div class="row g-2">
-                                <div class="col-md-6">
-                                    <label class="form-label" style="font-size: 0.68rem; color: #1e40af;"><i class="fas fa-tag me-1"></i>Equipment Title (Technical Name)</label>
-                                    <input type="text" class="form-control" name="technical_name[]" placeholder="e.g. Induction Melting Furnace 40kw ABC">
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold" style="font-size: 0.72rem; color: #1e40af;"><i class="fas fa-cogs me-1"></i>TECHNICAL SPECIFICATIONS (MULTILINE BULLETS)</label>
+                                    <textarea class="form-control" name="technical_specs[]" rows="3" placeholder="• Melting Capacity: 20kg Copper&#10;• Tilting System: Manual&#10;• Duty Cycle: 24/7 100%"></textarea>
                                 </div>
-                                <div class="col-md-6">
-                                    <label class="form-label" style="font-size: 0.68rem; color: #1e40af;"><i class="fas fa-cogs me-1"></i>Technical Specifications (Multiline bullets)</label>
-                                    <textarea class="form-control" name="technical_specs[]" rows="2" placeholder="• Melting Capacity: 20kg Copper&#10;• Tilting System: Manual&#10;• Duty Cycle: 24/7 100%"></textarea>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label" style="font-size: 0.68rem; color: #1e40af;"><i class="fas fa-bolt me-1"></i>Input Power / Brand</label>
-                                    <input type="text" class="form-control" name="brand[]" placeholder="e.g. 3-PHASE 440V AC 50Hz">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label" style="font-size: 0.68rem; color: #1e40af;"><i class="fas fa-tachometer-alt me-1"></i>Duty Cycle / Rating</label>
-                                    <input type="text" class="form-control" name="color[]" placeholder="e.g. 24/7 100%">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label" style="font-size: 0.68rem; color: #1e40af;"><i class="fas fa-fan me-1"></i>Cooling Type / Model</label>
-                                    <input type="text" class="form-control" name="model[]" placeholder="e.g. LTZMODEL Water Cooled">
-                                </div>
+                                <input type="hidden" name="technical_name[]" value="">
+                                <input type="hidden" name="brand[]" value="">
+                                <input type="hidden" name="color[]" value="">
+                                <input type="hidden" name="model[]" value="">
                             </div>
                         </td>
                     </tr>

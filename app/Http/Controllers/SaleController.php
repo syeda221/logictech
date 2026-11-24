@@ -1530,8 +1530,9 @@ class SaleController extends Controller
                 $totalReceiptAmount = (float)$request->cash;
             }
 
-            // Walk-in Customer Validation: Walk-in customers must pay full total amount in advance
-            if ($isWalkin) {
+            // Walk-in Customer Validation: Walk-in customers must pay full total amount in advance ONLY for immediate POS sales (posted).
+            // For Orders / Bookings (manufacturing/pre-order), partial advance payment is allowed!
+            if ($isWalkin && !$isBookingAction && $status === 'posted') {
                 if ($totalReceiptAmount < ($sale->total_net - 0.05)) {
                     throw \Illuminate\Validation\ValidationException::withMessages([
                         'receipt_amount' => 'Walk-in customers must pay the full amount in advance (Rs. ' . number_format($sale->total_net, 2) . '). Remaining balance is not allowed for Walk-in customers.'

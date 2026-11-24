@@ -480,6 +480,7 @@
                             $productOptionsHtml = '<option value=""></option>';
                             if (isset($allProducts) && count($allProducts) > 0) {
                                 foreach($allProducts as $p) {
+                                    if (isset($p->item_type) && $p->item_type === 'raw_material') continue;
                                     $skuTxt = $p->item_code ? ' (SKU: ' . e($p->item_code) . ')' : '';
                                     $priceTxt = ($p->sale_price_per_piece ?? 0) > 0 ? ' — Rs. ' . number_format($p->sale_price_per_piece, 0) : '';
                                     $unitTxt = optional($p->unit)->name ?? 'Pcs';
@@ -605,11 +606,15 @@
                                                         <span class="text-muted small px-1">R</span>
                                                     </div>
                                                 </td>
+                                                @php
+                                                    $isFixedDisc = ($it->discount_type === 'fixed') || ($it->discount_amount > 0 && ($it->discount_percent == 0 || round(((float)$it->qty * (float)$it->price * (float)$it->discount_percent)/100, 2) != round((float)$it->discount_amount, 2)));
+                                                    $displayDiscVal = $isFixedDisc ? (float)$it->discount_amount : (float)$it->discount_percent;
+                                                @endphp
                                                 <td>
                                                     <div class="d-flex align-items-center">
-                                                        <input type="number" step="0.01" min="0" class="form-control discount-input text-end font-monospace" name="discount[]" value="{{ (float)$it->discount_percent }}">
-                                                        <input type="hidden" name="discount_type[]" class="discount-type-val" value="percent">
-                                                        <span class="badge bg-light text-secondary border px-1 py-0.5 ms-1 disc-type-badge">%</span>
+                                                        <input type="number" step="0.01" min="0" class="form-control discount-input text-end font-monospace" name="discount[]" value="{{ $displayDiscVal }}">
+                                                        <input type="hidden" name="discount_type[]" class="discount-type-val" value="{{ $isFixedDisc ? 'fixed' : 'percent' }}">
+                                                        <span class="badge {{ $isFixedDisc ? 'bg-warning text-dark' : 'bg-light text-secondary' }} border px-1 py-0.5 ms-1 disc-type-badge" style="cursor: pointer;" title="Click to toggle % / Fixed">{{ $isFixedDisc ? 'PKR' : '%' }}</span>
                                                     </div>
                                                 </td>
                                                 <td>
@@ -629,26 +634,14 @@
                                             <tr class="specs-subrow d-none" data-row="{{ $idx }}">
                                                 <td colspan="9" style="background: #f8fbff; padding: 8px 12px !important; border-top: none !important;">
                                                     <div class="row g-2">
-                                                        <div class="col-md-6">
-                                                            <label class="form-label" style="font-size: 0.68rem; color: #1e40af;">Equipment Title (Technical Name)</label>
-                                                            <input type="text" class="form-control" name="technical_name[]" value="{{ $it->technical_name }}">
+                                                        <div class="col-12">
+                                                            <label class="form-label fw-semibold" style="font-size: 0.72rem; color: #1e40af;"><i class="fas fa-cogs me-1"></i>TECHNICAL SPECIFICATIONS (MULTILINE BULLETS)</label>
+                                                            <textarea class="form-control" name="technical_specs[]" rows="3" placeholder="• Melting Capacity: 20kg Copper&#10;• Tilting System: Manual&#10;• Duty Cycle: 24/7 100%">{{ $it->technical_specs }}</textarea>
                                                         </div>
-                                                        <div class="col-md-6">
-                                                            <label class="form-label" style="font-size: 0.68rem; color: #1e40af;">Technical Specifications</label>
-                                                            <textarea class="form-control" name="technical_specs[]" rows="2">{{ $it->technical_specs }}</textarea>
-                                                        </div>
-                                                        <div class="col-md-4">
-                                                            <label class="form-label" style="font-size: 0.68rem; color: #1e40af;">Input Power / Brand</label>
-                                                            <input type="text" class="form-control" name="brand[]" value="{{ !empty($it->brand_name) ? $it->brand_name : (optional($it->brand)->name ?? '') }}">
-                                                        </div>
-                                                        <div class="col-md-4">
-                                                            <label class="form-label" style="font-size: 0.68rem; color: #1e40af;">Duty Cycle / Rating</label>
-                                                            <input type="text" class="form-control" name="color[]" value="{{ $it->color }}">
-                                                        </div>
-                                                        <div class="col-md-4">
-                                                            <label class="form-label" style="font-size: 0.68rem; color: #1e40af;">Cooling Type / Model</label>
-                                                            <input type="text" class="form-control" name="model[]" value="{{ $it->model }}">
-                                                        </div>
+                                                        <input type="hidden" name="technical_name[]" value="{{ $it->technical_name }}">
+                                                        <input type="hidden" name="brand[]" value="{{ !empty($it->brand_name) ? $it->brand_name : (optional($it->brand)->name ?? '') }}">
+                                                        <input type="hidden" name="color[]" value="{{ $it->color }}">
+                                                        <input type="hidden" name="model[]" value="{{ $it->model }}">
                                                     </div>
                                                 </td>
                                             </tr>
@@ -841,6 +834,20 @@
                 tr.next('.specs-subrow').toggleClass('d-none');
             });
 
+            // Discount type toggle (% or Fixed)
+            $(document).on('click', '.disc-type-badge', function() {
+                var container = $(this).closest('td');
+                var typeInput = container.find('.discount-type-val');
+                if (typeInput.val() === 'percent') {
+                    typeInput.val('fixed');
+                    $(this).text('PKR').removeClass('bg-light text-secondary').addClass('bg-warning text-dark');
+                } else {
+                    typeInput.val('percent');
+                    $(this).text('%').removeClass('bg-warning text-dark').addClass('bg-light text-secondary');
+                }
+                recalcTotals();
+            });
+
             function recalcTotals() {
                 var totalGross = 0;
                 var totalDisc = 0;
@@ -889,6 +896,8 @@
                 $('#bottomInvoiceTotal').text(totalGross.toFixed(2));
                 $('#tLineDisc').text(totalDisc.toFixed(2));
                 $('#bottomTotalDiscount').text(totalDisc.toFixed(2));
+                var gstRate = (totalGross - totalDisc) > 0 ? ((totalGst / (totalGross - totalDisc)) * 100) : 0;
+                $('#summaryGstRate').text(gstRate % 1 === 0 ? gstRate.toFixed(0) : gstRate.toFixed(2));
                 $('#summaryGstAmount').text(totalGst.toFixed(2));
                 $('#tSub').text(totalNet.toFixed(2));
                 $('#bottomNetTotal').text(totalNet.toFixed(2));
@@ -921,6 +930,7 @@
             }
 
             initProductSelect2($('.product-select'));
+            recalcTotals();
 
             // Product Select2 change event
             $(document).on('select2:select', '.product-select', function(e) {
@@ -1020,28 +1030,16 @@
                         </td>
                     </tr>
                     <tr class="specs-subrow d-none" data-row="${count}">
-                        <td colspan="9" style="background: #f8fbff; padding: 8px 12px !important;">
+                        <td colspan="9" style="background: #f8fbff; padding: 8px 12px !important; border-top: none !important;">
                             <div class="row g-2">
-                                <div class="col-md-6">
-                                    <label class="form-label" style="font-size: 0.68rem; color: #1e40af;">Equipment Title (Technical Name)</label>
-                                    <input type="text" class="form-control" name="technical_name[]">
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold" style="font-size: 0.72rem; color: #1e40af;"><i class="fas fa-cogs me-1"></i>TECHNICAL SPECIFICATIONS (MULTILINE BULLETS)</label>
+                                    <textarea class="form-control" name="technical_specs[]" rows="3" placeholder="• Melting Capacity: 20kg Copper&#10;• Tilting System: Manual&#10;• Duty Cycle: 24/7 100%"></textarea>
                                 </div>
-                                <div class="col-md-6">
-                                    <label class="form-label" style="font-size: 0.68rem; color: #1e40af;">Technical Specifications</label>
-                                    <textarea class="form-control" name="technical_specs[]" rows="2"></textarea>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label" style="font-size: 0.68rem; color: #1e40af;">Input Power / Brand</label>
-                                    <input type="text" class="form-control" name="brand[]">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label" style="font-size: 0.68rem; color: #1e40af;">Duty Cycle / Rating</label>
-                                    <input type="text" class="form-control" name="color[]">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label" style="font-size: 0.68rem; color: #1e40af;">Cooling Type / Model</label>
-                                    <input type="text" class="form-control" name="model[]">
-                                </div>
+                                <input type="hidden" name="technical_name[]" value="">
+                                <input type="hidden" name="brand[]" value="">
+                                <input type="hidden" name="color[]" value="">
+                                <input type="hidden" name="model[]" value="">
                             </div>
                         </td>
                     </tr>
