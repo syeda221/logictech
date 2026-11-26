@@ -673,7 +673,7 @@ class QuotationController extends Controller
                 $sale->order_status = 'pending';
                 $sale->is_booking = 1;
                 $sale->estimated_delivery_date = $quotation->estimated_delivery_date;
-                $sale->delivery_date = $quotation->estimated_delivery_date;
+                $sale->delivery_date = null;
                 $sale->total_bill_amount = $quotation->total_bill_amount;
                 $sale->total_extradiscount = $quotation->total_discount;
                 $sale->tax_percent = $quotation->tax_percent;
@@ -722,10 +722,9 @@ class QuotationController extends Controller
                 $quotation->converted_at = now();
                 $quotation->save();
 
-                return redirect()->route('sale.index')->with(
-                    'success',
-                    "Quotation #{$quotation->quote_no} has been converted into Order #{$sale->invoice_no} successfully!"
-                );
+                return redirect()->route('sale.index')
+                    ->with('success', "Quotation #{$quotation->quote_no} has been converted into Order #{$sale->invoice_no} successfully!")
+                    ->with('technical_doc_url', route('sales.technical_doc', $sale->id));
             });
         } catch (\Exception $e) {
             Log::error('Quotation Conversion Error: ' . $e->getMessage());

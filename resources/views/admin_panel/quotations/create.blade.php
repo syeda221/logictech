@@ -308,7 +308,9 @@
             background-color: #eff6ff !important;
             box-shadow: inset 0 0 0 1.5px #2563eb !important;
         }
-        .sales-table tbody .specs-subrow .form-control {
+        .sales-table tbody .specs-subrow input.form-control,
+        .sales-table tbody .specs-subrow select.form-control,
+        .sales-table tbody .specs-subrow select.form-select {
             border: 1.5px solid #cbd5e1 !important;
             border-radius: 6px !important;
             background-color: #ffffff !important;
@@ -318,7 +320,26 @@
             font-size: 0.78rem !important;
             color: #1e293b !important;
         }
-        .sales-table tbody .specs-subrow .form-control:focus {
+        .sales-table tbody .specs-subrow textarea.form-control,
+        .sales-table tbody .specs-subrow textarea {
+            border: 1.5px solid #cbd5e1 !important;
+            border-radius: 6px !important;
+            background-color: #ffffff !important;
+            text-align: left !important;
+            padding: 8px 12px !important;
+            font-size: 0.80rem !important;
+            color: #1e293b !important;
+            line-height: 1.5 !important;
+            min-height: 85px !important;
+            height: 95px;
+            resize: vertical !important;
+            overflow-y: auto !important;
+            display: block !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+        }
+        .sales-table tbody .specs-subrow .form-control:focus,
+        .sales-table tbody .specs-subrow textarea:focus {
             border-color: #2563eb !important;
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
         }
@@ -727,7 +748,7 @@
                                                 <div class="row g-2">
                                                     <div class="col-12">
                                                         <label class="form-label fw-semibold" style="font-size: 0.72rem; color: #1e40af;"><i class="fas fa-cogs me-1"></i>TECHNICAL SPECIFICATIONS (MULTILINE BULLETS)</label>
-                                                        <textarea class="form-control" name="technical_specs[]" rows="3" placeholder="• Melting Capacity: 20kg Copper&#10;• Tilting System: Manual&#10;• Duty Cycle: 24/7 100%"></textarea>
+                                                        <textarea class="form-control" name="technical_specs[]" rows="3" placeholder="• Melting Capacity: 20kg Copper&#10;• Tilting System: Manual&#10;• Duty Cycle: 24/7 100%" style="resize: vertical; min-height: 85px;"></textarea>
                                                     </div>
                                                     <input type="hidden" name="technical_name[]" value="">
                                                     <input type="hidden" name="brand[]" value="">
@@ -980,6 +1001,17 @@
                     icon.removeClass('fa-chevron-up').addClass('fa-chevron-down');
                 } else {
                     icon.removeClass('fa-chevron-down').addClass('fa-chevron-up');
+                    var $ta = nextTr.find('textarea[name="technical_specs[]"]');
+                    if ($ta.length && $ta[0].scrollHeight > $ta.innerHeight()) {
+                        $ta.css('height', Math.min(350, $ta[0].scrollHeight + 12) + 'px');
+                    }
+                }
+            });
+
+            // Auto-expand specs textarea on typing while retaining drag resize
+            $(document).on('input', 'textarea[name="technical_specs[]"]', function() {
+                if (this.scrollHeight > this.clientHeight) {
+                    this.style.height = Math.min(450, this.scrollHeight + 8) + 'px';
                 }
             });
 
@@ -1187,7 +1219,7 @@
                             <div class="row g-2">
                                 <div class="col-12">
                                     <label class="form-label fw-semibold" style="font-size: 0.72rem; color: #1e40af;"><i class="fas fa-cogs me-1"></i>TECHNICAL SPECIFICATIONS (MULTILINE BULLETS)</label>
-                                    <textarea class="form-control" name="technical_specs[]" rows="3" placeholder="• Melting Capacity: 20kg Copper&#10;• Tilting System: Manual&#10;• Duty Cycle: 24/7 100%"></textarea>
+                                    <textarea class="form-control" name="technical_specs[]" rows="3" placeholder="• Melting Capacity: 20kg Copper&#10;• Tilting System: Manual&#10;• Duty Cycle: 24/7 100%" style="resize: vertical; min-height: 85px;"></textarea>
                                 </div>
                                 <input type="hidden" name="technical_name[]" value="">
                                 <input type="hidden" name="brand[]" value="">

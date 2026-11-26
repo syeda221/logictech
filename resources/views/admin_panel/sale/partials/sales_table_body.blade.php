@@ -270,13 +270,11 @@
                                 <i class="fas fa-file-invoice text-info fa-fw"></i> View Invoice
                             </a>
                         </li>
-                        @if($ordStatus === 'delivered')
                         <li>
                             <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('sales.technical_doc', $sale->id) }}" target="_blank">
                                 <i class="fas fa-file-contract text-warning fa-fw"></i> Technical Document
                             </a>
                         </li>
-                        @endif
                     @endcan
 
                     @can('sales.edit')
@@ -475,11 +473,9 @@
                         <a href="{{ route('sales.invoice', $sale->id) }}" target="_blank" class="btn btn-sm btn-erp-outline fw-bold justify-content-center" style="border-radius: 8px;">
                             <i class="fas fa-file-invoice me-1 text-info"></i> Invoice
                         </a>
-                        @if($ordStatus === 'delivered')
                         <a href="{{ route('sales.technical_doc', $sale->id) }}" target="_blank" class="btn btn-sm btn-erp-outline fw-bold justify-content-center" style="border-radius: 8px;">
                             <i class="fas fa-file-contract me-1 text-warning"></i> Tech Doc
                         </a>
-                        @endif
                     @endcan
 
                     @if ($sale->sale_status === 'posted')

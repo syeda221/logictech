@@ -98,7 +98,8 @@
                     <span class="badge bg-info-subtle text-info border border-info-subtle">Direct Sale</span>
                 @endif
             </div>
-            <div>
+            <div class="d-flex align-items-center gap-2">
+                <a href="{{ route('sales.technical_doc', $sale->id) }}" target="_blank" class="btn btn-sm btn-outline-warning text-dark fw-bold"><i class="fas fa-file-contract me-1"></i> Technical Sheet</a>
                 <a href="{{ route('sales.dc', $sale->id) }}" target="_blank" class="btn btn-sm btn-outline-primary fw-bold"><i class="fas fa-truck me-1"></i> Delivery Challan</a>
             </div>
         </div>

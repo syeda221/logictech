@@ -744,9 +744,14 @@
                 <div class="card erp-main-card">
                     <div class="card-body p-3 p-md-4">
                         @if (session('success'))
-                            <div class="alert alert-success d-flex align-items-center gap-2 rounded-3 mb-4">
+                            <div class="alert alert-success d-flex align-items-center gap-2 rounded-3 mb-4 flex-wrap">
                                 <i class="fas fa-check-circle"></i>
                                 <span>{{ session('success') }}</span>
+                                @if (session('technical_doc_url'))
+                                    <a href="{{ session('technical_doc_url') }}" target="_blank" class="btn btn-sm btn-primary ms-2 fw-bold" style="border-radius: 6px;">
+                                        <i class="fas fa-file-contract me-1"></i> View Technical Sheet
+                                    </a>
+                                @endif
                                 <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
                             </div>
                         @endif
@@ -940,6 +945,7 @@
 
             // If Delivered status is selected, open Product Specifications & Delivery Modal!
             if (newStatus === 'delivered') {
+                $('#deliverySpecsModal').data('prev-sale-id', saleId).data('prev-status', prevStatus).data('delivery-saved', false);
                 window.openDeliverySpecsModal(saleId);
                 return;
             }
@@ -1327,6 +1333,7 @@
                         success: function(response) {
                             $btn.prop('disabled', false).html(origHtml);
                             if (response && response.success) {
+                                $('#deliverySpecsModal').data('delivery-saved', true);
                                 // Close modal first - BS4 jQuery approach + cleanup
                                 $('#deliverySpecsModal').modal('hide');
                                 setTimeout(function() {
@@ -1383,6 +1390,18 @@
                         sendDelivery(relativeUrl, null);
                     });
                 });
+            });
+
+            // Revert radio UI if delivery modal is dismissed without saving
+            $(document).on('hidden.bs.modal', '#deliverySpecsModal', function() {
+                const $modal = $(this);
+                if (!$modal.data('delivery-saved')) {
+                    const prevSaleId = $modal.data('prev-sale-id');
+                    const prevSt = $modal.data('prev-status');
+                    if (prevSaleId && prevSt) {
+                        $('input[name="order_state_' + prevSaleId + '"][value="' + prevSt + '"], input[name="m_order_state_' + prevSaleId + '"][value="' + prevSt + '"]').prop('checked', true);
+                    }
+                }
             });
 
             // Function to initialize DataTable

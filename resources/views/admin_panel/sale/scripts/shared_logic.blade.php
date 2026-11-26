@@ -849,23 +849,28 @@
                     if (res?.ok) {
                         const bid = res.booking_id || existing;
                         $('#booking_id').val(bid);
+                        const docUrl = res.technical_doc_url || ('{{ url("sales") }}/' + bid + '/technical-doc');
                         if (redirectAfter) {
                             Swal.fire({
-                                title: 'Saved Successfully!',
-                                text: 'Sale booking saved successfully.',
+                                title: 'Order Saved Successfully!',
+                                html: `<p class="mb-3 text-muted" style="font-size: 0.95rem;">Sale booking saved successfully. Print the Technical Sheet now to record specs and serial numbers manually during assembly.</p>
+                                       <a href="${docUrl}" target="_blank" class="btn btn-primary btn-sm px-3 py-2 fw-bold shadow-sm d-inline-flex align-items-center gap-1.5" style="border-radius: 6px;">
+                                           <i class="fas fa-file-contract"></i> View / Print Technical Sheet
+                                       </a>`,
                                 icon: 'success',
                                 showConfirmButton: true,
                                 confirmButtonColor: '#2563eb',
-                                confirmButtonText: 'OK',
-                                timer: 1800,
-                                timerProgressBar: true
+                                confirmButtonText: 'Go to Orders'
                             }).then(() => {
                                 window.location.href = "{{ route('sale.index') }}";
                             });
                         } else {
                             Swal.fire({
                                 title: 'Saved',
-                                text: 'Sale saved successfully',
+                                html: `<p class="mb-3 text-muted" style="font-size: 0.95rem;">Sale saved successfully.</p>
+                                       <a href="${docUrl}" target="_blank" class="btn btn-primary btn-sm px-3 py-2 fw-bold shadow-sm d-inline-flex align-items-center gap-1.5" style="border-radius: 6px;">
+                                           <i class="fas fa-file-contract"></i> View / Print Technical Sheet
+                                       </a>`,
                                 icon: 'success',
                                 confirmButtonColor: '#2563eb'
                             });

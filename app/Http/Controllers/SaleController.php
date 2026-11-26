@@ -1945,10 +1945,13 @@ class SaleController extends Controller
                     'msg' => 'Sale '.ucfirst($status).' Successfully',
                     'invoice_url' => $receiptUrl,
                     'receipt_url' => $receiptUrl,
+                    'technical_doc_url' => route('sales.technical_doc', $sale->id),
                 ]);
             }
 
-            return redirect()->route('sale.index')->with('success', 'Sale saved as '.$status);
+            return redirect()->route('sale.index')
+                ->with('success', 'Sale saved as '.$status)
+                ->with('technical_doc_url', route('sales.technical_doc', $sale->id));
         });
         } catch (\Exception $e) {
             $errorMsg = $e->getMessage();
@@ -2549,6 +2552,8 @@ class SaleController extends Controller
             ];
         });
 
+        $isAlreadyDelivered = strtolower((string) $sale->order_status) === 'delivered';
+
         return response()->json([
             'success' => true,
             'sale' => [
@@ -2556,7 +2561,7 @@ class SaleController extends Controller
                 'invoice_no' => $sale->invoice_no,
                 'customer_name' => $sale->customer_relation->customer_name ?? ($sale->walkin_name ?? 'Walk-in Customer'),
                 'order_status' => $sale->order_status,
-                'delivery_date' => $sale->delivery_date ? \Carbon\Carbon::parse($sale->delivery_date)->format('Y-m-d') : date('Y-m-d'),
+                'delivery_date' => ($isAlreadyDelivered && $sale->delivery_date) ? \Carbon\Carbon::parse($sale->delivery_date)->format('Y-m-d') : date('Y-m-d'),
                 'delivery_source' => $sale->delivery_source ?? '',
                 'delivery_remarks' => $sale->delivery_remarks ?? '',
                 'items' => $items,
@@ -2635,14 +2640,145 @@ class SaleController extends Controller
     }
 
     /**
+     * Prepare shared data for Technical Document views (HTML & PDF).
+     */
+    private function prepareTechnicalDocumentData($id): array
+    {
+        $sale = Sale::resolveByIdOrInvoice($id, ['customer_relation', 'items.product.brand']);
+        if (! $sale) {
+            abort(404, 'Technical document not found');
+        }
+        $setting = \App\Models\Setting::pluck('value', 'key')->toArray();
+        $logoUrl = \App\Models\Setting::getLogoUrl();
+
+        return compact('sale', 'setting', 'logoUrl');
+    }
+
+    /**
      * Display Company Technical Document (New Order Process Sheet) for Sale / Equipment
      */
     public function technicalDocument($id)
     {
-        $sale = Sale::with(['customer_relation', 'items.product.brand'])->findOrFail($id);
-        $setting = \App\Models\Setting::pluck('value', 'key')->toArray();
-        $logoUrl = \App\Models\Setting::getLogoUrl();
+        return view('admin_panel.sale.technical_doc', $this->prepareTechnicalDocumentData($id));
+    }
 
-        return view('admin_panel.sale.technical_doc', compact('sale', 'setting', 'logoUrl'));
+    /**
+     * Ensure oversized company logos (e.g. 70MP PNGs) are downscaled & cached for DomPDF
+     * so PDF generation never exhausts PHP memory.
+     */
+    private function prepareLogoForPdf(?string $logoUrl): ?string
+    {
+        if (empty($logoUrl) || ! str_starts_with($logoUrl, 'data:image/')) {
+            return $logoUrl;
+        }
+
+        $cacheDir = storage_path('app/pdf_logos');
+        $cacheFile = $cacheDir . DIRECTORY_SEPARATOR . md5($logoUrl) . '.png';
+        if (is_file($cacheFile) && filesize($cacheFile) > 0) {
+            return 'data:image/png;base64,' . base64_encode(file_get_contents($cacheFile));
+        }
+
+        if (! preg_match('#^data:image/[^;]+;base64,(.+)$#s', $logoUrl, $m)) {
+            return $logoUrl;
+        }
+        $raw = base64_decode($m[1], true);
+        if ($raw === false) {
+            return null;
+        }
+
+        $info = @getimagesizefromstring($raw);
+        if (! is_array($info) || empty($info[0]) || empty($info[1])) {
+            return null;
+        }
+
+        $w = (int) $info[0];
+        $h = (int) $info[1];
+        $pixels = $w * $h;
+
+        // Normal-sized logos render safely in DomPDF without resizing
+        if ($pixels <= 4000000) {
+            return $logoUrl;
+        }
+
+        if (! extension_loaded('gd')) {
+            return null;
+        }
+
+        $parseBytes = static function (string $val): int {
+            $val = trim($val);
+            if ($val === '' || $val === '-1') {
+                return -1;
+            }
+            $num = (int) $val;
+            $unit = strtolower(substr($val, -1));
+            return match ($unit) {
+                'g' => $num * 1073741824,
+                'm' => $num * 1048576,
+                'k' => $num * 1024,
+                default => $num,
+            };
+        };
+
+        $neededBytes = ($pixels * 9) + memory_get_usage(true) + (64 * 1048576);
+        $limitBytes = $parseBytes((string) ini_get('memory_limit'));
+        if ($limitBytes !== -1 && $limitBytes < $neededBytes) {
+            $targetMb = max(1024, (int) ceil($neededBytes / 1048576) + 64);
+            @ini_set('memory_limit', $targetMb . 'M');
+            $limitBytes = $parseBytes((string) ini_get('memory_limit'));
+        }
+
+        if ($limitBytes !== -1 && $limitBytes < $neededBytes) {
+            // Cannot safely decode huge image inside current memory limit; fall back to company text title
+            return null;
+        }
+
+        $src = @imagecreatefromstring($raw);
+        if (! $src) {
+            return null;
+        }
+
+        $targetW = 480;
+        $targetH = max(1, (int) round(($h / $w) * $targetW));
+        $dst = imagecreatetruecolor($targetW, $targetH);
+        imagealphablending($dst, false);
+        imagesavealpha($dst, true);
+        $transparent = imagecolorallocatealpha($dst, 255, 255, 255, 127);
+        imagefilledrectangle($dst, 0, 0, $targetW, $targetH, $transparent);
+        imagecopyresampled($dst, $src, 0, 0, 0, 0, $targetW, $targetH, $w, $h);
+
+        ob_start();
+        imagepng($dst);
+        $png = ob_get_clean();
+        imagedestroy($src);
+        imagedestroy($dst);
+
+        if (! $png) {
+            return null;
+        }
+
+        if (! is_dir($cacheDir)) {
+            @mkdir($cacheDir, 0755, true);
+        }
+        @file_put_contents($cacheFile, $png);
+
+        return 'data:image/png;base64,' . base64_encode($png);
+    }
+
+    /**
+     * Download Company Technical Document as an A4 PDF for sharing with client
+     */
+    public function downloadTechnicalDocument($id)
+    {
+        $data = $this->prepareTechnicalDocumentData($id);
+        $data['logoUrl'] = $this->prepareLogoForPdf($data['logoUrl'] ?? null);
+        $sale = $data['sale'];
+        $safeInvoice = preg_replace('/[^A-Za-z0-9_-]+/', '-', (string) ($sale->invoice_no ?: $sale->id));
+        $statusSlug = strtolower((string) ($sale->order_status ?: 'pending'));
+        $filename = "Technical-Sheet-{$safeInvoice}-{$statusSlug}.pdf";
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin_panel.sale.technical_doc_pdf', $data)
+            ->setPaper('a4', 'portrait');
+
+        return $pdf->download($filename);
     }
 }

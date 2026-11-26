@@ -440,7 +440,8 @@
         }
 
         /* Specifications Sub-row Inputs (Clear Crisp Borders & Clean UI) */
-        .sales-table tbody .specs-subrow .form-control {
+        .sales-table tbody .specs-subrow input.form-control,
+        .sales-table tbody .specs-subrow select.form-control {
             border: 1.5px solid #cbd5e1 !important;
             border-radius: 6px !important;
             background-color: #ffffff !important;
@@ -451,6 +452,25 @@
             color: #1e293b !important;
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
             transition: all 0.2s ease !important;
+        }
+
+        .sales-table tbody .specs-subrow textarea.form-control,
+        .sales-table tbody .specs-subrow textarea {
+            border: 1.5px solid #cbd5e1 !important;
+            border-radius: 6px !important;
+            background-color: #ffffff !important;
+            text-align: left !important;
+            padding: 8px 12px !important;
+            font-size: 0.80rem !important;
+            color: #1e293b !important;
+            line-height: 1.5 !important;
+            min-height: 85px !important;
+            height: 95px;
+            resize: vertical !important;
+            overflow-y: auto !important;
+            display: block !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
         }
 
         .sales-table tbody .specs-subrow .form-control:hover {

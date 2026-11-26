@@ -173,6 +173,31 @@
             line-height: 1.45;
         }
 
+        .manual-write-line {
+            display: inline-block;
+            flex: 1;
+            min-width: 110px;
+            height: 15px;
+            border-bottom: 1px solid #94a3b8;
+            margin-bottom: 1px;
+        }
+
+        .spec-blank-box {
+            padding: 4px 10px 8px 10px;
+            min-height: 58px;
+            background: #ffffff;
+        }
+
+        .spec-blank-box.spec-remarks-blank {
+            min-height: 40px;
+        }
+
+        .spec-write-line {
+            height: 18px;
+            border-bottom: 1px dashed #cbd5e1;
+            width: 100%;
+        }
+
         .delivery-source-badge {
             background-color: #ecfdf5;
             color: #065f46;
@@ -242,6 +267,19 @@
                 display: none !important;
             }
 
+            .manual-write-line {
+                border-bottom: 1px solid #64748b !important;
+            }
+
+            .spec-write-line {
+                border-bottom: 1px dashed #94a3b8 !important;
+            }
+
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
             @page {
                 margin: 6mm;
                 size: portrait;
@@ -253,6 +291,9 @@
 
     {{-- Floating Action Toolbar --}}
     <div class="print-btn-bar">
+        <a href="{{ route('sales.technical_doc.download', $sale->id) }}" class="btn btn-success btn-sm shadow fw-bold px-3 py-1.5 d-flex align-items-center gap-1.5" style="border-radius: 6px;">
+            <i class="fas fa-download"></i> Download PDF
+        </a>
         <button onclick="window.print()" class="btn btn-primary btn-sm shadow fw-bold px-3 py-1.5 d-flex align-items-center gap-1.5" style="border-radius: 6px;">
             <i class="fas fa-print"></i> Print Technical Document
         </button>
@@ -290,6 +331,27 @@
             </div>
         </div>
 
+        @php
+            $ordStatus = strtolower($sale->order_status ?: 'pending');
+            $isDelivered = ($ordStatus === 'delivered');
+
+            $statusBadgeStyle = match ($ordStatus) {
+                'ready' => 'background-color: #2563eb; color: #ffffff;',
+                'delivered' => 'background-color: #10b981; color: #ffffff;',
+                'cancelled' => 'background-color: #f59e0b; color: #0f172a;',
+                default => 'background-color: #ef4444; color: #ffffff;',
+            };
+
+            $custName = optional($sale->customer_relation)->customer_name ?: ($sale->walkin_name ?: 'Walk-in Customer');
+            $custPhone = optional($sale->customer_relation)->mobile ?: (optional($sale->customer_relation)->phone ?? '');
+            $custAddr = optional($sale->customer_relation)->address ?? '';
+
+            $firstItem = $sale->items->first();
+            $allModels = $sale->items->pluck('model')->map(fn($v) => trim((string)$v))->filter()->unique()->implode(', ');
+            $allSerials = $sale->items->pluck('serial_no')->map(fn($v) => trim((string)$v))->filter()->unique()->implode(', ');
+            $totalQty = $sale->items->sum(function($i){ return (float)($i->total_pieces ?: ($i->qty ?: 1)); });
+        @endphp
+
         {{-- Order & Customer Meta Cards --}}
         <div class="row g-2.5 mb-3">
             {{-- Customer Box --}}
@@ -300,39 +362,43 @@
                     </div>
                     <div class="info-row">
                         <span class="info-lbl">Customer Name:</span>
-                        <span class="info-val text-primary">{{ $sale->walkin_name ?? ($sale->customer_relation->customer_name ?? 'Walk-in Customer') }}</span>
+                        <span class="info-val text-primary">{{ $custName }}</span>
                     </div>
-                    @if(!empty($sale->customer_relation->phone))
+                    @if(!empty($custPhone))
                     <div class="info-row">
                         <span class="info-lbl">Contact Phone:</span>
-                        <span class="info-val">{{ $sale->customer_relation->phone }}</span>
+                        <span class="info-val">{{ $custPhone }}</span>
                     </div>
                     @endif
-                    @if(!empty($sale->customer_relation->address))
+                    @if(!empty($custAddr))
                     <div class="info-row">
                         <span class="info-lbl">Address / City:</span>
-                        <span class="info-val">{{ $sale->customer_relation->address }}</span>
+                        <span class="info-val">{{ $custAddr }}</span>
                     </div>
                     @endif
                     <div class="info-row">
                         <span class="info-lbl">Order Status:</span>
-                        <span class="badge bg-success font-monospace text-uppercase" style="font-size: 10px;">{{ $sale->order_status ?: 'Delivered' }}</span>
+                        <span class="badge font-monospace text-uppercase" style="font-size: 10px; {{ $statusBadgeStyle }}">{{ $ordStatus }}</span>
                     </div>
 
                     {{-- Moved Model, Serial No, and QTY --}}
-                    @php
-                        $firstItem = $sale->items->first();
-                        $allModels = $sale->items->pluck('model')->filter()->unique()->implode(', ');
-                        $allSerials = $sale->items->pluck('serial_no')->filter()->unique()->implode(', ');
-                        $totalQty = $sale->items->sum(function($i){ return (float)($i->total_pieces ?: ($i->qty ?: 1)); });
-                    @endphp
                     <div class="info-row mt-2 pt-2 border-top">
                         <span class="info-lbl">Model:</span>
-                        <span class="info-val text-dark">{{ $allModels ?: ($firstItem->model ?? '-') }}</span>
+                        @if(!empty($allModels) || !empty($firstItem->model))
+                            <span class="info-val text-dark">{{ $allModels ?: $firstItem->model }}</span>
+                        @elseif(!$isDelivered)
+                            <span class="manual-write-line"></span>
+                        @else
+                            <span class="info-val text-dark">-</span>
+                        @endif
                     </div>
                     <div class="info-row">
                         <span class="info-lbl">Serial No:</span>
-                        <span class="info-val text-primary font-monospace">{{ $allSerials ?: ($firstItem->serial_no ?? '-') }}</span>
+                        @if($isDelivered)
+                            <span class="info-val text-primary font-monospace">{{ $allSerials ?: ($firstItem->serial_no ?? '-') }}</span>
+                        @else
+                            <span class="manual-write-line"></span>
+                        @endif
                     </div>
                     <div class="info-row">
                         <span class="info-lbl">QTY:</span>
@@ -357,19 +423,34 @@
                     </div>
                     <div class="info-row">
                         <span class="info-lbl">Delivery Date:</span>
-                        <span class="info-val text-success">{{ $sale->delivery_date ? \Carbon\Carbon::parse($sale->delivery_date)->format('d-M-Y') : '-' }}</span>
+                        @if($isDelivered)
+                            <span class="info-val text-success">{{ $sale->delivery_date ? \Carbon\Carbon::parse($sale->delivery_date)->format('d-M-Y') : '-' }}</span>
+                        @else
+                            <span class="manual-write-line"></span>
+                        @endif
                     </div>
                     <div class="info-row">
                         <span class="info-lbl">Delivery Source:</span>
-                        <span class="info-val">
-                            <span class="delivery-source-badge">{{ $sale->delivery_source ?: 'Self Collection' }}</span>
-                        </span>
+                        @if($isDelivered)
+                            <span class="info-val">
+                                <span class="delivery-source-badge">{{ $sale->delivery_source ?: 'Self Collection' }}</span>
+                            </span>
+                        @else
+                            <span class="manual-write-line"></span>
+                        @endif
                     </div>
-                    @if(!empty($sale->delivery_remarks))
-                    <div class="info-row">
-                        <span class="info-lbl">Delivery Remarks:</span>
-                        <span class="info-val text-muted fst-italic">{{ $sale->delivery_remarks }}</span>
-                    </div>
+                    @if($isDelivered)
+                        @if(!empty($sale->delivery_remarks))
+                        <div class="info-row">
+                            <span class="info-lbl">Delivery Remarks:</span>
+                            <span class="info-val text-muted fst-italic">{{ $sale->delivery_remarks }}</span>
+                        </div>
+                        @endif
+                    @else
+                        <div class="info-row">
+                            <span class="info-lbl">Delivery Remarks:</span>
+                            <span class="manual-write-line"></span>
+                        </div>
                     @endif
                 </div>
             </div>
@@ -394,6 +475,24 @@
                 @foreach($sale->items as $idx => $item)
                     @php
                         $techTitle = $item->technical_name ?: ($item->product_name ?: ($item->product->item_name ?? 'Equipment Item'));
+                        $itemQty = (float)($item->total_pieces ?: ($item->qty ?: 1));
+                        $decodedColorSpecs = '';
+                        if (!empty($item->color)) {
+                            $rawColor = trim((string) $item->color);
+                            $b64 = base64_decode($rawColor, true);
+                            $json = ($b64 !== false) ? json_decode($b64, true) : null;
+                            if (!is_array($json)) {
+                                $json = json_decode($rawColor, true);
+                            }
+                            if (is_array($json)) {
+                                $decodedColorSpecs = trim((string) ($json['color'] ?? ($json['spec'] ?? ($json['specs'] ?? ''))));
+                                if ($decodedColorSpecs === '-') {
+                                    $decodedColorSpecs = '';
+                                }
+                            } else {
+                                $decodedColorSpecs = $rawColor;
+                            }
+                        }
                     @endphp
                     <tr>
                         <td style="text-align: center; font-weight: 700; color: #64748b;">{{ $idx + 1 }}</td>
@@ -405,6 +504,9 @@
                             @if(!empty($item->product->item_code))
                                 <span class="param-badge"><i class="fas fa-barcode me-1"></i>SKU: {{ $item->product->item_code }}</span>
                             @endif
+                            @if($sale->items->count() > 1)
+                                <span class="param-badge"><i class="fas fa-cubes me-1"></i>Qty: {{ $itemQty == (int)$itemQty ? (int)$itemQty : $itemQty }}</span>
+                            @endif
                         </td>
                         <td>
                             @if(!empty($item->technical_specs))
@@ -413,6 +515,17 @@
                                         <i class="fas fa-sliders-h me-1"></i> Technical Parameters:
                                     </span>
                                     <div class="spec-content-box mt-0.5">{{ $item->technical_specs }}</div>
+                                </div>
+                            @elseif(!$isDelivered)
+                                <div class="mb-1.5">
+                                    <span class="text-primary fw-bold" style="font-size: 10.5px; text-transform: uppercase;">
+                                        <i class="fas fa-sliders-h me-1"></i> Technical Parameters:
+                                    </span>
+                                    <div class="spec-content-box spec-blank-box mt-0.5">
+                                        <div class="spec-write-line"></div>
+                                        <div class="spec-write-line"></div>
+                                        <div class="spec-write-line"></div>
+                                    </div>
                                 </div>
                             @endif
 
@@ -423,13 +536,23 @@
                                     </span>
                                     <div class="spec-content-box mt-0.5" style="background-color: #f8fafc;">{{ $item->technical_remarks }}</div>
                                 </div>
+                            @elseif(!$isDelivered)
+                                <div class="mb-1.5">
+                                    <span class="text-secondary fw-bold" style="font-size: 10.5px; text-transform: uppercase;">
+                                        <i class="fas fa-clipboard-check me-1"></i> Engineering &amp; QC Remarks:
+                                    </span>
+                                    <div class="spec-content-box spec-blank-box spec-remarks-blank mt-0.5" style="background-color: #f8fafc;">
+                                        <div class="spec-write-line"></div>
+                                        <div class="spec-write-line"></div>
+                                    </div>
+                                </div>
                             @endif
 
-                            @if(empty($item->technical_specs) && empty($item->technical_remarks))
-                                @if(!empty($item->color))
+                            @if($isDelivered && empty($item->technical_specs) && empty($item->technical_remarks))
+                                @if(!empty($decodedColorSpecs))
                                     <div>
                                         <span class="text-muted small fw-semibold">Specs:</span>
-                                        <span class="text-dark">{{ $item->color }}</span>
+                                        <span class="text-dark">{{ $decodedColorSpecs }}</span>
                                     </div>
                                 @else
                                     <span class="text-muted fst-italic small">Standard factory specification parameters apply.</span>

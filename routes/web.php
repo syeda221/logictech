@@ -363,7 +363,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/sales/{id}/dc', [SaleController::class, 'saledc'])->middleware('permission:sales.view')->name('sales.dc');
     Route::get('/sales/{id}/dc-thermal', [SaleController::class, 'saledcThermal'])->middleware('permission:sales.view')->name('sales.dc_thermal');
     Route::get('/sales/{id}/recepit', [SaleController::class, 'salereceipt'])->middleware('permission:sales.view')->name('sales.receipt');
-    Route::get('/sales/{id}/technical-doc', [SaleController::class, 'technicalDocument'])->middleware('permission:sales.view')->name('sales.technical_doc');
+    Route::get('/sales/{id}/technical-doc', [SaleController::class, 'technicalDocument'])->middleware('permission:sales.view|bookings.view')->name('sales.technical_doc');
+    Route::get('/sales/{id}/technical-doc/download', [SaleController::class, 'downloadTechnicalDocument'])->middleware('permission:sales.view|bookings.view')->name('sales.technical_doc.download');
     Route::post('/sales/{id}/order-status', [SaleController::class, 'updateOrderStatus'])->middleware('permission:sales.edit|bookings.edit|sales.create|bookings.create')->name('sales.update_order_status');
     Route::post('/sale/{id}/order-status', [SaleController::class, 'updateOrderStatus'])->middleware('permission:sales.edit|bookings.edit|sales.create|bookings.create');
     Route::get('/sales/{id}/delivery-details', [SaleController::class, 'getDeliveryDetails'])->middleware('permission:sales.edit|bookings.edit|sales.create|bookings.create')->name('sales.delivery_details');

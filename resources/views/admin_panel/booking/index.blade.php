@@ -184,12 +184,26 @@
                                                                         <i class="fas fa-file-invoice text-info fa-fw"></i> View Invoice
                                                                     </a>
                                                                 </li>
+                                                                @canany(['sales.view', 'bookings.view'])
+                                                                <li>
+                                                                    <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('sales.technical_doc', $booking->id) }}" target="_blank">
+                                                                        <i class="fas fa-file-contract text-warning fa-fw"></i> Technical Document
+                                                                    </a>
+                                                                </li>
+                                                                @endcanany
                                                             @else
                                                                 <li>
                                                                     <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('sales.invoice', $booking->id) }}" target="_blank">
                                                                         <i class="fas fa-file-invoice text-info fa-fw"></i> View Invoice
                                                                     </a>
                                                                 </li>
+                                                                @canany(['sales.view', 'bookings.view'])
+                                                                <li>
+                                                                    <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('sales.technical_doc', $booking->id) }}" target="_blank">
+                                                                        <i class="fas fa-file-contract text-warning fa-fw"></i> Technical Document
+                                                                    </a>
+                                                                </li>
+                                                                @endcanany
                                                                 <li>
                                                                     <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('sales.dc', $booking->id) }}" target="_blank">
                                                                         <i class="fas fa-shipping-fast text-warning fa-fw"></i> DC Receipt

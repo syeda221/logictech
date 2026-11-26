@@ -640,6 +640,9 @@
                             </datalist>
                         </div>
                         <span class="badge" id="entryDateTime" style="background-color: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; font-size:0.75rem; padding: 6px 12px; border-radius: 50px;">Date: {{ $sale->created_at->format('d/m/Y H:i') }}</span>
+                        <a href="{{ route('sales.technical_doc', $sale->id) }}" target="_blank" class="btn btn-erp-pill-outline" style="height: 32px; font-size: 0.75rem;" title="View / Print Technical Sheet">
+                            <i class="fas fa-file-contract text-warning"></i> <span>Technical Sheet</span>
+                        </a>
                         <button type="button" class="btn btn-erp-pill-outline" id="btnHeaderPosted" disabled style="height: 32px; font-size: 0.75rem;">Sale</button>
                     </div>
                 </div>
